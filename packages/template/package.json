@@ -1,0 +1,44 @@
+{
+  "name": "@three-acts/template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./button": {
+      "types": "./src/button/index.ts",
+      "default": "./src/button/index.ts"
+    },
+    "./card": {
+      "types": "./src/card/index.ts",
+      "default": "./src/card/index.ts"
+    },
+    "./section": {
+      "types": "./src/section/index.ts",
+      "default": "./src/section/index.ts"
+    },
+    "./stat": {
+      "types": "./src/stat/index.ts",
+      "default": "./src/stat/index.ts"
+    },
+    "./typography": {
+      "types": "./src/typography/index.ts",
+      "default": "./src/typography/index.ts"
+    }
+  },
+  "dependencies": {
+    "@base-ui-components/react": "^1.0.0-rc.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3"
+  }
+}

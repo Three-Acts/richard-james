@@ -1,0 +1,12 @@
+@theme {
+  --font-sans: "Satoshi", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
+  --color-ink: #171512;
+  --color-paper: #f7f1e7;
+  --color-panel: #fffaf0;
+  --color-charcoal: #202733;
+  --color-moss: #365344;
+  --color-rust: #ad5d3a;
+  --color-gold: #d6a23f;
+  --shadow-soft: 0 24px 80px rgb(23 21 18 / 0.14);
+}

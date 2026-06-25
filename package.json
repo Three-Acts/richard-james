@@ -1,0 +1,25 @@
+{
+  "name": "three-acts-react",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.18.1",
+  "scripts": {
+    "dev:web": "pnpm --filter @three-acts/web dev",
+    "dev:cms": "pnpm --filter @three-acts/cms dev",
+    "build": "pnpm -r --filter './apps/*' build",
+    "build:web": "pnpm --filter @three-acts/web build",
+    "build:cms": "pnpm --filter @three-acts/cms build",
+    "lint": "pnpm -r --filter './apps/*' lint",
+    "typecheck": "pnpm -r --filter './apps/*' typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.3"
+  }
+}
