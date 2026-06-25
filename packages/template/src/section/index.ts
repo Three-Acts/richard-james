@@ -1,1 +1,1 @@
-export { Section, type ContainerProps, type RootProps, type SectionTone } from "./Section";
+export { Section, type ContainerProps, type RootProps } from "./section";

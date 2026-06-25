@@ -1,6 +1,6 @@
 import { Button as BaseButton } from "@base-ui-components/react/button";
 import type { AnchorHTMLAttributes, ComponentProps, ReactNode } from "react";
-import { cn } from "../classNames";
+import { cn } from "../class-names";
 
 type ButtonVariant = "primary" | "secondary" | "light";
 

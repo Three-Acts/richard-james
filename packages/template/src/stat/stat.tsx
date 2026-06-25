@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { cn } from "../classNames";
+import { cn } from "../class-names";
 
 type RootProps = HTMLAttributes<HTMLDivElement> & {
   className?: string;

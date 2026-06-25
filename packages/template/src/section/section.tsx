@@ -1,24 +1,14 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { cn } from "../classNames";
-
-type SectionTone = "paper" | "panel" | "charcoal" | "rust";
-
-const tones: Record<SectionTone, string> = {
-  paper: "bg-paper text-ink",
-  panel: "bg-panel text-ink",
-  charcoal: "bg-charcoal text-panel",
-  rust: "bg-rust text-paper"
-};
+import { cn } from "../class-names";
 
 type RootProps = HTMLAttributes<HTMLElement> & {
   children: ReactNode;
   className?: string;
-  tone?: SectionTone;
 };
 
-function Root({ children, className, tone = "paper", ...props }: RootProps) {
+function Root({ children, className, ...props }: RootProps) {
   return (
-    <section className={cn("py-16", tones[tone], className)} {...props}>
+    <section className={cn("py-16", className)} {...props}>
       {children}
     </section>
   );
@@ -42,4 +32,4 @@ export const Section = {
   Root
 };
 
-export type { ContainerProps, RootProps, SectionTone };
+export type { ContainerProps, RootProps };

@@ -65,7 +65,7 @@ export function HomePage() {
           </div>
         </div>
       </Section.Container>
-      <Section.Root id="services" tone="panel">
+      <Section.Root id="services" className="bg-panel text-ink">
         <Section.Container>
           <div className="max-w-2xl">
             <Typography.Eyebrow>What the web app is shaped for</Typography.Eyebrow>
@@ -104,7 +104,7 @@ export function HomePage() {
           </div>
         </Section.Container>
       </Section.Root>
-      <Section.Root id="pipeline" tone="charcoal">
+      <Section.Root id="pipeline" className="bg-charcoal text-panel">
         <Section.Container>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-gold">Technical foundation</p>
           <h2 className="mt-4 max-w-3xl font-serif text-4xl font-semibold landscape:text-5xl">Marketing polish without giving up static performance.</h2>
@@ -127,7 +127,7 @@ export function HomePage() {
           </div>
         </Section.Container>
       </Section.Root>
-      <Section.Root id="contact" tone="rust">
+      <Section.Root id="contact" className="bg-rust text-paper">
         <Section.Container className="flex flex-col justify-between gap-8 landscape:flex-row landscape:items-end">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-paper/75">Next step</p>

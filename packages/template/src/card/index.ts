@@ -1,1 +1,1 @@
-export { Card, type MarketingProps } from "./Card";
+export { Card, type MarketingProps } from "./card";

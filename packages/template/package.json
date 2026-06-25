@@ -13,6 +13,10 @@
       "types": "./src/button/index.ts",
       "default": "./src/button/index.ts"
     },
+    "./class-names": {
+      "types": "./src/class-names.ts",
+      "default": "./src/class-names.ts"
+    },
     "./card": {
       "types": "./src/card/index.ts",
       "default": "./src/card/index.ts"
@@ -31,7 +35,8 @@
     }
   },
   "dependencies": {
-    "@base-ui-components/react": "^1.0.0-rc.0"
+    "@base-ui-components/react": "^1.0.0-rc.0",
+    "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
     "react": "^19.2.7",

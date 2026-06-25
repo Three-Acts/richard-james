@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { cn } from "../classNames";
+import { cn } from "../class-names";
 
 type EyebrowProps = HTMLAttributes<HTMLParagraphElement> & {
   children: ReactNode;
