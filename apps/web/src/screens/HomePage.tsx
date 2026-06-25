@@ -29,10 +29,10 @@ export function HomePage() {
 
   return (
     <>
-      <Section.Container className="grid min-h-[calc(100vh-88px)] items-center gap-10 pb-14 pt-6 lg:grid-cols-[1.05fr_0.95fr]">
+      <Section.Container className="grid min-h-[calc(100vh-88px)] items-center gap-10 pb-14 pt-6 tablet:grid-cols-[1.05fr_0.95fr]">
         <div>
           <Typography.Eyebrow className="mb-5">Marketing site system</Typography.Eyebrow>
-          <h1 className="max-w-3xl font-serif text-5xl font-semibold leading-[0.95] text-ink md:text-7xl">
+          <h1 className="max-w-3xl font-serif text-5xl font-semibold leading-[0.95] text-ink landscape:text-7xl">
             Static pages built to sell the launch before the demo call.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-charcoal">
@@ -42,7 +42,7 @@ export function HomePage() {
             <Button.Link href="#contact">Plan a launch</Button.Link>
             <Button.Link href="#services" variant="secondary">Explore services</Button.Link>
           </div>
-          <dl className="mt-10 grid gap-4 sm:grid-cols-3">
+          <dl className="mt-10 grid gap-4 portrait:grid-cols-3">
             {metrics.map(([value, label]) => (
               <Stat.Root key={label} value={value} label={label} />
             ))}
@@ -69,9 +69,9 @@ export function HomePage() {
         <Section.Container>
           <div className="max-w-2xl">
             <Typography.Eyebrow>What the web app is shaped for</Typography.Eyebrow>
-            <h2 className="mt-4 font-serif text-4xl font-semibold md:text-5xl">A marketing site that can grow from landing page to content engine.</h2>
+            <h2 className="mt-4 font-serif text-4xl font-semibold landscape:text-5xl">A marketing site that can grow from landing page to content engine.</h2>
           </div>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <div className="mt-10 grid gap-6 landscape:grid-cols-3">
             {offers.map((offer) => (
               <Card.Marketing key={offer.title} title={offer.title} body={offer.body} />
             ))}
@@ -79,10 +79,10 @@ export function HomePage() {
         </Section.Container>
       </Section.Root>
       <Section.Root>
-        <Section.Container className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+        <Section.Container className="grid gap-10 tablet:grid-cols-[0.8fr_1.2fr]">
           <div>
             <Typography.Eyebrow>Conversion path</Typography.Eyebrow>
-            <h2 className="mt-4 font-serif text-4xl font-semibold md:text-5xl">Every section has a job.</h2>
+            <h2 className="mt-4 font-serif text-4xl font-semibold landscape:text-5xl">Every section has a job.</h2>
           </div>
           <div className="grid gap-4">
             {["Show the promise", "Prove the outcome", "Answer the risk", "Ask for action"].map((step, index) => (
@@ -107,8 +107,8 @@ export function HomePage() {
       <Section.Root id="pipeline" tone="charcoal">
         <Section.Container>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-gold">Technical foundation</p>
-          <h2 className="mt-4 max-w-3xl font-serif text-4xl font-semibold md:text-5xl">Marketing polish without giving up static performance.</h2>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <h2 className="mt-4 max-w-3xl font-serif text-4xl font-semibold landscape:text-5xl">Marketing polish without giving up static performance.</h2>
+          <div className="mt-10 grid gap-6 landscape:grid-cols-3">
             {["Static generation", "SEO metadata", "CMS isolation"].map((title, index) => (
               <Collapsible.Root key={title} defaultOpen className="rounded-lg border border-ink/10 bg-paper p-5">
                 <Collapsible.Trigger className="flex w-full items-center justify-between text-left font-serif text-2xl">
@@ -128,10 +128,10 @@ export function HomePage() {
         </Section.Container>
       </Section.Root>
       <Section.Root id="contact" tone="rust">
-        <Section.Container className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
+        <Section.Container className="flex flex-col justify-between gap-8 landscape:flex-row landscape:items-end">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-paper/75">Next step</p>
-            <h2 className="mt-4 font-serif text-4xl font-semibold md:text-6xl">Turn this scaffold into the campaign site.</h2>
+            <h2 className="mt-4 font-serif text-4xl font-semibold landscape:text-6xl">Turn this scaffold into the campaign site.</h2>
           </div>
           <Button.Link className="w-fit" href="mailto:hello@example.com" variant="light">
             hello@example.com

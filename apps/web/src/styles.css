@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "@three-acts/config/theme.css";
 
+@theme {
+  --breakpoint-portrait: 30rem;
+  --breakpoint-landscape: 48rem;
+  --breakpoint-tablet: 64rem;
+  --breakpoint-desktop: 80rem;
+}
+
 :root {
   color: var(--color-ink);
   background: var(--color-paper);
