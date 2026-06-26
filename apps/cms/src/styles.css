@@ -1,22 +1,17 @@
 @import "tailwindcss";
 @import "@three-acts/config/theme.css";
 
-:root {
-  color: var(--color-ink);
-  background: #ede7dc;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@layer base {
+  :root {
+    color-scheme: dark;
+    @apply bg-cms-bg text-cms-text antialiased;
+  }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-}
+  body {
+    @apply m-0 min-h-screen min-w-80 overflow-hidden;
+  }
 
-button,
-input {
-  font: inherit;
+  * {
+    @apply box-border;
+  }
 }

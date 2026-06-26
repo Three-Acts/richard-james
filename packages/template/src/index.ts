@@ -4,3 +4,4 @@ export { Section, type ContainerProps as SectionContainerProps, type RootProps a
 export { Stat, type RootProps as StatRootProps } from "./stat";
 export { Typography, type EyebrowProps } from "./typography";
 export { cn } from "./class-names";
+export { clsx, cv, type ClassValue } from "./component-variants";

@@ -9,4 +9,16 @@
   --color-rust: #ad5d3a;
   --color-gold: #d6a23f;
   --shadow-soft: 0 24px 80px rgb(23 21 18 / 0.14);
+
+  /* CMS admin palette — solid shades from the Webflow reference (no opacity fills) */
+  --color-cms-bg: #1e1e1e;
+  --color-cms-surface: #292929;
+  --color-cms-raised: #353535;
+  --color-cms-track: #5e5e5e;
+  --color-cms-text: #ffffff;
+  --color-cms-muted: #c4c4c4;
+  --color-cms-accent: #006acc;
+  --color-cms-accent-hover: #0077e0;
+  --color-cms-info: #a7d1ff;
+  --color-cms-success: #79e09c;
 }

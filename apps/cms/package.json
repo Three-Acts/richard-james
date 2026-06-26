@@ -12,14 +12,15 @@
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-rc.0",
+    "@tailwindcss/vite": "^4.3.1",
     "@three-acts/config": "workspace:*",
     "@three-acts/template": "workspace:*",
     "@vitejs/plugin-react": "^6.0.3",
-    "vite": "^8.1.0",
+    "lucide-react": "^1.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tailwindcss": "^4.3.1",
-    "@tailwindcss/vite": "^4.3.1"
+    "vite": "^8.1.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.7",
