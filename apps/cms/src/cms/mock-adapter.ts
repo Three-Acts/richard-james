@@ -1,0 +1,477 @@
+import { collectionRegistry } from "./registry";
+import type { AssetField, AssetUploadResult, CmsCollection, CmsDataAdapter, CmsRecord, CmsRecordValue, PublishStatus, SelectField } from "./types";
+
+const seedNow = new Date("2026-06-25T18:30:00.000Z");
+const statuses: PublishStatus[] = ["published", "queued_to_publish", "not_published"];
+
+const words = ["Signal", "Harbour", "Proof", "Atlas", "Northstar", "Foundry", "Pulse", "Beacon", "Orbit", "Vector", "Canvas", "Metric", "Archive", "Bridge", "Summit", "Launch", "Campaign", "Studio", "Field", "Ledger"];
+const people = ["Craig Chihururu", "Amara Stone", "Nadia Jacobs", "Theo Brand", "Mika Chen", "Jonas Mokoena", "Priya Naidoo", "Leah Morgan", "Sipho Dlamini", "Elena Ward", "Max Roux", "Ayesha Khan"];
+const cities = ["Cape Town", "Johannesburg", "Durban", "Gqeberha", "East London", "Mthatha", "Kariega", "Centane", "Qumbu", "Butterworth"];
+const regions = ["northern", "eastern", "western", "central"];
+const counts: Record<string, number> = {
+  "launch-pages": 44,
+  "content-blocks": 72,
+  "product-catalog": 58,
+  "form-submissions": 180,
+  experiments: 38,
+  locations: 64,
+  "people-directory": 42,
+  "feature-flags": 52,
+  "media-library": 96,
+  "redirect-rules": 128,
+  "localization-strings": 150
+};
+
+const edgeCases: Record<string, CmsRecord[]> = {
+  "launch-pages": [
+    buildRecord("lp-edge-long", 901, {
+      title: "A Very Long Launch Page Title That Should Stress Every Truncation Boundary In The Table And Editor Header",
+      slug: "very-long-launch-page-title-that-keeps-going-and-going",
+      summary: "This record deliberately contains a long textarea value. It should make the editor feel realistic, test scroll behavior, and confirm that dense form controls still remain usable when content is verbose.",
+      template: "long_form",
+      priority: 999,
+      featured: true,
+      heroImage: "/mock-storage/cms-assets/launch_pages/extreme-long-title.png",
+      publishAt: isoFromSeed(-1, 47),
+      recordId: "lp-edge-long"
+    })
+  ],
+  "form-submissions": [
+    buildRecord("fs-edge-empty", 911, {
+      submittedBy: "Anonymous visitor",
+      email: "anonymous+stress@example.test",
+      message: "",
+      source: "referral",
+      score: 0,
+      consent: false,
+      attachment: "",
+      submittedAt: isoFromSeed(-2, 14),
+      submissionId: "fs-edge-empty"
+    }),
+    buildRecord("fs-edge-unicode", 912, {
+      submittedBy: "Zoë François-Louw",
+      email: "zoe.francois-louw@example.test",
+      message: "Unicode stress: café, naïve, jalapeño, isiXhosa, résumé, São Paulo, München.",
+      source: "partner",
+      score: 100,
+      consent: true,
+      attachment: "/mock-storage/cms-documents/form_submissions/unicode-brief.pdf",
+      submittedAt: isoFromSeed(-3, 22),
+      submissionId: "fs-edge-unicode"
+    })
+  ],
+  "redirect-rules": [
+    buildRecord("rr-edge-loop-risk", 921, {
+      sourcePath: "old/pricing/legacy/enterprise/2024/very/deep/path",
+      targetUrl: "https://www.threeacts.test/pricing?utm_source=legacy&utm_medium=redirect&utm_campaign=stress-test",
+      notes: "Deep path and long query string stress column truncation and CSV export.",
+      statusCode: "308",
+      hits: 124884,
+      permanent: true,
+      evidence: "/mock-storage/cms-documents/redirect_rules/redirect-audit.csv",
+      lastHitAt: isoFromSeed(-1, 6),
+      ruleId: "rr-edge-loop-risk"
+    })
+  ],
+  "media-library": [
+    buildRecord("ml-edge-missing-alt", 931, {
+      assetName: "Huge transparent product render 12000px",
+      altText: "",
+      license: "unknown",
+      width: 12000,
+      height: 8000,
+      sensitive: true,
+      file: "/mock-storage/cms-assets/media_library/huge-transparent-product-render.png",
+      uploadedAt: isoFromSeed(-30, 70),
+      assetId: "ml-edge-missing-alt"
+    })
+  ],
+  "localization-strings": [
+    buildRecord("ls-edge-over-limit", 941, {
+      stringKey: "checkout.error.payment_provider_timeout.secondary_action.tooltip",
+      localizedText: "This translated string intentionally runs far longer than the configured character limit so editors can see overflow pressure in the table and textarea.",
+      locale: "de",
+      namespace: "errors",
+      characterLimit: 48,
+      approved: false,
+      screenshot: "/mock-storage/cms-assets/localization_strings/checkout-error.png",
+      updatedAt: isoFromSeed(-4, 9),
+      stringId: "ls-edge-over-limit"
+    })
+  ]
+};
+
+const initialRecords = collectionRegistry.reduce<Record<string, CmsRecord[]>>((nextRecords, collection) => {
+  nextRecords[collection.id] = [...(edgeCases[collection.id] ?? []), ...Array.from({ length: counts[collection.id] ?? 24 }, (_, index) => generateRecord(collection, index))];
+  return nextRecords;
+}, {});
+
+const records = structuredClone(initialRecords);
+
+function delay<T>(value: T, ms = 180): Promise<T> {
+  return new Promise((resolve) => {
+    window.setTimeout(() => resolve(value), ms);
+  });
+}
+
+export const mockCmsAdapter: CmsDataAdapter = {
+  async listCollections() {
+    return delay(
+      collectionRegistry.map((collection) => ({
+        ...collection,
+        count: records[collection.id]?.length ?? 0
+      }))
+    );
+  },
+
+  async listRecords(collectionId) {
+    getCollection(collectionId);
+    return delay((records[collectionId] ?? []).map(cloneRecord));
+  },
+
+  async getRecord(collectionId, recordId) {
+    getCollection(collectionId);
+    const record = records[collectionId]?.find((item) => item.id === recordId);
+
+    if (!record) {
+      throw new Error(`Unknown record: ${recordId}`);
+    }
+
+    return delay(cloneRecord(record));
+  },
+
+  async saveRecord(collectionId, record) {
+    getCollection(collectionId);
+    const nextRecord = {
+      ...cloneRecord(record),
+      modifiedAt: new Date().toISOString()
+    };
+    const collectionRecords = records[collectionId] ?? [];
+    const index = collectionRecords.findIndex((item) => item.id === record.id);
+
+    if (index >= 0) {
+      collectionRecords[index] = nextRecord;
+    } else {
+      collectionRecords.unshift(nextRecord);
+    }
+
+    records[collectionId] = collectionRecords;
+    return delay(cloneRecord(nextRecord), 220);
+  },
+
+  async createRecord(collectionId) {
+    const collection = getCollection(collectionId);
+    const record = createEmptyRecord(collection);
+    records[collectionId] = [record, ...(records[collectionId] ?? [])];
+    return delay(cloneRecord(record), 160);
+  },
+
+  async deleteRecord(collectionId, recordId) {
+    getCollection(collectionId);
+    records[collectionId] = (records[collectionId] ?? []).filter((item) => item.id !== recordId);
+    return delay(undefined, 160);
+  },
+
+  async importRecords(collectionId, rows) {
+    const collection = getCollection(collectionId);
+    const stamp = Date.now();
+    const imported = rows.map((row, index) => {
+      const base = createEmptyRecord(collection, `${collection.id}-${stamp}-${index}`);
+      const values = { ...base.values };
+
+      for (const field of collection.fields) {
+        if (field.key in row) {
+          values[field.key] = coerceValue(field.type, row[field.key]);
+        }
+      }
+
+      return { ...base, values };
+    });
+
+    records[collectionId] = [...imported, ...(records[collectionId] ?? [])];
+    return delay(imported.map(cloneRecord), 260);
+  },
+
+  async uploadAsset(collectionId, fieldKey, file) {
+    const collection = getCollection(collectionId);
+    const field = collection.fields.find((item) => item.key === fieldKey);
+
+    if (!field || field.type !== "asset") {
+      throw new Error(`Field is not an asset field: ${fieldKey}`);
+    }
+
+    const assetField = field as AssetField;
+    const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
+    const result: AssetUploadResult = {
+      path: `${assetField.bucket}/${collection.tableName}/${Date.now()}-${safeName}`,
+      url: `/mock-storage/${assetField.bucket}/${collection.tableName}/${safeName}`,
+      fileName: file.name,
+      size: file.size
+    };
+
+    return delay(result, 260);
+  }
+};
+
+function cloneRecord(record: CmsRecord): CmsRecord {
+  return { ...record, values: { ...record.values } };
+}
+
+function getCollection(collectionId: string): CmsCollection {
+  const collection = collectionRegistry.find((item) => item.id === collectionId);
+
+  if (!collection) {
+    throw new Error(`Unknown collection: ${collectionId}`);
+  }
+
+  return collection;
+}
+
+function generateRecord(collection: CmsCollection, index: number): CmsRecord {
+  const id = `${collection.id.slice(0, 3)}-${String(index + 1).padStart(4, "0")}`;
+
+  return {
+    id,
+    publishStatus: statuses[index % statuses.length],
+    createdAt: isoFromSeed(-index - 1, index * 7),
+    modifiedAt: isoFromSeed(-Math.floor(index / 2), index * 11),
+    values: valuesForCollection(collection, index, id)
+  };
+}
+
+function buildRecord(id: string, offset: number, values: Record<string, CmsRecordValue>): CmsRecord {
+  return {
+    id,
+    publishStatus: statuses[offset % statuses.length],
+    createdAt: isoFromSeed(-offset, offset),
+    modifiedAt: isoFromSeed(-Math.floor(offset / 2), offset * 2),
+    values
+  };
+}
+
+function valuesForCollection(collection: CmsCollection, index: number, id: string): Record<string, CmsRecordValue> {
+  const name = makeName(index);
+
+  switch (collection.id) {
+    case "launch-pages":
+      return {
+        title: `${name} Launch Page`,
+        slug: slugify(`${name} Launch Page`),
+        summary: makeParagraph(index, "launch page"),
+        template: pickOption(collection, "template", index),
+        priority: (index % 12) + 1,
+        featured: index % 5 === 0,
+        heroImage: assetOrEmpty(index, collection.tableName, "hero", "jpg"),
+        publishAt: index % 4 === 0 ? "" : isoFromSeed(index % 10, index * 3),
+        recordId: id
+      };
+    case "content-blocks":
+      return {
+        blockName: `${name} Content Block`,
+        slotKey: slugify(`${name} slot ${index}`),
+        body: makeParagraph(index, "content block"),
+        surface: pickOption(collection, "surface", index),
+        sortOrder: index + 1,
+        visible: index % 6 !== 0,
+        referenceImage: assetOrEmpty(index, collection.tableName, "reference", "png"),
+        reviewAt: isoFromSeed(index % 18, index * 5),
+        blockId: id
+      };
+    case "product-catalog":
+      return {
+        name: `${name} Product ${index + 1}`,
+        sku: `${words[index % words.length].slice(0, 3).toUpperCase()}-${1000 + index}`,
+        description: makeParagraph(index, "product"),
+        price: Number(((index % 17) * 19 + 29.99).toFixed(2)),
+        category: pickOption(collection, "category", index),
+        inStock: index % 7 !== 0,
+        specSheet: assetOrEmpty(index, collection.tableName, "spec-sheet", "pdf"),
+        updatedBy: people[index % people.length]
+      };
+    case "form-submissions":
+      return {
+        submittedBy: people[index % people.length],
+        email: `${slugify(people[index % people.length])}.${index}@example.test`,
+        message: makeParagraph(index, "submission"),
+        source: pickOption(collection, "source", index),
+        score: index % 101,
+        consent: index % 3 !== 0,
+        attachment: assetOrEmpty(index, collection.tableName, "attachment", "pdf"),
+        submittedAt: isoFromSeed(-index, index),
+        submissionId: id
+      };
+    case "experiments":
+      return {
+        experimentName: `${name} Experiment`,
+        slug: slugify(`${name} Experiment`),
+        hypothesis: makeParagraph(index, "experiment hypothesis"),
+        channel: pickOption(collection, "channel", index),
+        trafficSplit: (index * 13) % 101,
+        active: index % 4 !== 0,
+        variantPreview: assetOrEmpty(index, collection.tableName, "variant", "png"),
+        launchAt: isoFromSeed(index % 20, index * 2),
+        experimentId: id
+      };
+    case "locations":
+      return {
+        locationName: `${cities[index % cities.length]} ${words[index % words.length]} Office`,
+        slug: slugify(`${cities[index % cities.length]} ${words[index % words.length]} Office`),
+        region: regions[index % regions.length],
+        capacity: 8 + ((index * 7) % 180),
+        acceptsBookings: index % 5 !== 1,
+        openingDate: index % 8 === 0 ? "" : isoFromSeed(index % 60, index),
+        mapPreview: assetOrEmpty(index, collection.tableName, "map", "jpg"),
+        notes: makeParagraph(index, "location note")
+      };
+    case "people-directory":
+      return {
+        fullName: people[index % people.length],
+        email: `${slugify(people[index % people.length])}@threeacts.test`,
+        bio: makeParagraph(index, "team profile"),
+        role: pickOption(collection, "role", index),
+        weeklyCapacity: 8 + ((index * 5) % 33),
+        contractor: index % 4 === 0,
+        avatar: assetOrEmpty(index, collection.tableName, "avatar", "jpg"),
+        startDate: isoFromSeed(-index * 9, index),
+        personId: id
+      };
+    case "feature-flags":
+      return {
+        flagName: `${name} Feature Flag`,
+        key: slugify(`${name} Feature Flag`),
+        description: makeParagraph(index, "feature flag"),
+        environment: pickOption(collection, "environment", index),
+        rollout: (index * 17) % 101,
+        enabled: index % 3 !== 1,
+        evidence: assetOrEmpty(index, collection.tableName, "evidence", "pdf"),
+        expiresAt: index % 6 === 0 ? "" : isoFromSeed(index % 90, index * 4),
+        flagId: id
+      };
+    case "media-library":
+      return {
+        assetName: `${name} Asset ${index + 1}`,
+        altText: index % 5 === 0 ? "" : `Alt text for ${name} asset ${index + 1}`,
+        license: pickOption(collection, "license", index),
+        width: 640 + ((index * 137) % 3600),
+        height: 360 + ((index * 89) % 2400),
+        sensitive: index % 9 === 0,
+        file: assetOrEmpty(index, collection.tableName, "asset", index % 4 === 0 ? "pdf" : "jpg"),
+        uploadedAt: isoFromSeed(-index, index * 6),
+        assetId: id
+      };
+    case "redirect-rules":
+      return {
+        sourcePath: slugify(`old ${name} ${index}`),
+        targetUrl: `https://www.threeacts.test/${slugify(name)}/${index + 1}`,
+        notes: makeParagraph(index, "redirect rule"),
+        statusCode: pickOption(collection, "statusCode", index),
+        hits: (index * 977) % 50000,
+        permanent: index % 4 !== 1,
+        evidence: assetOrEmpty(index, collection.tableName, "audit", "csv"),
+        lastHitAt: isoFromSeed(-index, index * 2),
+        ruleId: id
+      };
+    case "localization-strings":
+      return {
+        stringKey: `${pickOption(collection, "namespace", index)}.${slugify(name)}.${index + 1}`,
+        localizedText: makeParagraph(index, "localized string"),
+        locale: pickOption(collection, "locale", index),
+        namespace: pickOption(collection, "namespace", index),
+        characterLimit: 40 + ((index * 11) % 180),
+        approved: index % 5 !== 2,
+        screenshot: assetOrEmpty(index, collection.tableName, "screenshot", "png"),
+        updatedAt: isoFromSeed(-index, index * 3),
+        stringId: id
+      };
+    default:
+      return {};
+  }
+}
+
+function createEmptyRecord(collection: CmsCollection, id = `${collection.id}-${Date.now()}`): CmsRecord {
+  const values = collection.fields.reduce<Record<string, CmsRecordValue>>((nextValues, field) => {
+    if (field.type === "boolean") {
+      nextValues[field.key] = false;
+    } else if (field.type === "number") {
+      nextValues[field.key] = 0;
+    } else if (field.type === "readonly" && field.key.toLowerCase().includes("id")) {
+      nextValues[field.key] = id;
+    } else {
+      nextValues[field.key] = "";
+    }
+
+    return nextValues;
+  }, {});
+
+  return {
+    id,
+    publishStatus: "not_published",
+    createdAt: seedNow.toISOString(),
+    modifiedAt: seedNow.toISOString(),
+    values
+  };
+}
+
+function coerceValue(fieldType: string, value: CmsRecordValue): CmsRecordValue {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  if (fieldType === "boolean") {
+    const normalized = String(value).trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "yes";
+  }
+
+  if (fieldType === "number") {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  return value;
+}
+
+function makeName(index: number) {
+  return `${words[index % words.length]} ${words[(index * 7 + 3) % words.length]}`;
+}
+
+function makeParagraph(index: number, subject: string) {
+  const first = words[index % words.length].toLowerCase();
+  const second = words[(index * 5 + 2) % words.length].toLowerCase();
+  const third = words[(index * 11 + 4) % words.length].toLowerCase();
+  return `Mock ${subject} ${index + 1} combines ${first}, ${second}, and ${third} signals to test dense editing, search matching, import/export output, and long-form field rendering.`;
+}
+
+function pickOption(collection: CmsCollection, fieldKey: string, index: number) {
+  const field = collection.fields.find((item) => item.key === fieldKey);
+
+  if (!field || field.type !== "select") {
+    return "";
+  }
+
+  const selectField = field as SelectField;
+  return selectField.options[index % selectField.options.length]?.value ?? "";
+}
+
+function assetOrEmpty(index: number, tableName: string, prefix: string, extension: string) {
+  if (index % 7 === 0) {
+    return "";
+  }
+
+  return `/mock-storage/cms-assets/${tableName}/${prefix}-${String(index + 1).padStart(3, "0")}.${extension}`;
+}
+
+function isoFromSeed(dayOffset: number, minuteOffset: number) {
+  const date = new Date(seedNow);
+  date.setUTCDate(date.getUTCDate() + dayOffset);
+  date.setUTCMinutes(date.getUTCMinutes() + minuteOffset);
+  return date.toISOString();
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
