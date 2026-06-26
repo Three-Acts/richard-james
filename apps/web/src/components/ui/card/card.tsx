@@ -10,9 +10,9 @@ type MarketingProps = HTMLAttributes<HTMLElement> & {
 
 function Marketing({ body, className, title, ...props }: MarketingProps) {
   return (
-    <article className={cn("rounded-lg border border-ink/10 bg-paper p-6", className)} {...props}>
-      <h3 className="font-serif text-3xl font-semibold">{title}</h3>
-      <p className="mt-4 leading-7 text-charcoal">{body}</p>
+    <article className={cn("border border-black bg-white p-6", className)} {...props}>
+      <h3 className="text-3xl font-semibold tracking-tight">{title}</h3>
+      <p className="mt-4 leading-7 text-neutral-700">{body}</p>
     </article>
   );
 }

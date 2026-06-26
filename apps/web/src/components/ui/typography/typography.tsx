@@ -9,7 +9,7 @@ type EyebrowProps = HTMLAttributes<HTMLParagraphElement> & {
 
 function Eyebrow({ children, className, ...props }: EyebrowProps) {
   return (
-    <p className={cn("text-sm font-semibold uppercase tracking-[0.18em] text-rust", className)} {...props}>
+    <p className={cn("text-sm font-semibold uppercase tracking-[0.14em] text-black", className)} {...props}>
       {children}
     </p>
   );

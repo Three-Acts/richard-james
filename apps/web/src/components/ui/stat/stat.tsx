@@ -10,9 +10,9 @@ type RootProps = HTMLAttributes<HTMLDivElement> & {
 
 function Root({ className, label, value, ...props }: RootProps) {
   return (
-    <div className={cn("border-l border-ink/15 pl-4", className)} {...props}>
-      <dt className="font-serif text-3xl font-semibold">{value}</dt>
-      <dd className="mt-1 text-sm leading-5 text-charcoal">{label}</dd>
+    <div className={cn("border-l border-black pl-4", className)} {...props}>
+      <dt className="text-3xl font-semibold tracking-tight">{value}</dt>
+      <dd className="mt-1 text-sm leading-5 text-neutral-700">{label}</dd>
     </div>
   );
 }

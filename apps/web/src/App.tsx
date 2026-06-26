@@ -1,5 +1,5 @@
 import { Toolbar } from "@base-ui-components/react/toolbar";
-import { Section } from "./components/template/section";
+import { Section } from "./components/layout/section";
 import { getRoute, routes } from "./routes";
 
 type AppProps = {
@@ -11,10 +11,10 @@ export function App({ url }: AppProps) {
   const route = getRoute(pathname);
 
   return (
-    <div className="min-h-screen bg-paper text-ink">
-      <header className="py-5">
+    <div className="min-h-screen bg-white text-black">
+      <header className="border-b border-black py-5">
         <Section.Container className="flex items-center justify-between">
-          <a className="font-serif text-2xl font-semibold" href="/">
+          <a className="text-2xl font-semibold tracking-tight" href="/">
             Three Acts
           </a>
           <Toolbar.Root className="flex items-center gap-2" aria-label="Primary navigation">
@@ -22,7 +22,7 @@ export function App({ url }: AppProps) {
               <Toolbar.Link
                 key={item.path}
                 href={item.path}
-                className="rounded-full px-4 py-2 text-sm font-medium text-charcoal transition hover:bg-panel"
+                className="border border-transparent px-4 py-2 text-sm font-medium text-black transition hover:border-black hover:bg-black hover:text-white"
               >
                 {item.path === "/" ? "Home" : "About"}
               </Toolbar.Link>

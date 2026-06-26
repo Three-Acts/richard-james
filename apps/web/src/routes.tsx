@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { HomePage } from "./screens/HomePage";
-import { AboutPage } from "./screens/AboutPage";
+import { AboutPage } from "./pages/AboutPage";
+import { HomePage } from "./pages/HomePage";
 
 export type SeoMetadata = {
   title: string;
