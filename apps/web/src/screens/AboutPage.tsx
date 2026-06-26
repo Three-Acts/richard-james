@@ -1,5 +1,5 @@
-import { Section } from "@three-acts/template/section";
-import { Typography } from "@three-acts/template/typography";
+import { Section } from "../components/template/section";
+import { Typography } from "../components/template/typography";
 
 export function AboutPage() {
   return (

@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 
 type SearchInputProps = {
   className?: string;

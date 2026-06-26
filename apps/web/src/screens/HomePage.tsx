@@ -1,9 +1,9 @@
 import { Collapsible } from "@base-ui-components/react/collapsible";
-import { Button } from "@three-acts/template/button";
-import { Card } from "@three-acts/template/card";
-import { Section } from "@three-acts/template/section";
-import { Stat } from "@three-acts/template/stat";
-import { Typography } from "@three-acts/template/typography";
+import { Button } from "../components/template/button";
+import { Card } from "../components/template/card";
+import { Section } from "../components/template/section";
+import { Stat } from "../components/template/stat";
+import { Typography } from "../components/template/typography";
 
 export function HomePage() {
   const offers = [

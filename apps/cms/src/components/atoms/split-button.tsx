@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { Menu } from "@base-ui-components/react/menu";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import { buttonVariants } from "./styles";
 
 export type SplitButtonOption = {

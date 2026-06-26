@@ -1,6 +1,6 @@
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Select as BaseSelect } from "@base-ui-components/react/select";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import { inputClass } from "./styles";
 
 export type SelectOption = { label: string; value: string };

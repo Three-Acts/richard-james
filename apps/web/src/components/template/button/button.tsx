@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import { Button as BaseButton } from "@base-ui-components/react/button";
 import type { AnchorHTMLAttributes, ComponentProps, ReactNode } from "react";
-import { cn } from "../class-names";
+import { cn } from "@three-acts/utils";
 
 type ButtonVariant = "primary" | "secondary" | "light";
 

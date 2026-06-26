@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import { Checkbox as BaseCheckbox } from "@base-ui-components/react/checkbox";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 
 type CheckboxProps = {
   ariaLabel?: string;

@@ -1,0 +1,24 @@
+{
+  "name": "@three-acts/utils",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./class-names": {
+      "types": "./src/class-names.ts",
+      "default": "./src/class-names.ts"
+    },
+    "./component-variants": {
+      "types": "./src/component-variants.ts",
+      "default": "./src/component-variants.ts"
+    }
+  },
+  "dependencies": {
+    "tailwind-merge": "^3.6.0"
+  }
+}

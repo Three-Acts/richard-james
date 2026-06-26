@@ -6,20 +6,20 @@ Vite, React, and Tailwind monorepo with a static public web app and an auth-gate
 
 - `apps/web` - public website with static HTML generation, route-level SEO metadata, sitemap generation, and public `robots.txt`.
 - `apps/cms` - private CMS shell with `noindex,nofollow`, disallowing `robots.txt`, and a provider-shaped auth interface ready for Clerk, Auth0, or Supabase.
-- `packages/template` - shared React UI elements used by both apps, exported by scoped subpaths such as `@three-acts/template/button`.
+- `packages/utils` - shared utility helpers such as `cn`, `clsx`, and `cv`, exported from `@three-acts/utils`.
 - `packages/config` - shared theme tokens consumed by Tailwind.
 
-Base UI is installed per app through `@base-ui-components/react`, and `packages/template` can wrap Base UI primitives under the hood for reusable app styling.
+Base UI is installed per app through `@base-ui-components/react`, and web-specific template components live inside `apps/web`.
 
 ## Template UI
 
 Template components use element-scoped dot notation and subpath exports for tree shaking:
 
 ```tsx
-import { Button } from "@three-acts/template/button";
-import { Card } from "@three-acts/template/card";
-import { Section } from "@three-acts/template/section";
-import { Typography } from "@three-acts/template/typography";
+import { Button } from "./components/template/button";
+import { Card } from "./components/template/card";
+import { Section } from "./components/template/section";
+import { Typography } from "./components/template/typography";
 
 <Section.Root tone="panel">
   <Section.Container>

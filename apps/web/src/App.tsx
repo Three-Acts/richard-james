@@ -1,5 +1,5 @@
 import { Toolbar } from "@base-ui-components/react/toolbar";
-import { Section } from "@three-acts/template/section";
+import { Section } from "./components/template/section";
 import { getRoute, routes } from "./routes";
 
 type AppProps = {

@@ -1,4 +1,4 @@
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 
 // Brand mark for the top bar. Sources the app favicon so the logo can be
 // swapped in one place (public/favicon.svg) and stay in sync with the tab icon.

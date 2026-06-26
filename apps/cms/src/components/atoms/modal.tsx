@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { Dialog } from "@base-ui-components/react/dialog";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import { BareIconButton } from "./bare-icon-button";
 import { ScrollArea } from "./scroll-area";
 

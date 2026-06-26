@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 
 // Single source of truth for chrome header height (40px) and padding,
 // shared by the records toolbar, record list pane, editor, and sidebar.

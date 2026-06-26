@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import type { CmsCollectionSummary, CmsRecord } from "../../cms/types";
 import { getRecordTitle } from "../../lib/records";
 import { PanelHeader, ScrollArea, StatusDot } from "../atoms";

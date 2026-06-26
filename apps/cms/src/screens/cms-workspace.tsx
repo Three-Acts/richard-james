@@ -1,4 +1,4 @@
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import type { AuthUser } from "../auth/auth-context";
 import { singularize } from "../lib/format";
 import { useCmsWorkspace } from "../hooks/use-cms-workspace";

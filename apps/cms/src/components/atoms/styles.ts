@@ -1,4 +1,4 @@
-import { cv } from "@three-acts/template";
+import { cv } from "@three-acts/utils";
 
 // Shared class fragments for the dense, dark CMS control surfaces.
 // Solid shades from the Webflow reference (see theme.css cms-* tokens) — no opacity fills.

@@ -1,6 +1,6 @@
 import type { ChangeEvent, ReactNode } from "react";
 import { ExternalLink, Upload } from "lucide-react";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import type { AssetField, CmsField, CmsRecord, CmsRecordValue, SelectField, SlugField } from "../../cms/types";
 import { buttonVariants, Input, inputClass, Select, Textarea, Toggle } from "../atoms";
 import { toDateTimeLocal } from "../../lib/format";

@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import { controlShadow } from "./styles";
 
 export function IconButton({ className, type = "button", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {

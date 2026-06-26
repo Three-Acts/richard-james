@@ -1,4 +1,4 @@
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import type { PublishStatus } from "../../cms/types";
 
 const statusLabels: Record<PublishStatus, string> = {

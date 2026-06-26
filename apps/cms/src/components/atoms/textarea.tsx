@@ -1,5 +1,5 @@
 import type { TextareaHTMLAttributes } from "react";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import { inputClass } from "./styles";
 
 export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {

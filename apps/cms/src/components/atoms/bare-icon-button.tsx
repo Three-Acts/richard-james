@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 
 export function BareIconButton({ className, type = "button", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (

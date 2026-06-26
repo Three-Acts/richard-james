@@ -1,5 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
 import type { HTMLAttributes, ReactNode } from "react";
-import { cn } from "../class-names";
+import { cn } from "@three-acts/utils";
 
 type RootProps = HTMLAttributes<HTMLDivElement> & {
   className?: string;

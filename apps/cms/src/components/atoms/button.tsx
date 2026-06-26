@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
-import { cn } from "@three-acts/template";
+import { cn } from "@three-acts/utils";
 import { buttonVariants, type ButtonVariant } from "./styles";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
