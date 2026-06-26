@@ -16,12 +16,12 @@ Base UI is installed per app through `@base-ui-components/react`, and web-specif
 Template components use element-scoped dot notation and subpath exports for tree shaking:
 
 ```tsx
-import { Button } from "./components/template/button";
-import { Card } from "./components/template/card";
-import { Section } from "./components/template/section";
-import { Typography } from "./components/template/typography";
+import { Section } from "./components/layout/section";
+import { Button } from "./components/ui/button";
+import { Card } from "./components/ui/card";
+import { Typography } from "./components/ui/typography";
 
-<Section.Root tone="panel">
+<Section.Root>
   <Section.Container>
     <Typography.Eyebrow>Marketing site system</Typography.Eyebrow>
     <Card.Marketing title="Launch pages" body="Campaign-ready pages." />
