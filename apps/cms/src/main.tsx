@@ -1,8 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
-import { AuthProvider } from "./auth/AuthProvider";
-import { mockAuthClient } from "./auth/mockAuthClient";
+import { App } from "./app";
+import { AuthProvider } from "./auth/auth-provider";
+import { mockAuthClient } from "./auth/mock-auth-client";
 import "./styles.css";
 
 createRoot(document.getElementById("root") as HTMLElement).render(

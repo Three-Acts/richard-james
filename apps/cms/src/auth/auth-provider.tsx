@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { AuthContext, type AuthClient, type AuthState, type AuthUser } from "./AuthContext";
+import { AuthContext, type AuthClient, type AuthState, type AuthUser } from "./auth-context";
 
 export function AuthProvider({ children, client }: { children: ReactNode; client: AuthClient }) {
   const [user, setUser] = useState<AuthUser | null>(null);

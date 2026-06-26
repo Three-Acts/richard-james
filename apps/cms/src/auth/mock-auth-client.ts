@@ -1,4 +1,4 @@
-import type { AuthClient, AuthUser } from "./AuthContext";
+import type { AuthClient, AuthUser } from "./auth-context";
 
 const demoUser: AuthUser = {
   id: "local-editor",
