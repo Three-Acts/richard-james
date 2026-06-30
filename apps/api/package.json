@@ -1,0 +1,19 @@
+{
+  "name": "@three-acts/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx scripts/dev-server.ts",
+    "dev:vercel": "vercel dev --yes --listen 0.0.0.0:5175",
+    "build": "tsc -p tsconfig.app.json --noEmit",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "@vercel/node": "^5.5.13",
+    "tsx": "^4.21.0",
+    "vercel": "^48.10.3"
+  }
+}
