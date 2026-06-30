@@ -24,7 +24,7 @@ export function App({ url }: AppProps) {
                 href={item.path}
                 className="border border-transparent px-4 py-2 text-sm font-medium text-black transition hover:border-black hover:bg-black hover:text-white"
               >
-                {item.path === "/" ? "Home" : "About"}
+                {item.label}
               </Toolbar.Link>
             ))}
           </Toolbar.Root>

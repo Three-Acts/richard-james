@@ -1,9 +1,9 @@
 import { renderToString } from "react-dom/server";
 import { App } from "./App";
-import { getRoute, routes, site } from "./routes";
+import { getRoute, prerenderRoutes, routes, sitemapRoutes, site } from "./routes";
 import "./styles.css";
 
-export { routes, site };
+export { prerenderRoutes, routes, sitemapRoutes, site };
 
 export function render(url: string) {
   const route = getRoute(url);
