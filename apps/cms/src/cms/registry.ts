@@ -119,6 +119,8 @@ export const collectionRegistry: CmsCollection[] = [
     id: "form-submissions",
     label: "Form Submissions",
     tableName: "form_submissions",
+    // Submissions are created by the site, not editors — view, export, delete only.
+    mode: "readonly",
     group: "Growth",
     titleField: "submittedBy",
     description: "High-volume inbound submissions with scoring, consent, and attachments.",
@@ -157,6 +159,8 @@ export const collectionRegistry: CmsCollection[] = [
     id: "experiments",
     label: "Experiments",
     tableName: "experiments",
+    // Operational config — editable, but no publish workflow.
+    mode: "data",
     group: "Growth",
     titleField: "experimentName",
     description: "A/B tests with traffic split, owner, and launch scheduling.",
@@ -187,7 +191,7 @@ export const collectionRegistry: CmsCollection[] = [
       { key: "channel", label: "Channel", width: "130px" },
       { key: "trafficSplit", label: "Split", width: "90px" },
       { key: "active", label: "Active", valueType: "boolean", width: "90px" },
-      { key: "publishStatus", label: "Status", valueType: "status", width: "160px" },
+      { key: "launchAt", label: "Launch at", valueType: "datetime", width: "170px" },
       { key: "modifiedAt", label: "Modified", valueType: "datetime", width: "170px" }
     ]
   },
@@ -269,6 +273,8 @@ export const collectionRegistry: CmsCollection[] = [
     id: "feature-flags",
     label: "Feature Flags",
     tableName: "feature_flags",
+    // Operational config — editable, but no publish workflow.
+    mode: "data",
     group: "Platform",
     titleField: "flagName",
     description: "Operational feature flags with rollout percentages and expiry dates.",
@@ -298,7 +304,7 @@ export const collectionRegistry: CmsCollection[] = [
       { key: "environment", label: "Environment", width: "130px" },
       { key: "rollout", label: "Rollout", width: "100px" },
       { key: "enabled", label: "Enabled", valueType: "boolean", width: "100px" },
-      { key: "publishStatus", label: "Status", valueType: "status", width: "160px" },
+      { key: "expiresAt", label: "Expires", valueType: "datetime", width: "170px" },
       { key: "modifiedAt", label: "Modified", valueType: "datetime", width: "170px" }
     ]
   },
@@ -306,6 +312,8 @@ export const collectionRegistry: CmsCollection[] = [
     id: "media-library",
     label: "Media Library",
     tableName: "media_library",
+    // Asset metadata — editable, but assets themselves have no publish workflow.
+    mode: "data",
     group: "Media",
     titleField: "assetName",
     description: "Asset metadata for images, documents, licenses, and sensitive media.",
@@ -343,6 +351,8 @@ export const collectionRegistry: CmsCollection[] = [
     id: "redirect-rules",
     label: "Redirect Rules",
     tableName: "redirect_rules",
+    // Operational config — editable, but no publish workflow.
+    mode: "data",
     group: "SEO",
     titleField: "sourcePath",
     description: "Redirects with status codes, hit counts, and review notes.",
@@ -380,6 +390,8 @@ export const collectionRegistry: CmsCollection[] = [
     id: "localization-strings",
     label: "Localization Strings",
     tableName: "localization_strings",
+    // Approval is tracked on the record itself ("approved"), not via publish status.
+    mode: "data",
     group: "SEO",
     titleField: "stringKey",
     description: "Localized UI and SEO copy with approvals and length constraints.",
@@ -421,7 +433,7 @@ export const collectionRegistry: CmsCollection[] = [
       { key: "locale", label: "Locale", width: "90px" },
       { key: "namespace", label: "Namespace", width: "130px" },
       { key: "approved", label: "Approved", valueType: "boolean", width: "100px" },
-      { key: "publishStatus", label: "Status", valueType: "status", width: "160px" },
+      { key: "characterLimit", label: "Limit", width: "90px" },
       { key: "modifiedAt", label: "Modified", valueType: "datetime", width: "170px" }
     ]
   }

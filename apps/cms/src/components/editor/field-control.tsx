@@ -3,17 +3,37 @@ import { ExternalLink, Upload } from "lucide-react";
 import { cn } from "@three-acts/utils";
 import type { AssetField, CmsField, CmsRecord, CmsRecordValue, SelectField, SlugField } from "../../cms/types";
 import { buttonVariants, Input, inputClass, Select, Textarea, Toggle } from "../atoms";
-import { toDateTimeLocal } from "../../lib/format";
+import { formatDateTime, toDateTimeLocal } from "../../lib/format";
 
 type FieldControlProps = {
   field: CmsField;
   onAssetUpload: (field: AssetField, event: ChangeEvent<HTMLInputElement>) => void;
   onUpdateValue: (fieldKey: string, value: CmsRecordValue) => void;
+  /** Render the value as a plain display instead of an editable control. */
+  readOnly?: boolean;
   record: CmsRecord;
   uploadingField: string | null;
 };
 
-export function FieldControl({ field, onAssetUpload, onUpdateValue, record, uploadingField }: FieldControlProps) {
+function readOnlyDisplay(field: CmsField, value: CmsRecordValue): string {
+  if (field.type === "boolean") {
+    return value ? "Yes" : "No";
+  }
+
+  if (field.type === "datetime") {
+    return value ? formatDateTime(String(value)) : "—";
+  }
+
+  if (field.type === "select") {
+    const selectField = field as SelectField;
+    const match = selectField.options.find((option) => option.value === String(value ?? ""));
+    return match?.label ?? (String(value ?? "") || "—");
+  }
+
+  return String(value ?? "") || "—";
+}
+
+export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, record, uploadingField }: FieldControlProps) {
   const value = record.values[field.key] ?? "";
   const inputId = `${record.id}-${field.key}`;
 
@@ -21,6 +41,17 @@ export function FieldControl({ field, onAssetUpload, onUpdateValue, record, uplo
     return (
       <FieldShell field={field} inputId={inputId}>
         <div className={cn(inputClass, "flex items-center text-cms-muted")}>{String(value || record.id)}</div>
+      </FieldShell>
+    );
+  }
+
+  if (readOnly) {
+    // A required marker is meaningless when nothing can be edited.
+    return (
+      <FieldShell field={{ ...field, required: false }} inputId={inputId}>
+        <div className={cn(inputClass, "flex items-center whitespace-pre-wrap text-cms-muted", field.type === "textarea" && "min-h-[52px] py-1.5 leading-6")}>
+          {readOnlyDisplay(field, value)}
+        </div>
       </FieldShell>
     );
   }

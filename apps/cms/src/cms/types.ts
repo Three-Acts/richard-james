@@ -1,5 +1,14 @@
 export type PublishStatus = "published" | "not_published" | "queued_to_publish";
 
+/**
+ * How editors work with a collection's records (mirrors Webflow's split
+ * between CMS items and form submissions):
+ * - "editorial": site content with a publish workflow — status + publish controls.
+ * - "data": editable operational records with no publish workflow (flags, redirects).
+ * - "readonly": system-generated records (form submissions) — view, export, delete only.
+ */
+export type CollectionMode = "editorial" | "data" | "readonly";
+
 export type FieldType = "text" | "slug" | "textarea" | "number" | "boolean" | "select" | "datetime" | "asset" | "readonly";
 
 export type CmsRecordValue = string | number | boolean | null | undefined;
@@ -56,6 +65,8 @@ export type CmsCollection = {
   id: string;
   label: string;
   tableName: string;
+  /** Defaults to "editorial" when omitted. */
+  mode?: CollectionMode;
   group?: string;
   titleField?: string;
   description?: string;

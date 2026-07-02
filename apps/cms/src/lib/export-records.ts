@@ -1,5 +1,6 @@
 import type { CmsCollection, CmsRecord, CmsRecordValue } from "../cms/types";
 import { toCsv } from "./csv";
+import { hasPublishWorkflow } from "./records";
 
 function formatCell(value: CmsRecordValue): string {
   return value === null || value === undefined ? "" : String(value);
@@ -7,10 +8,11 @@ function formatCell(value: CmsRecordValue): string {
 
 export function recordsToCsv(collection: CmsCollection, records: CmsRecord[]): string {
   const fieldKeys = collection.fields.map((field) => field.key);
-  const headers = ["id", "publishStatus", "createdAt", "modifiedAt", ...fieldKeys];
+  const publishable = hasPublishWorkflow(collection);
+  const headers = ["id", ...(publishable ? ["publishStatus"] : []), "createdAt", "modifiedAt", ...fieldKeys];
   const rows = records.map((record) => [
     record.id,
-    record.publishStatus,
+    ...(publishable ? [record.publishStatus] : []),
     record.createdAt,
     record.modifiedAt,
     ...fieldKeys.map((key) => formatCell(record.values[key]))

@@ -141,7 +141,7 @@ export const mockCmsAdapter: CmsDataAdapter = {
   },
 
   async saveRecord(collectionId, record) {
-    getCollection(collectionId);
+    assertWritable(getCollection(collectionId));
     const nextRecord = {
       ...cloneRecord(record),
       modifiedAt: new Date().toISOString()
@@ -160,7 +160,7 @@ export const mockCmsAdapter: CmsDataAdapter = {
   },
 
   async createRecord(collectionId) {
-    const collection = getCollection(collectionId);
+    const collection = assertWritable(getCollection(collectionId));
     const record = createEmptyRecord(collection);
     records[collectionId] = [record, ...(records[collectionId] ?? [])];
     return delay(cloneRecord(record), 160);
@@ -173,7 +173,7 @@ export const mockCmsAdapter: CmsDataAdapter = {
   },
 
   async importRecords(collectionId, rows) {
-    const collection = getCollection(collectionId);
+    const collection = assertWritable(getCollection(collectionId));
     const stamp = Date.now();
     const imported = rows.map((row, index) => {
       const base = createEmptyRecord(collection, `${collection.id}-${stamp}-${index}`);
@@ -193,7 +193,7 @@ export const mockCmsAdapter: CmsDataAdapter = {
   },
 
   async uploadAsset(collectionId, fieldKey, file) {
-    const collection = getCollection(collectionId);
+    const collection = assertWritable(getCollection(collectionId));
     const field = collection.fields.find((item) => item.key === fieldKey);
 
     if (!field || field.type !== "asset") {
@@ -222,6 +222,15 @@ function getCollection(collectionId: string): CmsCollection {
 
   if (!collection) {
     throw new Error(`Unknown collection: ${collectionId}`);
+  }
+
+  return collection;
+}
+
+/** Enforce the collection contract: read-only collections reject editor writes. */
+function assertWritable(collection: CmsCollection) {
+  if (collection.mode === "readonly") {
+    throw new Error(`${collection.label} is read-only: records are created by the site, not editors.`);
   }
 
   return collection;

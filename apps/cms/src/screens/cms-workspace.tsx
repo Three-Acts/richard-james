@@ -1,6 +1,9 @@
+import { useEffect } from "react";
 import { cn } from "@three-acts/utils";
 import type { AuthUser } from "../auth/auth-context";
 import { singularize } from "../lib/format";
+import { isEditable } from "../lib/records";
+import { useToast } from "../components/atoms";
 import { useCmsWorkspace } from "../hooks/use-cms-workspace";
 import { CollectionSidebar, RecordListPane, RecordsToolbar, RecordTable, TopBar } from "../components/workspace";
 import { RecordEditor } from "../components/editor";
@@ -17,6 +20,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
     handleAssetUpload,
     handleCreateRecord,
     handleDeleteRecords,
+    handleDuplicateRecord,
     handleExport,
     handleImportRecords,
     handleSaveRecord,
@@ -39,6 +43,14 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
     updateDraftValue,
     uploadingField
   } = useCmsWorkspace();
+
+  const toast = useToast();
+
+  useEffect(() => {
+    if (error) {
+      toast.push({ tone: "error", title: "Something went wrong", description: error, duration: 8000 });
+    }
+  }, [error, toast]);
 
   const selectedRecords = filteredRecords.filter((record) => selectedIds.has(record.id));
 
@@ -67,6 +79,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                     onImport={() => setIsImportOpen(true)}
                     onSearchChange={setSearch}
                     onToggleSelectionMode={toggleSelectionMode}
+                    readOnly={!isEditable(activeCollection)}
                     search={search}
                     selectedCount={selectedRecords.length}
                     selectionMode={selectionMode}
@@ -98,16 +111,11 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                 onBack={() => setSelectedRecordId(null)}
                 onChangeStatus={(status) => handleSaveRecord(status)}
                 onDelete={() => handleDeleteRecords([draftRecord.id])}
+                onDuplicate={handleDuplicateRecord}
                 onSave={() => handleSaveRecord()}
                 onUpdateValue={updateDraftValue}
                 uploadingField={uploadingField}
               />
-            ) : null}
-
-            {error ? (
-              <div className="absolute bottom-3.5 right-3.5 max-w-sm rounded-md border border-red-900 bg-red-950 px-3 py-2 text-[11px] text-red-100 shadow-2xl shadow-black/40" role="alert">
-                {error}
-              </div>
             ) : null}
           </main>
         ) : (

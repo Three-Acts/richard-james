@@ -10,6 +10,8 @@ type RecordsToolbarProps = {
   onImport: () => void;
   onSearchChange: (value: string) => void;
   onToggleSelectionMode: () => void;
+  /** Read-only collections: records come from the site, so hide New/Import. */
+  readOnly?: boolean;
   search: string;
   selectedCount: number;
   selectionMode: boolean;
@@ -25,6 +27,7 @@ export function RecordsToolbar({
   onImport,
   onSearchChange,
   onToggleSelectionMode,
+  readOnly,
   search,
   selectedCount,
   selectionMode,
@@ -61,14 +64,18 @@ export function RecordsToolbar({
             <Download size={16} />
             Export
           </Button>
-          <Button onClick={onImport} type="button">
-            <Upload size={16} />
-            Import
-          </Button>
-          <Button onClick={onCreate} type="button" variant="primary">
-            <Plus size={16} />
-            New {newLabel}
-          </Button>
+          {readOnly ? null : (
+            <>
+              <Button onClick={onImport} type="button">
+                <Upload size={16} />
+                Import
+              </Button>
+              <Button onClick={onCreate} type="button" variant="primary">
+                <Plus size={16} />
+                New {newLabel}
+              </Button>
+            </>
+          )}
         </div>
       )}
     </PanelHeader>

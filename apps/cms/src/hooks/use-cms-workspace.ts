@@ -246,6 +246,44 @@ export function useCmsWorkspace() {
     }
   }
 
+  async function handleDuplicateRecord() {
+    if (!activeCollection || !draftRecord) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const values: Record<string, CmsRecordValue> = { ...draftRecord.values };
+
+      // System identifiers must not carry into the copy; the adapter assigns new ones.
+      for (const field of activeCollection.fields) {
+        if (field.type === "readonly") {
+          delete values[field.key];
+        }
+      }
+
+      const titleKey = activeCollection.titleField;
+      if (titleKey && typeof values[titleKey] === "string" && values[titleKey]) {
+        values[titleKey] = `${values[titleKey]} (copy)`;
+      }
+
+      const [copy] = await adapter.importRecords(activeCollection.id, [values]);
+      const nextRecords = await adapter.listRecords(activeCollection.id);
+      setRecords(nextRecords);
+      setCollections((currentCollections) =>
+        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: nextRecords.length } : collection))
+      );
+
+      if (copy) {
+        setSelectedRecordId(copy.id);
+        setDraftRecord(copy);
+      }
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Unable to duplicate record.");
+    }
+  }
+
   async function handleSaveRecord(nextStatus?: PublishStatus) {
     if (!activeCollection || !draftRecord) {
       return;
@@ -313,6 +351,7 @@ export function useCmsWorkspace() {
     handleAssetUpload,
     handleCreateRecord,
     handleDeleteRecords,
+    handleDuplicateRecord,
     handleExport,
     handleImportRecords,
     handleSaveRecord,
