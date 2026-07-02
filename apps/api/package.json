@@ -15,5 +15,8 @@
     "@vercel/node": "^5.5.13",
     "tsx": "^4.21.0",
     "vercel": "^48.10.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0"
   }
 }

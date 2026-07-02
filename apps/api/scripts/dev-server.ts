@@ -8,7 +8,9 @@ const host = process.env.HOST ?? "0.0.0.0";
 
 const routes = {
   "/api/health": () => import("../api/health"),
-  "/api/meta": () => import("../api/meta")
+  "/api/meta": () => import("../api/meta"),
+  "/api/deploy": () => import("../api/deploy"),
+  "/api/deploy-status": () => import("../api/deploy-status")
 } satisfies Record<
   string,
   () => Promise<{ default: (request: VercelRequest, response: VercelResponse) => unknown }>
