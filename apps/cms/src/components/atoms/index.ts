@@ -13,4 +13,5 @@ export { Toggle } from "./toggle";
 export { SearchInput } from "./search-input";
 export { StatusDot, StatusPill } from "./status";
 export { Logo } from "./logo";
+export { ToastProvider, useToast, type ToastOptions, type ToastTone } from "./toast";
 export { buttonVariants, controlShadow, inputClass, type ButtonVariant } from "./styles";
