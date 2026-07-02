@@ -24,8 +24,12 @@ _Avoid_: Asset library, media collection
 The interface the CMS uses to read records, save records, and upload asset field files.
 _Avoid_: Supabase client, mock data
 
+**Collection Mode**:
+How editors work with a CMS Collection's records: `editorial` (publish workflow), `data` (editable, no publish workflow), or `readonly` (system-generated records like form submissions — view, export, delete only).
+_Avoid_: Per-record permissions, role-based access
+
 **Publish Status**:
-The editor-facing state that indicates whether a record is published, unpublished, or queued to publish.
+The editor-facing state that indicates whether a record is published, unpublished, or queued to publish. Only records in `editorial` mode collections carry one.
 _Avoid_: Version history, release workflow
 
 **Editorial Workspace**:
@@ -51,7 +55,8 @@ _Avoid_: Production content, screenshot copy
 - A **CMS Collection** has one or more **Collection Fields**.
 - An **Asset Field** belongs to exactly one **CMS Collection** field configuration.
 - The **CMS Data Adapter** provides records and asset uploads for each **CMS Collection**.
-- A CMS Collection record has one **Publish Status**.
+- A **CMS Collection** has one **Collection Mode** (`editorial` by default).
+- A CMS Collection record has one **Publish Status** only when its collection's **Collection Mode** is `editorial`.
 - The **Editorial Workspace** is optimized for desktop editorial work.
 - The **Editorial Workspace** shows the selected record in a **Record Editor Pane**.
 - A **CMS Collection** may define one **Title Field**.
