@@ -1,33 +1,28 @@
 import { renderToString } from "react-dom/server";
-import { App } from "./App";
-import { getRoute, prerenderRoutes, routes, sitemapRoutes, site } from "./routes";
-import "./styles.css";
+import { StaticRouter } from "react-router-dom";
+import { Layout } from "./components/layout/layout";
+import { buildHead } from "./lib/seo";
+import { getRoutes } from "./build-routes";
+import { notFoundRoute, site, type AppRoute } from "./routes";
 
-export { prerenderRoutes, routes, sitemapRoutes, site };
+export { getRoutes, notFoundRoute, site };
 
-export function render(url: string) {
-  const route = getRoute(url);
-  const canonicalUrl = new URL(route.seo.canonicalPath, site.url).toString();
-  const appHtml = renderToString(<App url={url} />);
+/**
+ * Server render for a single resolved route. Static/content routes render the
+ * full layout + page into HTML (for zero-JS delivery and indexing); client
+ * routes render an empty body (see prerender) and boot as an SPA.
+ */
+export function render(route: AppRoute) {
+  const appHtml = renderToString(
+    <StaticRouter location={route.path}>
+      <Layout>{route.render()}</Layout>
+    </StaticRouter>
+  );
 
-  const head = [
-    `<title>${escapeHtml(route.seo.title)}</title>`,
-    `<meta name="description" content="${escapeHtml(route.seo.description)}" />`,
-    `<link rel="canonical" href="${canonicalUrl}" />`,
-    `<meta property="og:title" content="${escapeHtml(route.seo.title)}" />`,
-    `<meta property="og:description" content="${escapeHtml(route.seo.description)}" />`,
-    `<meta property="og:url" content="${canonicalUrl}" />`,
-    `<meta property="og:type" content="website" />`,
-    `<meta name="twitter:card" content="summary_large_image" />`
-  ].join("\n    ");
-
-  return { appHtml, head };
+  return { appHtml, head: buildHead(route, site) };
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+/** Head-only render for client-route shells (no body content baked). */
+export function renderHead(route: AppRoute) {
+  return buildHead(route, site);
 }

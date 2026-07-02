@@ -4,28 +4,31 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 5173",
-    "build": "pnpm run build:client && pnpm run build:ssr && node scripts/prerender.mjs",
+    "dev": "node server.mjs",
+    "build": "pnpm run build:client && pnpm run build:ssr && node scripts/prerender.mjs && node scripts/optimize-images.mjs",
     "build:client": "vite build",
     "build:ssr": "vite build --ssr src/entry-server.tsx --outDir dist/server",
-    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "preview": "vite preview --host 0.0.0.0 --port 4173 --outDir dist/client",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.app.json --noEmit"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-rc.0",
+    "@supabase/supabase-js": "^2.110.0",
+    "@tailwindcss/vite": "^4.3.1",
     "@three-acts/config": "workspace:*",
     "@three-acts/utils": "workspace:*",
     "@vitejs/plugin-react": "^6.0.3",
-    "vite": "^8.1.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1",
     "tailwindcss": "^4.3.1",
-    "@tailwindcss/vite": "^4.3.1"
+    "vite": "^8.1.0"
   },
   "devDependencies": {
-    "@vercel/config": "^0.5.5",
     "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "@vercel/config": "^0.5.5",
+    "sharp": "^0.35.3"
   }
 }

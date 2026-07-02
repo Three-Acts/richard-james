@@ -1,5 +1,6 @@
 import { Section } from "../layout/section";
-import { Button } from "../ui/button";
+import { Island } from "../islands/island";
+import { ContactFormIsland } from "../islands/contact-form-island";
 
 export function HomeContactSection() {
   return (
@@ -9,9 +10,10 @@ export function HomeContactSection() {
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-white">Next step</p>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight landscape:text-6xl">Turn this scaffold into the campaign site.</h2>
         </div>
-        <Button.Link className="w-fit" href="mailto:hello@example.com" variant="light">
-          hello@example.com
-        </Button.Link>
+        <div className="w-full max-w-md">
+          {/* Interactive island: hydrates on its own; the rest of the page ships zero JS. */}
+          <Island name="contact-form" component={ContactFormIsland} />
+        </div>
       </Section.Container>
     </Section.Root>
   );

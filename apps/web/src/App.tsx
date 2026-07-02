@@ -1,36 +1,25 @@
-import { Toolbar } from "@base-ui-components/react/toolbar";
-import { Section } from "./components/layout/section";
-import { getRoute, routes } from "./routes";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Layout } from "./components/layout/layout";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { clientRoutes } from "./routes";
 
-type AppProps = {
-  url?: string;
-};
-
-export function App({ url }: AppProps) {
-  const pathname = url ?? (typeof window === "undefined" ? "/" : window.location.pathname);
-  const route = getRoute(pathname);
-
+/**
+ * Client-side SPA shell. Used only on `renderMode: "client"` routes (and in
+ * dev), where the app boots in the browser and can navigate between client
+ * routes without full reloads. Static pages never load this — they are served
+ * as prerendered HTML (with islands hydrating individually).
+ */
+export function App() {
   return (
-    <div className="min-h-screen bg-white text-black">
-      <header className="border-b border-black py-5">
-        <Section.Container className="flex items-center justify-between">
-          <a className="text-2xl font-semibold tracking-tight" href="/">
-            Three Acts
-          </a>
-          <Toolbar.Root className="flex items-center gap-2" aria-label="Primary navigation">
-            {routes.map((item) => (
-              <Toolbar.Link
-                key={item.path}
-                href={item.path}
-                className="border border-transparent px-4 py-2 text-sm font-medium text-black transition hover:border-black hover:bg-black hover:text-white"
-              >
-                {item.label}
-              </Toolbar.Link>
-            ))}
-          </Toolbar.Root>
-        </Section.Container>
-      </header>
-      <main>{route.render()}</main>
-    </div>
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          {clientRoutes.map((route) => (
+            <Route key={route.path} path={route.path} element={route.render()} />
+          ))}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
   );
 }
