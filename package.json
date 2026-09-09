@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "concurrently -c cyan,magenta,yellow npm:dev:web npm:dev:cms npm:dev:api",
     "dev:web": "npm run dev -w @three-acts/web",
     "dev:cms": "npm run dev -w @three-acts/cms",
     "dev:api": "npm run dev -w @three-acts/api",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

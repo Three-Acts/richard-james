@@ -36,6 +36,7 @@ import { Typography } from "./components/ui/typography";
 
 ```sh
 npm install
+npm run dev
 npm run dev:web
 npm run dev:cms
 npm run dev:api
