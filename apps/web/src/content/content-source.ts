@@ -2,7 +2,7 @@
  * Build-time content contract for the public web app.
  *
  * The web app is static-first: content is fetched from a `ContentSource` during
- * `pnpm build:web` (and during SSR dev) and baked into HTML. In dev the same
+ * `npm run build:web` (and during SSR dev) and baked into HTML. In dev the same
  * source powers live rendering, so editors see fresh data; at build the result
  * is frozen into static files.
  *

@@ -35,16 +35,16 @@ import { Typography } from "./components/ui/typography";
 ## Scripts
 
 ```sh
-pnpm install
-pnpm dev:web
-pnpm dev:cms
-pnpm dev:api
-pnpm build
-pnpm lint
-pnpm typecheck
+npm install
+npm run dev:web
+npm run dev:cms
+npm run dev:api
+npm run build
+npm run lint
+npm run typecheck
 ```
 
-Set `VITE_SITE_URL` before `pnpm build:web` to control canonical URLs and sitemap locations. Set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` to source content from Supabase instead of the built-in mock (see `apps/web/.env.example`).
+Set `VITE_SITE_URL` before `npm run build:web` to control canonical URLs and sitemap locations. Set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` to source content from Supabase instead of the built-in mock (see `apps/web/.env.example`).
 
 ## API App
 
@@ -79,7 +79,7 @@ If a specific deployment needs to call the API directly from the browser, set `V
 - **Static with islands** → the page is static HTML; interactive components get a `client:*` directive and hydrate individually. See _Islands_ below.
 - **Client routes** → the page's root React component uses `client:load`, server-renders as a static shell with baked SEO head, then hydrates and fetches live data at runtime (login, account, dashboard, checkout). `/dashboard` is the reference example.
 
-In development, `pnpm dev:web` (`astro dev`) renders every request with live data and mirrors production. `pnpm build:web` (`astro build`) freezes the same output into static files, then compresses images (`scripts/optimize-images.mjs`).
+In development, `npm run dev:web` (`astro dev`) renders every request with live data and mirrors production. `npm run build:web` (`astro build`) freezes the same output into static files, then compresses images (`scripts/optimize-images.mjs`).
 
 Per-page SEO + sitemap metadata is centralized in `src/page-meta.ts` and rendered by `src/layouts/BaseLayout.astro`. Only pages with `includeInSitemap: true` are written to `sitemap.xml` (with `lastmod`/`changefreq`/`priority`) by the `src/pages/sitemap.xml.ts` endpoint; `robots.txt` and `llms.txt` are generated the same way. `src/pages/404.astro` emits `404.html`.
 

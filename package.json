@@ -3,17 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.18.1",
+  "packageManager": "npm@11.12.1",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev:web": "pnpm --filter @three-acts/web dev",
-    "dev:cms": "pnpm --filter @three-acts/cms dev",
-    "dev:api": "pnpm --filter @three-acts/api dev",
-    "build": "pnpm -r --filter './apps/*' build",
-    "build:web": "pnpm --filter @three-acts/web build",
-    "build:cms": "pnpm --filter @three-acts/cms build",
-    "build:api": "pnpm --filter @three-acts/api build",
-    "lint": "pnpm -r --filter './apps/*' lint",
-    "typecheck": "pnpm -r --filter './apps/*' typecheck"
+    "dev:web": "npm run dev -w @three-acts/web",
+    "dev:cms": "npm run dev -w @three-acts/cms",
+    "dev:api": "npm run dev -w @three-acts/api",
+    "build": "npm run build -w ./apps --if-present",
+    "build:web": "npm run build -w @three-acts/web",
+    "build:cms": "npm run build -w @three-acts/cms",
+    "build:api": "npm run build -w @three-acts/api",
+    "lint": "npm run lint -w ./apps --if-present",
+    "typecheck": "npm run typecheck -w ./apps --if-present"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

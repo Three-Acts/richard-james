@@ -4,7 +4,7 @@ const apiOrigin = process.env.API_ORIGIN?.replace(/\/+$/, "");
 
 export const config: VercelConfig = {
   framework: "astro",
-  buildCommand: "pnpm build",
+  buildCommand: "npm run build",
   outputDirectory: "dist",
   cleanUrls: true,
   rewrites: apiOrigin

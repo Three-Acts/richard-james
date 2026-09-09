@@ -1,7 +1,7 @@
 import type { ContentEntry, ContentSource } from "./content-source";
 
 /**
- * Default content source. Ships seed data so `pnpm build:web` produces a
+ * Default content source. Ships seed data so `npm run build:web` produces a
  * complete static site with zero credentials. Swap in the Supabase source by
  * setting the Supabase env vars (see `./index.ts`).
  */
