@@ -13,7 +13,7 @@ import sharp from "sharp";
  * never referenced here.
  */
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const clientDist = path.join(appRoot, "dist/client");
+const clientDist = path.join(appRoot, "dist");
 
 const RASTER = /\.(png|jpe?g|webp)$/i;
 

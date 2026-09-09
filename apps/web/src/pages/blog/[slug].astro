@@ -1,0 +1,20 @@
+---
+import { getContentSource, type ContentEntry } from "../../content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { blogPostMeta } from "../../page-meta";
+import { BlogPostPage } from "../../views/BlogPostPage";
+
+export async function getStaticPaths() {
+  const source = await getContentSource();
+  const posts = await source.listPosts();
+  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+}
+
+type Props = { post: ContentEntry };
+
+const { post } = Astro.props;
+---
+
+<BaseLayout seo={blogPostMeta(post).seo}>
+  <BlogPostPage post={post} />
+</BaseLayout>

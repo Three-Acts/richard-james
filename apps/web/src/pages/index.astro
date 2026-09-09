@@ -1,0 +1,23 @@
+---
+import ContactFormIsland from "../components/islands/contact-form-island";
+import {
+  HomeContactSection,
+  HomeConversionPathSection,
+  HomeHeroSection,
+  HomeServicesSection,
+  HomeTechnicalFoundationSection
+} from "../components/sections";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { homeMeta } from "../page-meta";
+---
+
+<BaseLayout seo={homeMeta.seo}>
+  <HomeHeroSection />
+  <HomeServicesSection />
+  <HomeConversionPathSection />
+  <HomeTechnicalFoundationSection />
+  <HomeContactSection>
+    {/* Interactive island: hydrates on its own; the rest of the page ships zero JS. */}
+    <ContactFormIsland client:visible />
+  </HomeContactSection>
+</BaseLayout>

@@ -1,10 +1,10 @@
 # Three Acts React
 
-Vite, React, Tailwind, and Vercel API monorepo with a static public web app, an auth-gated CMS app, and a server-side API bridge.
+Astro, React, Tailwind, and Vercel API monorepo with a static public web app, an auth-gated CMS app, and a server-side API bridge.
 
 ## Apps
 
-- `apps/web` - public website that prerenders to **zero-JS static HTML** (Astro-style), with **islands** for interactivity, a **build-time content layer** (mock by default, Supabase-ready), route-level SEO + AEO metadata (JSON-LD, `sitemap.xml`, `robots.txt`, `llms.txt`), build-time **AVIF** image compression, and a same-origin `/api/*` convention.
+- `apps/web` - public **Astro** website that prerenders to **zero-JS static HTML**, with React **islands** for interactivity, a **build-time content layer** (mock by default, Supabase-ready), route-level SEO + AEO metadata (JSON-LD, `sitemap.xml`, `robots.txt`, `llms.txt`), build-time **AVIF** image compression, and a same-origin `/api/*` convention.
 - `apps/cms` - private CMS shell with `noindex,nofollow`, disallowing `robots.txt`, a provider-shaped auth interface ready for Clerk, Auth0, or Supabase, and the same same-origin `/api/*` convention.
 - `apps/api` - Vercel serverless API app for server-only template functionality such as CMS writes, payment callbacks, webhook handling, record validation, and integration bridges.
 - `packages/utils` - shared utility helpers such as `cn`, `clsx`, and `cv`, exported from `@three-acts/utils`.
@@ -73,19 +73,19 @@ If a specific deployment needs to call the API directly from the browser, set `V
 
 ## Web rendering model
 
-`apps/web` ships three kinds of pages, chosen per route via `renderMode` in `src/routes.tsx`:
+`apps/web` is an [Astro](https://astro.build) app (`output: "static"`, React via `@astrojs/react`). Pages live in `src/pages/*.astro` and compose React views from `src/views/` and sections/primitives from `src/components/`. Three kinds of pages:
 
-- **Static, no interactivity** → prerendered HTML + CSS, **zero JavaScript**.
-- **Static with islands** → HTML + CSS + a tiny island runtime + only the island's chunk. See _Islands_ below.
-- **Client (`renderMode: "client"`)** → a prerendered shell with baked SEO head that boots as an SPA and fetches live data at runtime (login, account, dashboard, checkout).
+- **Static, no interactivity** → no `client:*` directive, prerendered HTML + CSS, **zero JavaScript**.
+- **Static with islands** → the page is static HTML; interactive components get a `client:*` directive and hydrate individually. See _Islands_ below.
+- **Client routes** → the page's root React component uses `client:load`, server-renders as a static shell with baked SEO head, then hydrates and fetches live data at runtime (login, account, dashboard, checkout). `/dashboard` is the reference example.
 
-In development, `pnpm dev:web` runs a Vite SSR server (`server.mjs`) that renders every request through the same `entry-server` used at build — so dev shows live data and mirrors production. `pnpm build:web` freezes the same output into static files (`vite build` client + SSR + `scripts/prerender.mjs`), then compresses images (`scripts/optimize-images.mjs`).
+In development, `pnpm dev:web` (`astro dev`) renders every request with live data and mirrors production. `pnpm build:web` (`astro build`) freezes the same output into static files, then compresses images (`scripts/optimize-images.mjs`).
 
-Only routes with `includeInSitemap: true` are written to `sitemap.xml` (with `lastmod`/`changefreq`/`priority`). A `404.html` is emitted from the `NotFound` route.
+Per-page SEO + sitemap metadata is centralized in `src/page-meta.ts` and rendered by `src/layouts/BaseLayout.astro`. Only pages with `includeInSitemap: true` are written to `sitemap.xml` (with `lastmod`/`changefreq`/`priority`) by the `src/pages/sitemap.xml.ts` endpoint; `robots.txt` and `llms.txt` are generated the same way. `src/pages/404.astro` emits `404.html`.
 
 ### Islands
 
-An island is a self-contained, JSON-serializable component that server-renders into the HTML (indexable, works with no JS) and hydrates on its own. Register it in `src/islands/registry.ts` and render it with `<Island name="..." component={...} props={...} />`. Only pages containing an island load the runtime + that island's chunk. The home page contact form is the reference example.
+An island is a self-contained React component with JSON-serializable props that server-renders into the HTML (indexable, works with no JS) and hydrates on its own. Render it in an `.astro` page with a client directive, e.g. `<ContactFormIsland client:visible />`. Only pages containing an island load Astro's tiny hydration runtime + that island's chunk. The home page contact form is the reference example.
 
 ### Content layer
 
@@ -94,7 +94,7 @@ Content is read through a source in `src/content/`:
 - `mock-source.ts` is the default, so builds work with **zero credentials**.
 - `supabase-source.ts` activates automatically when `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` are set (read-only, anon key). It is loaded lazily, so mock builds never bundle Supabase.
 
-`build-routes.ts` expands a collection into concrete static routes (e.g. `/blog/:slug`) with per-entry SEO. Server-side writes belong in `apps/api`, not here.
+`src/pages/blog/[slug].astro` expands the collection into concrete static routes via `getStaticPaths`, with per-entry SEO from `blogPostMeta` in `src/page-meta.ts`. The content source is only imported from build-time code, so the Supabase client never ships to the browser. Server-side writes belong in `apps/api`, not here.
 
 ### Images
 

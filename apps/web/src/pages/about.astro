@@ -1,0 +1,9 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { aboutMeta } from "../page-meta";
+import { AboutPage } from "../views/AboutPage";
+---
+
+<BaseLayout seo={aboutMeta.seo}>
+  <AboutPage />
+</BaseLayout>

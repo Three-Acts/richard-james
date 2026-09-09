@@ -1,0 +1,10 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { dashboardMeta } from "../page-meta";
+import { DashboardPage } from "../views/DashboardPage";
+---
+
+{/* Client route: ships as static shell + hydrates immediately to fetch live data. */}
+<BaseLayout seo={dashboardMeta.seo}>
+  <DashboardPage client:load />
+</BaseLayout>

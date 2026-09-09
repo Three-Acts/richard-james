@@ -1,6 +1,6 @@
 # ADR 0001: Zero-JS static rendering with islands (pure Vite + React)
 
-- Status: Accepted
+- Status: Superseded by [ADR 0002](./0002-astro-migration.md)
 - Date: 2026-07-02
 
 ## Context

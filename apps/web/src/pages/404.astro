@@ -1,0 +1,9 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { notFoundMeta } from "../page-meta";
+import { NotFoundPage } from "../views/NotFoundPage";
+---
+
+<BaseLayout seo={notFoundMeta.seo}>
+  <NotFoundPage />
+</BaseLayout>

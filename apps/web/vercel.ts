@@ -3,9 +3,9 @@ import { routes, type VercelConfig } from "@vercel/config/v1";
 const apiOrigin = process.env.API_ORIGIN?.replace(/\/+$/, "");
 
 export const config: VercelConfig = {
-  framework: "vite",
+  framework: "astro",
   buildCommand: "pnpm build",
-  outputDirectory: "dist/client",
+  outputDirectory: "dist",
   cleanUrls: true,
   rewrites: apiOrigin
     ? [routes.rewrite("/api/(.*)", `${apiOrigin}/api/$1`)]
