@@ -30,7 +30,15 @@ export const apiFetch = async <TData>(
     },
     ...init
   });
-  const payload = (await response.json()) as ApiEnvelope<TData>;
+  let payload: ApiEnvelope<TData>;
+
+  try {
+    payload = (await response.json()) as ApiEnvelope<TData>;
+  } catch {
+    // A non-JSON body means nothing handled the request — usually the API is not
+    // running. Report that instead of leaking the JSON parser's own error.
+    throw new Error(`The API returned an unreadable response (${response.status}). Check that the API server is running.`);
+  }
 
   if (!response.ok || !payload.ok) {
     const message =

@@ -1,26 +1,113 @@
 import { cv } from "@three-acts/utils";
 
-// Shared class fragments for the dense, dark CMS control surfaces.
-// Solid shades from the Webflow reference (see theme.css cms-* tokens) — no opacity fills.
+// The CMS design system in one file: shared class fragments and cv variants that
+// every atom composes from. Colors, type sizes, radii, and shadows are tokens in
+// packages/config/theme.css — nothing here hard-codes a value.
 
-export const controlShadow =
-  "shadow-[inset_0_0.5px_0.5px_rgb(255_255_255_/_0.12),0_0.5px_1px_rgb(0_0_0_/_0.8)]";
+/**
+ * One focus treatment for every interactive surface. The offset keeps the ring
+ * visible on filled controls, including the gold primary button.
+ *
+ * `outline-solid` is required: Tailwind v4's `outline-hidden`/`outline-none` set
+ * `--tw-outline-style: none`, which silently suppresses a later `outline-2`.
+ */
+export const focusRing =
+  "outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-cms-accent";
 
-// Shared field-control surface (inputs, textareas, selects).
-export const inputClass =
-  "min-h-7 w-full rounded border border-cms-raised bg-cms-surface px-2 py-1 text-[13px] text-cms-text outline-none shadow-inner shadow-black/50 focus:border-cms-accent focus:ring-1 focus:ring-cms-accent";
+/** Raised bevel for controls that sit above a panel (buttons, steppers). */
+export const controlShadow = "shadow-cms-control";
 
-export type ButtonVariant = "normal" | "primary";
+/** Recessed well for controls you type into (inputs, textareas, select triggers). */
+export const wellShadow = "shadow-cms-well";
 
-// The Paper buttons: "normal" is the raised dark surface, "primary" is solid accent (#006ACC).
-// Exported so non-<button> elements (e.g. the asset-upload <label>) can share it.
+/** Chrome header: 40px, shared by the top bar, sidebar, records toolbar, list pane, and editor. */
+export const panelHeaderClass = "flex h-10 shrink-0 items-center gap-2.5 border-b border-cms-line px-3";
+
+/** Floating surface shared by every Base UI popup (select, menu, tooltip, dialog, toast). */
+export const popupClass = "rounded-cms-lg border border-cms-line-strong bg-cms-surface text-cms-text shadow-cms-popup outline-none";
+
+/** Uppercase eyebrow used for collection groups and table headers. */
+export const eyebrowClass = "text-micro font-medium uppercase tracking-[0.09em] text-cms-subtle";
+
+/** Selectable row: sidebar collections, table rows, record list entries. 32px on the 4px grid. */
+export const rowClass = "h-8 w-full items-center border-b border-cms-line text-left text-ui text-cms-text transition-colors hover:bg-cms-raised";
+
+export type ButtonVariant = "normal" | "primary" | "danger" | "ghost";
+export type ButtonSize = "sm" | "md";
+
 export const buttonVariants = cv({
-  base: `inline-flex h-6 items-center justify-center gap-1.5 rounded px-2 text-[11.5px] leading-none text-cms-text transition ${controlShadow} disabled:cursor-not-allowed disabled:opacity-55`,
+  base: [
+    "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-cms font-medium leading-none transition-colors",
+    "disabled:cursor-not-allowed disabled:opacity-50",
+    focusRing
+  ],
   variants: {
     variant: {
-      normal: ["bg-cms-surface hover:bg-cms-raised"],
-      primary: ["bg-cms-accent hover:bg-cms-accent-hover"]
+      normal: [`bg-cms-surface text-cms-text hover:bg-cms-raised ${controlShadow}`],
+      // The signature: ink on gold. Gold means "you can act here".
+      primary: [`bg-cms-accent text-cms-accent-ink hover:bg-cms-accent-hover active:bg-cms-accent-press ${controlShadow}`],
+      danger: [`bg-cms-danger text-cms-accent-ink hover:brightness-110 ${controlShadow}`],
+      ghost: ["bg-transparent text-cms-muted hover:bg-cms-raised hover:text-cms-text"]
+    },
+    size: {
+      sm: ["h-6 px-2 text-ui"],
+      md: ["h-8 px-3 text-ui-lg"]
     }
   },
-  defaultVariants: { variant: "normal" }
+  defaultVariants: { variant: "normal", size: "sm" }
+});
+
+/** Square icon-only buttons. `bare` sits flat in chrome; `raised` matches input height. */
+export const iconButtonVariants = cv({
+  base: ["grid shrink-0 place-items-center rounded-cms transition-colors disabled:cursor-not-allowed disabled:opacity-50", focusRing],
+  variants: {
+    tone: {
+      bare: ["size-6 text-cms-muted hover:bg-cms-raised hover:text-cms-text"],
+      raised: [`size-7 bg-cms-surface text-cms-text hover:bg-cms-raised ${controlShadow}`]
+    }
+  },
+  defaultVariants: { tone: "bare" }
+});
+
+/** Field control surface. 28px tall, 13px text — larger than the chrome around it. */
+export const inputVariants = cv({
+  base: [
+    "min-h-7 w-full rounded-cms border border-cms-line-strong bg-cms-surface px-2 py-1 text-field text-cms-text",
+    "placeholder:text-cms-subtle",
+    `${wellShadow} transition-colors`,
+    // Inputs ring on their own edge rather than outside it, so dense rows stay aligned.
+    "outline-hidden focus-visible:border-cms-accent focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-offset-0 focus-visible:outline-cms-accent",
+    "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+  ],
+  variants: {
+    tone: {
+      editable: [],
+      // Read-only mirrors of a value: same footprint, no affordance.
+      display: ["flex items-center text-cms-muted"]
+    }
+  },
+  defaultVariants: { tone: "editable" }
+});
+
+/** Publish Status. Shape carries the state as well as hue, so it survives at 8px. */
+export const statusDotVariants = cv({
+  base: ["inline-block size-2 shrink-0 rounded-full"],
+  variants: {
+    status: {
+      published: ["bg-cms-success"],
+      not_published: ["border border-dashed border-cms-track"],
+      queued_to_publish: ["border-2 border-cms-pending"]
+    }
+  }
+});
+
+export const statusTextVariants = cv({
+  base: ["inline-flex max-w-full items-center gap-2 truncate text-ui"],
+  variants: {
+    status: {
+      published: ["text-cms-success"],
+      not_published: ["text-cms-muted"],
+      queued_to_publish: ["text-cms-pending"]
+    }
+  }
 });

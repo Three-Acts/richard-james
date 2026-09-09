@@ -55,7 +55,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
   const selectedRecords = filteredRecords.filter((record) => selectedIds.has(record.id));
 
   return (
-    <div className="flex h-screen flex-col bg-cms-bg text-[11px] text-cms-text">
+    <div className="flex h-screen flex-col bg-cms-bg text-ui text-cms-text">
       <TopBar onSignOut={onSignOut} user={user} />
       <div className="flex min-h-0 flex-1">
         <CollectionSidebar activeCollectionId={activeCollectionId} groups={groups} isLoading={isLoadingCollections} onSelectCollection={handleSelectCollection} />
@@ -63,7 +63,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
         {activeCollection ? (
           <main className="relative flex min-h-0 min-w-0 flex-1">
             <section
-              className={cn("flex min-h-0 flex-col border-r border-cms-raised", selectedRecordId ? "w-[250px] shrink-0" : "min-w-0 flex-1")}
+              className={cn("flex min-h-0 flex-col border-r border-cms-line-strong", selectedRecordId ? "w-[250px] shrink-0" : "min-w-0 flex-1")}
               aria-label={`${activeCollection.label} records`}
             >
               {selectedRecordId ? (
@@ -95,8 +95,10 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                     selectedIds={selectedIds}
                     selectionMode={selectionMode}
                   />
-                  <footer className="flex h-7 shrink-0 items-center border-t border-cms-raised px-3 text-[11px] text-cms-muted">
-                    Showing {filteredRecords.length ? `1-${filteredRecords.length}` : "0"} of {records.length}
+                  <footer className="flex h-7 shrink-0 items-center border-t border-cms-line px-3 text-ui tabular-nums text-cms-subtle">
+                    {filteredRecords.length === records.length
+                      ? `${records.length} records`
+                      : `${filteredRecords.length} of ${records.length} records`}
                   </footer>
                 </>
               )}
@@ -119,7 +121,9 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
             ) : null}
           </main>
         ) : (
-          <main className="flex-1 p-4 text-[11px] text-cms-muted">No collections configured.</main>
+          <main className="grid flex-1 place-items-center p-8 text-center">
+            <p className="m-0 text-ui text-cms-subtle">No collections are registered yet. Add one to the Collection Registry to start editing.</p>
+          </main>
         )}
       </div>
 

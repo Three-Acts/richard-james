@@ -1,5 +1,5 @@
 import { useAuth } from "./auth/auth-context";
-import { ToastProvider } from "./components/atoms";
+import { ToastProvider, TooltipProvider } from "./components/atoms";
 import { CmsWorkspace } from "./screens/cms-workspace";
 import { LoginScreen } from "./screens/login-screen";
 
@@ -8,7 +8,9 @@ export function App() {
 
   return (
     <ToastProvider>
-      {user ? <CmsWorkspace onSignOut={signOut} user={user} /> : <LoginScreen isLoading={isLoading} onSignIn={signIn} />}
+      <TooltipProvider>
+        {user ? <CmsWorkspace onSignOut={signOut} user={user} /> : <LoginScreen isLoading={isLoading} onSignIn={signIn} />}
+      </TooltipProvider>
     </ToastProvider>
   );
 }

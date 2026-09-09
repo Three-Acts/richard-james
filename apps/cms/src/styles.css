@@ -4,7 +4,9 @@
 @layer base {
   :root {
     color-scheme: dark;
-    @apply bg-cms-bg text-cms-text antialiased;
+    @apply bg-cms-bg font-sans text-cms-text antialiased;
+    /* cv05: single-storey l with a tail — separates l/1/I at 11px. */
+    font-feature-settings: "cv05" 1, "ss03" 1;
   }
 
   body {
@@ -13,5 +15,24 @@
 
   * {
     @apply box-border;
+  }
+
+  ::selection {
+    @apply bg-cms-accent text-cms-accent-ink;
+  }
+
+  /* Identifiers are scanned character by character, so they get mono + tabular. */
+  code {
+    @apply font-mono tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

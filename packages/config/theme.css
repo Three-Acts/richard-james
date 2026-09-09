@@ -1,6 +1,7 @@
 @theme {
-  --font-sans: "Satoshi", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Fraunces", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --color-ink: #171512;
   --color-paper: #f7f1e7;
   --color-panel: #fffaf0;
@@ -10,15 +11,55 @@
   --color-gold: #d6a23f;
   --shadow-soft: 0 24px 80px rgb(23 21 18 / 0.14);
 
-  /* CMS admin palette — solid shades from the Webflow reference (no opacity fills) */
-  --color-cms-bg: #1e1e1e;
-  --color-cms-surface: #292929;
-  --color-cms-raised: #353535;
-  --color-cms-track: #5e5e5e;
-  --color-cms-text: #ffffff;
-  --color-cms-muted: #c4c4c4;
-  --color-cms-accent: #006acc;
-  --color-cms-accent-hover: #0077e0;
-  --color-cms-info: #a7d1ff;
-  --color-cms-success: #79e09c;
+  /*
+   * CMS admin palette — the dark counterpart to the paper site.
+   * Neutrals are keyed off --color-ink (hue ~40°, 4-7% saturation) so the
+   * workspace reads as the same studio as apps/web rather than a grey tool.
+   * All fills are solid: opacity is reserved for scrims and shadows.
+   */
+  --color-cms-bg: #1A1A19;
+  --color-cms-surface: #232323;
+  --color-cms-raised: #2E2E2D;
+  --color-cms-line: #2A2929;
+  --color-cms-line-strong: #373736;
+  --color-cms-track: #525252;
+  --color-cms-text: #EFEFEE;
+  --color-cms-muted: #A8A8A7;
+  --color-cms-subtle: #858585;
+
+  /* Gold carries every "you can act here" affordance. Text on it is ink, not
+   * white: white-on-gold is 2.2:1, ink-on-gold is 7.6:1. */
+  --color-cms-accent: #2064EC;
+  --color-cms-accent-hover: #558FFF;
+  --color-cms-accent-press: #1E4FAF;
+  --color-cms-accent-ink: #1A1A19;
+
+  /* Status hues stay clear of gold so state is never confused with action. */
+  --color-cms-success: #7fd3a0;
+  --color-cms-pending: #9cc2e8;
+  --color-cms-danger: #e4715c;
+  --color-cms-danger-surface: #2e1d19;
+  --color-cms-danger-line: #4a2a23;
+
+  /* Dense-tool type scale. Chrome is 11px; the values an editor types into are
+   * 13px — the content being edited outranks the interface around it. */
+  --text-micro: 10px;
+  --text-micro--line-height: 14px;
+  --text-ui: 11px;
+  --text-ui--line-height: 16px;
+  --text-ui-lg: 12px;
+  --text-ui-lg--line-height: 16px;
+  --text-field: 13px;
+  --text-field--line-height: 20px;
+  --text-display: 26px;
+  --text-display--line-height: 30px;
+
+  /* 4px grid: control 24/28, row 32, chrome header 40. */
+  --radius-cms-sm: 3px;
+  --radius-cms: 4px;
+  --radius-cms-lg: 8px;
+
+  --shadow-cms-control: inset 0 0.5px 0.5px rgb(255 255 255 / 0.1), 0 0.5px 1px rgb(0 0 0 / 0.8);
+  --shadow-cms-well: inset 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-cms-popup: 0 16px 40px rgb(0 0 0 / 0.55);
 }

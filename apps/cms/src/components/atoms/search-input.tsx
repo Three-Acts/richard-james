@@ -1,26 +1,35 @@
+import type { ReactElement } from "react";
 import { Search } from "lucide-react";
+import { Input as BaseInput } from "@base-ui-components/react/input";
 import { cn } from "@three-acts/utils";
+import { wellShadow } from "./styles";
 
 type SearchInputProps = {
   className?: string;
+  /** Compose the inner input with a Base UI part, e.g. `<Toolbar.Input />`. */
+  inputRender?: ReactElement<Record<string, unknown>>;
   onChange: (value: string) => void;
   placeholder?: string;
   value: string;
 };
 
-export function SearchInput({ className, onChange, placeholder, value }: SearchInputProps) {
+export function SearchInput({ className, inputRender, onChange, placeholder, value }: SearchInputProps) {
   return (
     <label
       className={cn(
-        "flex min-w-0 items-center gap-1.5 rounded border border-cms-raised bg-cms-surface px-2 text-cms-muted shadow-inner shadow-black/50",
+        "flex h-7 min-w-0 items-center gap-1.5 rounded-cms border border-cms-line-strong bg-cms-surface px-2 text-cms-subtle transition-colors",
+        wellShadow,
+        // Matches the focus treatment of every other field control.
+        "outline-hidden focus-within:border-cms-accent focus-within:text-cms-muted focus-within:outline-1 focus-within:outline-solid focus-within:outline-offset-0 focus-within:outline-cms-accent",
         className
       )}
     >
-      <Search size={16} aria-hidden="true" />
-      <input
-        className="h-6 min-w-0 flex-1 bg-transparent text-[13px] text-cms-text outline-none"
-        onChange={(event) => onChange(event.target.value)}
+      <Search size={14} aria-hidden="true" />
+      <BaseInput
+        className="min-w-0 flex-1 bg-transparent text-ui text-cms-text outline-none placeholder:text-cms-subtle"
+        onValueChange={(next) => onChange(next)}
         placeholder={placeholder}
+        render={inputRender}
         value={value}
       />
     </label>

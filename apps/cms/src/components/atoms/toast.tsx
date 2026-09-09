@@ -1,8 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { CheckCircle2, Info, Loader2, X, XCircle } from "lucide-react";
+import { Toast } from "@base-ui-components/react/toast";
 import { cn } from "@three-acts/utils";
+import { focusRing, popupClass } from "./styles";
 
 export type ToastTone = "loading" | "success" | "error" | "info";
 
@@ -14,118 +16,100 @@ export type ToastOptions = {
   duration?: number;
 };
 
-type ToastRecord = ToastOptions & { id: number; tone: ToastTone };
-
 type ToastApi = {
-  push: (options: ToastOptions) => number;
-  update: (id: number, options: ToastOptions) => void;
-  dismiss: (id: number) => void;
+  push: (options: ToastOptions) => string;
+  update: (id: string, options: ToastOptions) => void;
+  dismiss: (id: string) => void;
 };
 
-const ToastContext = createContext<ToastApi | null>(null);
-
 const toneStyles: Record<ToastTone, { icon: ReactNode; accent: string }> = {
-  loading: { icon: <Loader2 size={14} className="animate-spin" />, accent: "text-cms-info" },
+  loading: { icon: <Loader2 size={14} className="animate-spin" />, accent: "text-cms-pending" },
   success: { icon: <CheckCircle2 size={14} />, accent: "text-cms-success" },
-  error: { icon: <XCircle size={14} />, accent: "text-red-400" },
+  error: { icon: <XCircle size={14} />, accent: "text-cms-danger" },
   info: { icon: <Info size={14} />, accent: "text-cms-muted" }
 };
 
+function toneOf(type: string | undefined): ToastTone {
+  return type && type in toneStyles ? (type as ToastTone) : "info";
+}
+
+// Tone maps onto Base UI's `type`, which drives the icon and accent below.
+// `timeout: 0` keeps a toast up until it is updated or dismissed — the publish
+// flow relies on that to move one toast through queued → building → deployed.
+function toBaseOptions({ description, duration, title, tone }: ToastOptions) {
+  return {
+    title,
+    description,
+    type: tone ?? "info",
+    timeout: duration ?? 0,
+    priority: tone === "error" ? ("high" as const) : ("low" as const)
+  };
+}
+
 /**
- * Self-contained toast system for the CMS (Base UI has no toast primitive in
- * the installed version). Toasts render bottom-right and can be updated in
- * place — used by the publish flow to move a single toast through
- * queued → building → deployed.
+ * Base UI Toast, styled for the CMS. Toasts render bottom-right and can be
+ * swiped away or dismissed with the close button. Base UI puts the newest toast
+ * first in the list, so the column is reversed to keep it nearest the corner.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<ToastRecord[]>([]);
-  const nextId = useRef(1);
-  const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
-
-  const clearTimer = useCallback((id: number) => {
-    const timer = timers.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timers.current.delete(id);
-    }
-  }, []);
-
-  const dismiss = useCallback(
-    (id: number) => {
-      clearTimer(id);
-      setToasts((current) => current.filter((toast) => toast.id !== id));
-    },
-    [clearTimer]
-  );
-
-  const scheduleDismiss = useCallback(
-    (id: number, duration?: number) => {
-      clearTimer(id);
-      if (duration && duration > 0) {
-        timers.current.set(
-          id,
-          setTimeout(() => dismiss(id), duration)
-        );
-      }
-    },
-    [clearTimer, dismiss]
-  );
-
-  const push = useCallback(
-    (options: ToastOptions) => {
-      const id = nextId.current++;
-      const record: ToastRecord = { id, tone: options.tone ?? "info", ...options };
-      setToasts((current) => [...current, record]);
-      scheduleDismiss(id, options.duration);
-      return id;
-    },
-    [scheduleDismiss]
-  );
-
-  const update = useCallback(
-    (id: number, options: ToastOptions) => {
-      setToasts((current) => current.map((toast) => (toast.id === id ? { ...toast, tone: options.tone ?? "info", ...options } : toast)));
-      scheduleDismiss(id, options.duration);
-    },
-    [scheduleDismiss]
-  );
-
-  const api = useMemo<ToastApi>(() => ({ push, update, dismiss }), [push, update, dismiss]);
-
   return (
-    <ToastContext.Provider value={api}>
+    <Toast.Provider timeout={0} limit={4}>
       {children}
-      <div className="pointer-events-none fixed bottom-3.5 right-3.5 z-[100] flex w-80 max-w-[calc(100vw-1.75rem)] flex-col gap-2" role="region" aria-label="Notifications">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            role={toast.tone === "error" ? "alert" : "status"}
-            className="pointer-events-auto flex items-start gap-2.5 rounded-md border border-cms-raised bg-cms-surface px-3 py-2.5 text-[11.5px] text-cms-text shadow-2xl shadow-black/50"
-          >
-            <span className={cn("mt-px shrink-0", toneStyles[toast.tone].accent)}>{toneStyles[toast.tone].icon}</span>
-            <div className="min-w-0 flex-1">
-              <p className="m-0 font-semibold">{toast.title}</p>
-              {toast.description ? <p className="m-0 mt-0.5 text-cms-muted">{toast.description}</p> : null}
-            </div>
-            <button
-              aria-label="Dismiss notification"
-              className="-mr-1 -mt-0.5 shrink-0 rounded p-0.5 text-cms-muted transition hover:bg-cms-raised hover:text-cms-text"
-              onClick={() => dismiss(toast.id)}
-              type="button"
-            >
-              <X size={13} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
+      <Toast.Portal>
+        <Toast.Viewport className="pointer-events-none fixed bottom-3.5 right-3.5 z-100 flex w-80 max-w-[calc(100vw-1.75rem)] flex-col-reverse gap-2">
+          <ToastList />
+        </Toast.Viewport>
+      </Toast.Portal>
+    </Toast.Provider>
   );
 }
 
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error("useToast must be used within a ToastProvider.");
-  }
-  return context;
+function ToastList() {
+  const { toasts } = Toast.useToastManager();
+
+  return toasts.map((toast) => {
+    const tone = toneOf(toast.type);
+
+    return (
+      <Toast.Root
+        key={toast.id}
+        toast={toast}
+        className={cn(
+          popupClass,
+          "pointer-events-auto flex items-start gap-2.5 px-3 py-2.5 text-ui",
+          "transition-all duration-200 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-2 data-[starting-style]:opacity-0"
+        )}
+      >
+        <span className={cn("mt-px shrink-0", toneStyles[tone].accent)}>{toneStyles[tone].icon}</span>
+        <div className="min-w-0 flex-1">
+          <Toast.Title className="m-0 font-semibold" />
+          {toast.description ? <Toast.Description className="m-0 mt-0.5 text-cms-muted" /> : null}
+        </div>
+        <Toast.Close
+          aria-label="Dismiss notification"
+          className={cn("-mr-1 -mt-0.5 shrink-0 rounded-cms-sm p-0.5 text-cms-subtle transition-colors hover:bg-cms-raised hover:text-cms-text", focusRing)}
+        >
+          <X size={13} />
+        </Toast.Close>
+      </Toast.Root>
+    );
+  });
+}
+
+/**
+ * Push, update, and dismiss CMS toasts. The returned api is referentially
+ * stable, so it is safe to list in effect dependency arrays.
+ */
+export function useToast(): ToastApi {
+  // Base UI keeps add/update/close referentially stable, so the api below is too.
+  const { add, close, update } = Toast.useToastManager();
+
+  return useMemo(
+    () => ({
+      push: (options) => add(toBaseOptions(options)),
+      update: (id, options) => update(id, toBaseOptions(options)),
+      dismiss: (id) => close(id)
+    }),
+    [add, close, update]
+  );
 }

@@ -1,15 +1,14 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ReactElement } from "react";
+import { Button as BaseButton } from "@base-ui-components/react/button";
 import { cn } from "@three-acts/utils";
+import { iconButtonVariants } from "./styles";
 
-export function BareIconButton({ className, type = "button", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      className={cn(
-        "grid size-[22px] place-items-center rounded text-cms-muted transition hover:bg-cms-raised hover:text-cms-text",
-        className
-      )}
-      type={type}
-      {...props}
-    />
-  );
+type BareIconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  /** Compose the button with a Base UI part, e.g. `<Tooltip.Trigger />`. */
+  render?: ReactElement<Record<string, unknown>>;
+};
+
+/** Flat icon-only action for chrome headers (24px, no fill until hover). */
+export function BareIconButton({ className, type = "button", ...props }: BareIconButtonProps) {
+  return <BaseButton className={cn(iconButtonVariants({ tone: "bare" }), className)} type={type} {...props} />;
 }

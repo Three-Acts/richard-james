@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
+import { eyebrowClass } from "../atoms";
 
 export function EditorSection({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <section className="border-b border-cms-raised px-3 py-4">
-      <h3 className="mb-3.5 text-[12px] font-semibold leading-tight text-cms-text">{title}</h3>
+    <section className="border-b border-cms-line px-3 py-4 last:border-b-0">
+      <h3 className={`mb-3 ${eyebrowClass}`}>{title}</h3>
       {children}
     </section>
   );

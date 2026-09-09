@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { FileText, Upload } from "lucide-react";
 import type { CmsCollectionSummary, CmsRecordValue } from "../../cms/types";
 import { parseCsv, type CsvTable } from "../../lib/csv";
+import { cn } from "@three-acts/utils";
 import { Button, buttonVariants, Modal, Select } from "../atoms";
 
 const IGNORE = "";
@@ -101,7 +102,7 @@ export function ImportDialog({ collection, onClose, onImport }: ImportDialogProp
         Cancel
       </Button>
       <Button disabled={isImporting || mappedCount === 0} onClick={handleImport} type="button" variant="primary">
-        {isImporting ? "Importing..." : `Import ${table.rows.length} rows`}
+        {isImporting ? "Importing…" : `Import ${table.rows.length} rows`}
       </Button>
     </>
   ) : (
@@ -112,22 +113,24 @@ export function ImportDialog({ collection, onClose, onImport }: ImportDialogProp
 
   return (
     <Modal footer={footer} onClose={onClose} open title={`Import into ${collection.label}`}>
-      {error ? <p className="mb-3 rounded border border-red-900 bg-red-950 px-2 py-1.5 text-red-100">{error}</p> : null}
+      {error ? (
+        <p className="mb-3 rounded-cms border border-cms-danger-line bg-cms-danger-surface px-2 py-1.5 text-cms-danger">{error}</p>
+      ) : null}
 
       {table ? (
         <div className="grid gap-3">
           <div className="flex flex-wrap items-center gap-2 text-cms-muted">
-            <FileText size={16} />
-            <span className="truncate">{fileName}</span>
-            <span>
-              · {table.rows.length} rows · {table.headers.length} columns
+            <FileText size={14} />
+            <span className="truncate font-medium text-cms-text">{fileName}</span>
+            <span className="tabular-nums text-cms-subtle">
+              {table.rows.length} rows · {table.headers.length} columns
             </span>
           </div>
-          <p className="text-cms-muted">Map each field to a column from your file.</p>
+          <p className="m-0 text-cms-subtle">Match each Collection Field to a column from your file.</p>
           <div className="grid gap-2">
             {collection.fields.map((field) => (
               <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] items-center gap-2" key={field.key}>
-                <span className="truncate text-cms-text">{field.label}</span>
+                <span className="truncate text-cms-muted">{field.label}</span>
                 <Select
                   onValueChange={(next) => setMapping((current) => ({ ...current, [field.key]: next }))}
                   options={[{ label: "— Ignore —", value: IGNORE }, ...table.headers.map((header) => ({ label: header, value: header }))]}
@@ -138,10 +141,10 @@ export function ImportDialog({ collection, onClose, onImport }: ImportDialogProp
           </div>
         </div>
       ) : (
-        <div className="grid place-items-center gap-3 py-8 text-center">
-          <p className="text-cms-muted">Choose a CSV file to import records into this collection.</p>
-          <label className={buttonVariants({ variant: "primary" })}>
-            <Upload size={16} />
+        <div className="grid place-items-center gap-3 py-10 text-center">
+          <p className="m-0 max-w-[280px] text-cms-subtle">Pick a CSV file, then match its columns to this collection&rsquo;s fields.</p>
+          <label className={cn(buttonVariants({ size: "md", variant: "primary" }), "cursor-pointer")}>
+            <Upload size={14} />
             Choose CSV file
             <input accept=".csv,text/csv" className="sr-only" onChange={handleFile} type="file" />
           </label>

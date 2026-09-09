@@ -1,12 +1,15 @@
+import { useState } from "react";
 import type { ChangeEvent } from "react";
 import { ArrowLeft, Copy, Lock, Trash2 } from "lucide-react";
 import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, PublishStatus } from "../../cms/types";
 import { formatDateTime } from "../../lib/format";
 import { getRecordTitle, hasPublishWorkflow, isEditable } from "../../lib/records";
-import { BareIconButton, Button, PanelHeader, ScrollArea, SplitButton, StatusPill } from "../atoms";
+import { BareIconButton, Button, ConfirmDialog, PanelHeader, ScrollArea, SplitButton, StatusPill, Tooltip } from "../atoms";
 import { EditorSection } from "./editor-section";
 import { DetailRow } from "./detail-row";
 import { FieldControl } from "./field-control";
+
+const READ_ONLY_HINT = "Records in this collection are created by the site and cannot be edited.";
 
 type RecordEditorProps = {
   collection: CmsCollectionSummary;
@@ -35,23 +38,20 @@ export function RecordEditor({
   onUpdateValue,
   uploadingField
 }: RecordEditorProps) {
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const editable = isEditable(collection);
   const publishable = hasPublishWorkflow(collection);
-
-  function confirmDelete() {
-    if (window.confirm("Delete this record? This cannot be undone.")) {
-      onDelete();
-    }
-  }
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-cms-bg" aria-label={`${getRecordTitle(collection, draftRecord)} editor`}>
       <PanelHeader className="justify-between">
         <div className="flex min-w-0 items-center gap-2.5">
-          <BareIconButton aria-label="Back to table" onClick={onBack}>
-            <ArrowLeft size={16} />
-          </BareIconButton>
-          <h2 className="truncate text-[12px] font-bold text-cms-text">{getRecordTitle(collection, draftRecord)}</h2>
+          <Tooltip content="Back to table">
+            <BareIconButton aria-label="Back to table" onClick={onBack}>
+              <ArrowLeft size={15} />
+            </BareIconButton>
+          </Tooltip>
+          <h2 className="truncate text-ui-lg font-semibold text-cms-text">{getRecordTitle(collection, draftRecord)}</h2>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {publishable ? (
@@ -59,7 +59,7 @@ export function RecordEditor({
               <StatusPill status={draftRecord.publishStatus} />
               <SplitButton
                 disabled={isSaving}
-                label={isSaving ? "Saving..." : "Publish now"}
+                label={isSaving ? "Saving…" : "Publish now"}
                 onClick={() => onChangeStatus("published")}
                 options={[
                   { label: "Queue to publish", onSelect: () => onChangeStatus("queued_to_publish") },
@@ -71,13 +71,17 @@ export function RecordEditor({
           ) : null}
           {editable ? (
             <Button disabled={isSaving} onClick={onSave} variant={publishable ? "normal" : "primary"}>
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? "Saving…" : "Save"}
             </Button>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-1 text-[11px] text-cms-muted" title="Records in this collection are created by the site and cannot be edited.">
-              <Lock size={12} />
-              Read-only
-            </span>
+            <Tooltip content={READ_ONLY_HINT} side="left">
+              <span className="inline-flex items-center gap-1.5 px-1 text-ui text-cms-subtle">
+                <Lock size={12} />
+                Read-only
+                {/* The tooltip is visual only, so keep the reason readable by assistive tech. */}
+                <span className="sr-only">{READ_ONLY_HINT}</span>
+              </span>
+            </Tooltip>
           )}
         </div>
       </PanelHeader>
@@ -112,33 +116,45 @@ export function RecordEditor({
         </EditorSection>
 
         <EditorSection title="Item details">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-[11px]">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             {publishable ? (
               <DetailRow label="Publish status">
                 <StatusPill status={draftRecord.publishStatus} />
               </DetailRow>
             ) : null}
-            <DetailRow label="Created">{formatDateTime(draftRecord.createdAt)}</DetailRow>
-            <DetailRow label="Modified">{formatDateTime(draftRecord.modifiedAt)}</DetailRow>
+            <DetailRow label="Created">
+              <span className="tabular-nums">{formatDateTime(draftRecord.createdAt)}</span>
+            </DetailRow>
+            <DetailRow label="Modified">
+              <span className="tabular-nums">{formatDateTime(draftRecord.modifiedAt)}</span>
+            </DetailRow>
             <DetailRow label="Item ID">
-              <code className="truncate text-cms-muted">{draftRecord.id}</code>
+              <code className="truncate">{draftRecord.id}</code>
             </DetailRow>
           </div>
         </EditorSection>
       </ScrollArea>
 
-      <footer className="flex shrink-0 gap-2 border-t border-cms-raised px-3 py-3">
+      <footer className="flex shrink-0 gap-1.5 border-t border-cms-line px-3 py-2.5">
         {editable ? (
           <Button onClick={onDuplicate}>
-            <Copy size={16} />
+            <Copy size={13} />
             Duplicate
           </Button>
         ) : null}
-        <Button onClick={confirmDelete}>
-          <Trash2 size={16} />
+        <Button className="text-cms-muted hover:text-cms-danger" onClick={() => setIsConfirmingDelete(true)}>
+          <Trash2 size={13} />
           Delete
         </Button>
       </footer>
+
+      <ConfirmDialog
+        description="Delete this record? This cannot be undone."
+        onConfirm={onDelete}
+        onOpenChange={setIsConfirmingDelete}
+        open={isConfirmingDelete}
+        title={`Delete ${getRecordTitle(collection, draftRecord)}`}
+      />
     </section>
   );
 }
