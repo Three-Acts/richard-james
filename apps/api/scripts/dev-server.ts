@@ -8,10 +8,10 @@ import { loadEnvFiles } from "./load-env";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// apps/api/.env first (app-local overrides), then the repo-root .env.local
-// pulled by `neon link`/`neon deploy` (live Neon branch vars) — so `npm run
-// dev:api` works with zero manual env setup once the branch is linked.
-loadEnvFiles([resolve(__dirname, "../.env"), resolve(__dirname, "../../../.env.local")]);
+// apps/api/.env first (app-local overrides), then apps/api/.env.local
+// pulled by `neon env pull` (live Neon branch vars) — so `npm run
+// dev:api` works with zero manual env setup once that file is generated.
+loadEnvFiles([resolve(__dirname, "../.env"), resolve(__dirname, "../.env.local")]);
 
 const port = Number(process.env.PORT ?? 5175);
 const host = process.env.HOST ?? "0.0.0.0";

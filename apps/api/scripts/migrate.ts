@@ -17,14 +17,14 @@ import { generateSchemaSql } from "./schema-sql";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 loadEnvFiles([
-  resolve(__dirname, "../../../.env.local"), // repo root — live Neon branch vars (neon link/deploy)
+  resolve(__dirname, "../.env.local"), // apps/api/.env.local — live Neon branch vars (neon env pull)
   resolve(__dirname, "../.env") // apps/api/.env — fallback for anything .env.local doesn't set, if present
 ]);
 
 async function main() {
   const connectionString = process.env.DATABASE_URL_UNPOOLED;
   if (!connectionString) {
-    console.error("DATABASE_URL_UNPOOLED is not set. Run `neon link` (or source .env.local) first.");
+    console.error("DATABASE_URL_UNPOOLED is not set. Run `neon env pull --file apps/api/.env.local` first.");
     process.exit(1);
   }
 

@@ -35,7 +35,7 @@ import type { GalleryImage, Project, SeedPage } from "../seed/data/types";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 loadEnvFiles([
-  resolve(__dirname, "../../../.env.local"), // repo root — live Neon branch vars
+  resolve(__dirname, "../.env.local"), // apps/api/.env.local — live Neon branch vars
   resolve(__dirname, "../.env") // apps/api/.env — fallback for anything .env.local doesn't set, if present
 ]);
 
@@ -320,7 +320,7 @@ async function main(): Promise<void> {
   const skipImages = argv.includes("--skip-images");
 
   if (!dryRun && !process.env.DATABASE_URL) {
-    console.error("DATABASE_URL is not set. Run `neon link` (or source .env.local) first.");
+    console.error("DATABASE_URL is not set. Run `neon env pull --file apps/api/.env.local` first.");
     process.exit(1);
   }
 

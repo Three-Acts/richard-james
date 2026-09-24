@@ -13,7 +13,7 @@ import { loadEnvFiles } from "./load-env";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadEnvFiles([
-  resolve(__dirname, "../../../.env.local"), // repo root — live Neon branch vars
+  resolve(__dirname, "../.env.local"), // apps/api/.env.local — live Neon branch vars
   resolve(__dirname, "../.env") // apps/api/.env — fallback for anything .env.local doesn't set, if present
 ]);
 

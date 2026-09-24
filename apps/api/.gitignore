@@ -1,0 +1,3 @@
+# Written by `neon env pull --file apps/api/.env.local` (the root .gitignore already
+# covers it via `*.local`; this file exists so the Neon CLI does not auto-create one).
+.env.local
