@@ -1,5 +1,5 @@
-import { getProjectContentBySlug } from "../../_lib/content";
-import { ApiError, ok, withApi } from "../../_lib/http";
+import { getProjectContentBySlug } from "../../../_lib/content";
+import { ApiError, ok, withApi } from "../../../_lib/http";
 
 const readStringParam = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
 

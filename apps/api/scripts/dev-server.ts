@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { URL } from "node:url";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { dispatch } from "../api/_lib/router";
 import { loadEnvFiles } from "./load-env";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -15,88 +16,6 @@ loadEnvFiles([resolve(__dirname, "../.env"), resolve(__dirname, "../.env.local")
 
 const port = Number(process.env.PORT ?? 5175);
 const host = process.env.HOST ?? "0.0.0.0";
-
-type RouteLoader = () => Promise<{ default: (request: VercelRequest, response: VercelResponse) => unknown }>;
-
-// Vercel resolves each of these to a file under api/ by exact path, with
-// `[param]` segments (e.g. `[collectionId]`) matching any single path segment
-// and landing in `request.query`. This map stays explicit (no fs scanning) so
-// `tsx` can statically resolve every dynamic import below.
-const routes = {
-  "/api/health": () => import("../api/health"),
-  "/api/meta": () => import("../api/meta"),
-  "/api/deploy": () => import("../api/deploy"),
-  "/api/deploy-status": () => import("../api/deploy-status"),
-  "/api/content/site": () => import("../api/content/site"),
-  "/api/content/projects": () => import("../api/content/projects"),
-  "/api/content/projects/[slug]": () => import("../api/content/projects/[slug]"),
-  "/api/content/pages": () => import("../api/content/pages"),
-  "/api/content/pages/[slug]": () => import("../api/content/pages/[slug]"),
-  "/api/auth/sign-in": () => import("../api/auth/sign-in"),
-  "/api/auth/session": () => import("../api/auth/session"),
-  "/api/auth/sign-out": () => import("../api/auth/sign-out"),
-  "/api/cms/collections": () => import("../api/cms/collections"),
-  "/api/cms/collections/[collectionId]/records": () => import("../api/cms/collections/[collectionId]/records"),
-  "/api/cms/collections/[collectionId]/records/[recordId]": () =>
-    import("../api/cms/collections/[collectionId]/records/[recordId]"),
-  "/api/cms/collections/[collectionId]/import": () => import("../api/cms/collections/[collectionId]/import"),
-  "/api/cms/collections/[collectionId]/assets/[fieldKey]": () =>
-    import("../api/cms/collections/[collectionId]/assets/[fieldKey]"),
-  "/api/cms/collections/[collectionId]/status": () => import("../api/cms/collections/[collectionId]/status"),
-  "/api/cms/publish": () => import("../api/cms/publish")
-} satisfies Record<string, RouteLoader>;
-
-type CompiledRoute = {
-  regex: RegExp;
-  paramNames: string[];
-  load: RouteLoader;
-};
-
-const dynamicSegment = /^\[(.+)\]$/;
-
-/** Turns a route pattern like `/api/cms/collections/[collectionId]/records` into a matcher + its param names. */
-function compileRoute(pattern: string, load: RouteLoader): CompiledRoute {
-  const paramNames: string[] = [];
-
-  const regexSegments = pattern
-    .split("/")
-    .filter(Boolean)
-    .map((segment) => {
-      const dynamicMatch = segment.match(dynamicSegment);
-      if (dynamicMatch) {
-        paramNames.push(dynamicMatch[1]);
-        return "([^/]+)";
-      }
-      return segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    });
-
-  return {
-    regex: new RegExp(`^/${regexSegments.join("/")}/?$`),
-    paramNames,
-    load
-  };
-}
-
-const compiledRoutes = Object.entries(routes).map(([pattern, load]) => compileRoute(pattern, load));
-
-/** First matching route for `pathname`, plus the dynamic segment values extracted from it. */
-function matchRoute(pathname: string): { load: RouteLoader; params: Record<string, string> } | undefined {
-  for (const route of compiledRoutes) {
-    const match = route.regex.exec(pathname);
-    if (!match) {
-      continue;
-    }
-
-    const params: Record<string, string> = {};
-    route.paramNames.forEach((name, index) => {
-      params[name] = decodeURIComponent(match[index + 1]);
-    });
-
-    return { load: route.load, params };
-  }
-
-  return undefined;
-}
 
 const readBody = async (request: IncomingMessage) => {
   const chunks: Buffer[] = [];
@@ -169,22 +88,6 @@ const server = createServer(async (incomingRequest, outgoingResponse) => {
     incomingRequest.url ?? "/",
     `http://${incomingRequest.headers.host ?? `${host}:${port}`}`
   );
-  const matched = matchRoute(requestUrl.pathname);
-
-  if (!matched) {
-    outgoingResponse.statusCode = 404;
-    outgoingResponse.setHeader("Content-Type", "application/json; charset=utf-8");
-    outgoingResponse.end(
-      JSON.stringify({
-        ok: false,
-        error: {
-          code: "not_found",
-          message: "API route not found."
-        }
-      })
-    );
-    return;
-  }
 
   try {
     const body = await readBody(incomingRequest);
@@ -193,16 +96,15 @@ const server = createServer(async (incomingRequest, outgoingResponse) => {
       body,
       headers: incomingRequest.headers,
       method: incomingRequest.method,
-      // Route params (e.g. collectionId from `[collectionId]`) win over a
-      // same-named search param, matching Vercel's own dynamic-route query.
-      query: { ...buildQuery(requestUrl.searchParams), ...matched.params },
+      query: buildQuery(requestUrl.searchParams),
       url: incomingRequest.url,
       cookies: {}
     } as unknown as VercelRequest;
     const response = createVercelResponse(outgoingResponse);
-    const route = await matched.load();
 
-    await route.default(request, response);
+    // Same route table + matching semantics as the single Vercel function
+    // (api/[...path].ts) dispatches to — see api/_lib/router.ts.
+    await dispatch(request, response, requestUrl.pathname);
   } catch (caughtError) {
     if (outgoingResponse.headersSent) {
       console.error(caughtError);

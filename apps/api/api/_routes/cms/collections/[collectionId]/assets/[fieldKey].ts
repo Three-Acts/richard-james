@@ -1,7 +1,7 @@
 import type { UploadAssetBody } from "@three-acts/cms-schema";
-import { ApiError, ok, readJsonBody, withApi } from "../../../../_lib/http";
-import { requireAuth } from "../../../../_lib/auth";
-import { uploadAsset } from "../../../../_lib/cms/service";
+import { ApiError, ok, readJsonBody, withApi } from "../../../../../_lib/http";
+import { requireAuth } from "../../../../../_lib/auth";
+import { uploadAsset } from "../../../../../_lib/cms/service";
 
 const readStringParam = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
 

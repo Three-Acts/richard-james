@@ -1,6 +1,6 @@
-import { ok, withApi } from "./_lib/http";
-import { requireAuth } from "./_lib/auth";
-import { triggerDeploy } from "./_lib/vercel";
+import { ok, withApi } from "../_lib/http";
+import { requireAuth } from "../_lib/auth";
+import { triggerDeploy } from "../_lib/vercel";
 
 /**
  * POST /api/deploy — trigger a Vercel deploy hook to rebuild the static site

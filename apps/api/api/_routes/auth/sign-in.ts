@@ -1,6 +1,6 @@
 import type { SignInBody } from "@three-acts/cms-schema";
-import { ApiError, ok, readJsonBody, withApi } from "../_lib/http";
-import { signInWithEmail } from "../_lib/neon-auth";
+import { ApiError, ok, readJsonBody, withApi } from "../../_lib/http";
+import { signInWithEmail } from "../../_lib/neon-auth";
 
 /** POST /api/auth/sign-in  body { email, password } -> AuthSession */
 export default withApi(["POST"], async (request, response) => {

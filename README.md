@@ -164,6 +164,14 @@ Notes:
 - `POST /api/deploy` - triggers a Vercel deploy hook (the CMS's Publish flow).
 - `GET /api/deploy-status` - normalized Vercel deployment state for progress feedback.
 
+Vercel's Hobby plan caps a deployment at 12 Serverless Functions, and Vercel would
+otherwise build one per file under `api/`. To stay under that limit, every handler above
+actually lives under `api/_routes/**` (Vercel ignores files/directories under `api/`
+whose name starts with `_`), and `api/index.ts` is the only Vercel function (`vercel.json` rewrites every `/api/*` path to it) -
+it dispatches each request to the right handler through the route table in
+`api/_lib/router.ts`. Add a new route by adding its file under `api/_routes` and a line
+to that table.
+
 There is no contact form and no `/api/contact` route or `contact-submissions`
 collection - both were removed; the site's Contact page (see **Web rendering model**)
 is a plain mailto/tel index with nothing to submit.

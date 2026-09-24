@@ -1,6 +1,6 @@
-import { ApiError, ok, withApi } from "./_lib/http";
-import { requireAuth } from "./_lib/auth";
-import { getDeploymentStatus } from "./_lib/vercel";
+import { ApiError, ok, withApi } from "../_lib/http";
+import { requireAuth } from "../_lib/auth";
+import { getDeploymentStatus } from "../_lib/vercel";
 
 const DEPLOYMENT_ID_PATTERN = /^dpl_[A-Za-z0-9]+$/;
 

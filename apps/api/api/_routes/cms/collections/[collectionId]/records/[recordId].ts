@@ -1,7 +1,7 @@
 import type { SaveRecordBody } from "@three-acts/cms-schema";
-import { ApiError, ok, readJsonBody, withApi } from "../../../../_lib/http";
-import { requireAuth } from "../../../../_lib/auth";
-import { deleteRecord, getRecord, saveRecord } from "../../../../_lib/cms/service";
+import { ApiError, ok, readJsonBody, withApi } from "../../../../../_lib/http";
+import { requireAuth } from "../../../../../_lib/auth";
+import { deleteRecord, getRecord, saveRecord } from "../../../../../_lib/cms/service";
 
 const readStringParam = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
 
