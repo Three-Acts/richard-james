@@ -11,3 +11,4 @@ coverage
 .astro
 .neon
 .claude
+.vercel
