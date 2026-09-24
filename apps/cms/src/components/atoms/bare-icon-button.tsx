@@ -6,9 +6,18 @@ import { iconButtonVariants } from "./styles";
 type BareIconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   /** Compose the button with a Base UI part, e.g. `<Tooltip.Trigger />`. */
   render?: ReactElement<Record<string, unknown>>;
+  /** Set false when `render` is not a real <button> (e.g. an anchor) so Base UI adds the button semantics itself. */
+  nativeButton?: boolean;
 };
 
 /** Flat icon-only action for chrome headers (24px, no fill until hover). */
-export function BareIconButton({ className, type = "button", ...props }: BareIconButtonProps) {
-  return <BaseButton className={cn(iconButtonVariants({ tone: "bare" }), className)} type={type} {...props} />;
+export function BareIconButton({ className, nativeButton = true, type = "button", ...props }: BareIconButtonProps) {
+  return (
+    <BaseButton
+      className={cn(iconButtonVariants({ tone: "bare" }), className)}
+      nativeButton={nativeButton}
+      type={nativeButton ? type : undefined}
+      {...props}
+    />
+  );
 }

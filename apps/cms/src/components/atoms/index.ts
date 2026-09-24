@@ -1,13 +1,14 @@
 export { Button } from "./button";
 export { IconButton } from "./icon-button";
 export { BareIconButton } from "./bare-icon-button";
+export { AssetControl, getAssetMeta, rememberAssetMeta } from "./asset-field";
 export { Checkbox } from "./checkbox";
 export { ConfirmDialog } from "./confirm-dialog";
 export { FormField } from "./form-field";
 export { Modal } from "./modal";
 export { PanelHeader } from "./panel-header";
 export { ScrollArea } from "./scroll-area";
-export { SplitButton, type SplitButtonOption } from "./split-button";
+export { SplitButton, MenuButton, type SplitButtonOption, type MenuButtonOption } from "./split-button";
 export { Input } from "./input";
 export { NumberInput } from "./number-input";
 export { Textarea } from "./textarea";
@@ -20,6 +21,7 @@ export { ToastProvider, useToast, type ToastOptions, type ToastTone } from "./to
 export { Tooltip, TooltipProvider } from "./tooltip";
 export {
   buttonVariants,
+  columnHeaderClass,
   controlShadow,
   eyebrowClass,
   fileLabelFocusRing,

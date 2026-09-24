@@ -1,13 +1,12 @@
-import type { ChangeEvent } from "react";
-import { ExternalLink, Upload } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { cn } from "@three-acts/utils";
 import type { AssetField, CmsField, CmsRecord, CmsRecordValue, SelectField, SlugField } from "../../cms/types";
-import { buttonVariants, fileLabelFocusRing, FormField, Input, inputVariants, NumberInput, Select, Textarea, Toggle } from "../atoms";
+import { AssetControl, FormField, Input, inputVariants, NumberInput, Select, Textarea, Toggle } from "../atoms";
 import { formatDateTime, fromDateTimeLocal, toDateTimeLocal } from "../../lib/format";
 
 type FieldControlProps = {
   field: CmsField;
-  onAssetUpload: (field: AssetField, event: ChangeEvent<HTMLInputElement>) => void;
+  onAssetUpload: (field: AssetField, file: File) => void;
   onUpdateValue: (fieldKey: string, value: CmsRecordValue) => void;
   /** Render the value as a plain display instead of an editable control. */
   readOnly?: boolean;
@@ -119,27 +118,17 @@ export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, re
 
   if (field.type === "asset") {
     const assetField = field as AssetField;
-    const fileValue = String(value);
 
     return (
       <FormField description={field.helpText} htmlFor={uploadId} label={field.label} required={field.required}>
-        <div className="grid grid-cols-fill-auto gap-2">
-          <div className={cn(inputVariants({ tone: "display" }), "overflow-hidden border-dashed border-cms-track")}>
-            <span className={cn("truncate", fileValue && "font-mono")}>{fileValue || "No file selected"}</span>
-          </div>
-          <label className={cn(buttonVariants({ variant: "normal" }), "cursor-pointer", fileLabelFocusRing)}>
-            <Upload size={13} />
-            {uploadingField === field.key ? "Uploading…" : "Upload"}
-            <input
-              accept={assetField.accept}
-              className="sr-only"
-              disabled={uploadingField === field.key}
-              id={uploadId}
-              onChange={(event) => onAssetUpload(assetField, event)}
-              type="file"
-            />
-          </label>
-        </div>
+        <AssetControl
+          accept={assetField.accept}
+          inputId={uploadId}
+          isUploading={uploadingField === field.key}
+          onClear={() => onUpdateValue(field.key, "")}
+          onFile={(file) => onAssetUpload(assetField, file)}
+          value={String(value)}
+        />
       </FormField>
     );
   }
