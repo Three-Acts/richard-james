@@ -10,7 +10,8 @@ export const site = {
   location: "Gqeberha (Port Elizabeth), South Africa",
   email: "richardjames502@gmail.com",
   phone: "+27 79 427 3687",
-  phoneHref: "tel:+27794273687",
+  // phoneHref is derived from `phone` at read time (see api/_lib/content.ts's
+  // derivePhoneHref) rather than stored — "+27 79 427 3687" -> "tel:+27794273687".
   description:
     "Richard James — South African / UK artist based in Gqeberha (Port Elizabeth), South Africa. Contemporary works exploring Buddhist practice, affect theory and the unborn."
 }

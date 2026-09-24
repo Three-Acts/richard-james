@@ -181,7 +181,8 @@ async function upsertSiteSettings(
     location: siteSeed.location ?? "",
     email: siteSeed.email,
     phone: siteSeed.phone ?? "",
-    phoneHref: siteSeed.phoneHref ?? "",
+    // phoneHref is no longer a stored column — derived from phone at read
+    // time (see api/_lib/content.ts's derivePhoneHref).
     description: siteSeed.description,
     ogImage: urlForLocalPath(urlByLocalPath, "/images/og-default.jpg")
   };

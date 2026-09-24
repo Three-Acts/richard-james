@@ -19,7 +19,7 @@ export type SiteContent = {
   location: string;
   email: string;
   phone: string;
-  /** `tel:` link, e.g. "tel:+27794273687". */
+  /** `tel:` link derived server-side from `phone`, e.g. "tel:+27794273687". */
   phoneHref: string;
   /** Default meta description. */
   description: string;

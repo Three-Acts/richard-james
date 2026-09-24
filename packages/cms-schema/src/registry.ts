@@ -180,12 +180,11 @@ export const collectionRegistry: CmsCollection[] = [
       { key: "tagline", label: "Tagline", type: "text", required: true, section: "custom" },
       { key: "location", label: "Location", type: "text", section: "custom" },
       { key: "email", label: "Email", type: "text", required: true, section: "custom" },
-      { key: "phone", label: "Phone", type: "text", section: "custom" },
       {
-        key: "phoneHref",
-        label: "Phone link",
+        key: "phone",
+        label: "Phone",
         type: "text",
-        helpText: "tel: link, e.g. tel:+27794273687",
+        helpText: "Displayed as written; the tel: link is derived from it automatically.",
         section: "custom"
       },
       {

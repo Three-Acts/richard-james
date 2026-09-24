@@ -46,6 +46,27 @@ function numberValue(record: CmsRecord, key: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/**
+ * `phoneHref` was a stored field; it's now derived from `phone` (a `tel:`
+ * link keeps only a leading "+" and digits) — e.g. "+27 79 427 3687" ->
+ * "tel:+27794273687". Empty phone -> "".
+ */
+function derivePhoneHref(phone: string): string {
+  const trimmed = phone.trim();
+  if (!trimmed) {
+    return "";
+  }
+  const leadingPlus = trimmed.startsWith("+") ? "+" : "";
+  const digits = trimmed.replace(/[^\d]/g, "");
+  return digits ? `tel:${leadingPlus}${digits}` : "";
+}
+
+// Tiny self-check at module load (pure, no I/O) against the registry's own
+// example phone number (site-settings' old `phoneHref` helpText).
+if (derivePhoneHref("+27 79 427 3687") !== "tel:+27794273687" || derivePhoneHref("") !== "" || derivePhoneHref("  ") !== "") {
+  throw new Error("derivePhoneHref regressed: check the digit/plus-stripping logic.");
+}
+
 async function listRecords(collectionId: string, options: ListRecordsStoreOptions): Promise<CmsRecord[]> {
   const collection = getCollection(collectionId);
   const { records } = await getDataStore().listRecords(collection, options);
@@ -119,7 +140,7 @@ export async function getSiteContent(): Promise<SiteContent> {
     location: stringValue(record, "location"),
     email: stringValue(record, "email"),
     phone: stringValue(record, "phone"),
-    phoneHref: stringValue(record, "phoneHref"),
+    phoneHref: derivePhoneHref(stringValue(record, "phone")),
     description: stringValue(record, "description"),
     ogImage: stringValue(record, "ogImage")
   };

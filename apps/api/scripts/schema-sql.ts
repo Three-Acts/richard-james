@@ -159,6 +159,9 @@ function indexSql(collection: CmsCollection): string {
  *   (an index depending on a column blocks a plain `drop column`); the new
  *   one on `slug` is created by the generic `indexSql` pass, same as any
  *   other `slug`-typed field.
+ * - `site_settings.phone_href` is gone: `phoneHref` is now derived from
+ *   `phone` at read time (see `derivePhoneHref` in api/_lib/content.ts)
+ *   rather than stored.
  */
 const LEGACY_CLEANUP_SQL = [
   "-- Cleanup: project-images -> projects.gallery (see registry.ts history).",
@@ -177,7 +180,10 @@ const LEGACY_CLEANUP_SQL = [
   "  end if;",
   "end $$;",
   "drop index if exists uq_pages_key;",
-  "alter table pages drop column if exists key;"
+  "alter table pages drop column if exists key;",
+  "",
+  "-- Cleanup: site_settings.phone_href -> derived from phone (see content.ts).",
+  "alter table site_settings drop column if exists phone_href;"
 ].join("\n");
 
 export function generateSchemaSql(): string {
