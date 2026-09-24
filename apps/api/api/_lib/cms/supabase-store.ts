@@ -153,9 +153,14 @@ export class SupabaseDataStore implements CmsDataStore {
     };
   }
 
-  async countRecords(collection: CmsCollection): Promise<number> {
+  async countRecords(collection: CmsCollection, filter?: { publishStatus?: PublishStatus }): Promise<number> {
     const client = requireClient();
-    const { count, error } = await client.from(collection.tableName).select("*", { count: "exact", head: true });
+    const sys = systemColumnsFor(collection);
+    let query = client.from(collection.tableName).select("*", { count: "exact", head: true });
+    if (filter?.publishStatus) {
+      query = query.eq(sys.publishStatus, filter.publishStatus);
+    }
+    const { count, error } = await query;
     if (error) {
       throw error;
     }
@@ -251,6 +256,25 @@ export class SupabaseDataStore implements CmsDataStore {
       throw error;
     }
     return data?.length ?? 0;
+  }
+
+  async setPublishStatus(collection: CmsCollection, recordIds: string[], status: PublishStatus): Promise<CmsRecord[]> {
+    const client = requireClient();
+    const sys = systemColumnsFor(collection);
+    const now = new Date().toISOString();
+
+    const { data, error } = await client
+      .from(collection.tableName)
+      .update({ [sys.publishStatus]: status, [sys.modifiedAt]: now })
+      .in(sys.id, recordIds)
+      .select("*");
+    if (error) {
+      throw error;
+    }
+
+    const records = (data ?? []).map((row: Record<string, unknown>) => mapRowToRecord(collection, row));
+    const byId = new Map(records.map((record) => [record.id, record]));
+    return recordIds.map((id) => byId.get(id)).filter((record): record is CmsRecord => Boolean(record));
   }
 }
 

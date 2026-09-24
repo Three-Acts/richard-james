@@ -1,4 +1,4 @@
-import type { CmsRecord, CmsRecordValue, ListRecordsOptions } from "./types";
+import type { CmsRecord, CmsRecordValue, ListRecordsOptions, PublishStatus } from "./types";
 
 /**
  * Wire contract for the CMS REST bridge (`apps/api/api/cms/*`), consumed by
@@ -13,6 +13,7 @@ import type { CmsRecord, CmsRecordValue, ListRecordsOptions } from "./types";
  *   DELETE /api/cms/collections/:collectionId/records/:recordId   -> { deleted: true }
  *   POST   /api/cms/collections/:collectionId/import              body ImportRecordsBody  -> CmsRecord[]
  *   POST   /api/cms/collections/:collectionId/assets/:fieldKey    body UploadAssetBody    -> AssetUploadResult
+ *   POST   /api/cms/collections/:collectionId/status              body SetPublishStatusBody -> CmsRecord[]
  *   POST   /api/cms/publish                                       body PublishBody        -> { published: number }
  *
  * All routes require the same bearer auth as /api/deploy.
@@ -25,6 +26,7 @@ export const cmsApiPaths = {
   import: (collectionId: string) => `/cms/collections/${encodeURIComponent(collectionId)}/import` as const,
   asset: (collectionId: string, fieldKey: string) =>
     `/cms/collections/${encodeURIComponent(collectionId)}/assets/${encodeURIComponent(fieldKey)}` as const,
+  status: (collectionId: string) => `/cms/collections/${encodeURIComponent(collectionId)}/status` as const,
   publish: () => "/cms/publish" as const
 };
 
@@ -32,6 +34,7 @@ export type CreateRecordBody = { values?: Partial<Record<string, CmsRecordValue>
 export type SaveRecordBody = { record: CmsRecord; expectedModifiedAt?: string };
 export type ImportRecordsBody = { rows: Array<Record<string, CmsRecordValue>> };
 export type PublishBody = { collectionId?: string };
+export type SetPublishStatusBody = { recordIds: string[]; publishStatus: Exclude<PublishStatus, "published"> };
 /** Base64 payload keeps the bridge dependency-free; keep files under 4 MB (Vercel body limit). */
 export type UploadAssetBody = { fileName: string; contentType: string; size: number; data: string };
 

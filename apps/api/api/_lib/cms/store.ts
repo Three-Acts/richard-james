@@ -15,7 +15,7 @@ export interface CmsDataStore {
 
   listRecords(collection: CmsCollection, options: ListRecordsOptions): Promise<ListRecordsResult>;
 
-  countRecords(collection: CmsCollection): Promise<number>;
+  countRecords(collection: CmsCollection, filter?: { publishStatus?: PublishStatus }): Promise<number>;
 
   getRecord(collection: CmsCollection, recordId: string): Promise<CmsRecord | null>;
 
@@ -42,6 +42,13 @@ export interface CmsDataStore {
 
   /** Flips every `queued_to_publish` record in this collection to `published`; returns the count changed. */
   publishQueued(collection: CmsCollection): Promise<number>;
+
+  /**
+   * Sets `status` (and stamps the modified column with "now") on every id in
+   * `recordIds` that exists in this collection. Returns the updated records
+   * in the same order as `recordIds`, silently skipping unknown ids.
+   */
+  setPublishStatus(collection: CmsCollection, recordIds: string[], status: PublishStatus): Promise<CmsRecord[]>;
 }
 
 export interface CmsBlobStore {

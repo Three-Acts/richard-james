@@ -134,10 +134,20 @@ export const mockCmsBackend: CmsBackend = {
   data: {
     async listCollections() {
       return delay(
-        collectionRegistry.map((collection) => ({
-          ...collection,
-          count: records[collection.id]?.length ?? 0
-        }))
+        collectionRegistry.map((collection) => {
+          const collectionRecords = records[collection.id] ?? [];
+          // Only collections with a publish workflow can carry queued records —
+          // mirrors the same check in publishQueued.
+          const hasPublishWorkflow = (collection.mode ?? "editorial") === "editorial";
+
+          return {
+            ...collection,
+            count: collectionRecords.length,
+            queuedCount: hasPublishWorkflow
+              ? collectionRecords.filter((record) => record.publishStatus === "queued_to_publish").length
+              : 0
+          };
+        })
       );
     },
 
@@ -260,6 +270,32 @@ export const mockCmsBackend: CmsBackend = {
       }
 
       return delay({ published }, 200);
+    },
+
+    async setPublishStatus(collectionId: string, recordIds: string[], status: Exclude<PublishStatus, "published">) {
+      const collection = assertWritable(getCollection(collectionId));
+
+      if ((collection.mode ?? "editorial") !== "editorial") {
+        throw new CmsError("validation", `${collection.label} has no publish workflow.`);
+      }
+
+      const idSet = new Set(recordIds);
+      const now = new Date().toISOString();
+      const updatedById = new Map<string, CmsRecord>();
+
+      records[collectionId] = (records[collectionId] ?? []).map((record) => {
+        if (!idSet.has(record.id)) {
+          return record;
+        }
+
+        const nextRecord = { ...record, publishStatus: status, modifiedAt: now };
+        updatedById.set(record.id, nextRecord);
+        return nextRecord;
+      });
+
+      const updated = recordIds.filter((id) => updatedById.has(id)).map((id) => cloneRecord(updatedById.get(id) as CmsRecord));
+
+      return delay(updated, 200);
     }
   },
 

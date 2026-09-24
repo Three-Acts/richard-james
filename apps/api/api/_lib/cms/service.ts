@@ -18,6 +18,8 @@ import {
 import { getBlobStore, getDataStore } from "./resolve-store";
 
 const MAX_IMPORT_ROWS = 1000;
+const MAX_STATUS_RECORD_IDS = 1000;
+const STATUS_TARGETS: ReadonlyArray<PublishStatus> = ["queued_to_publish", "not_published"];
 
 function getCollectionOrThrow(collectionId: string): CmsCollection {
   const collection = collectionRegistry.find((item) => item.id === collectionId);
@@ -163,6 +165,11 @@ function isPublishStatus(value: unknown): value is PublishStatus {
   return value === "published" || value === "not_published" || value === "queued_to_publish";
 }
 
+/** Only editorial (or default-mode) collections have a publish workflow; "data"/"readonly" collections never queue. */
+function hasPublishWorkflow(collection: CmsCollection): boolean {
+  return collection.mode === undefined || collection.mode === "editorial";
+}
+
 function sanitizeFileName(fileName: string): string {
   const cleaned = fileName.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
   return cleaned || "file";
@@ -173,7 +180,10 @@ export async function listCollections(): Promise<CmsCollectionSummary[]> {
   return Promise.all(
     collectionRegistry.map(async (collection) => ({
       ...collection,
-      count: await store.countRecords(collection)
+      count: await store.countRecords(collection),
+      queuedCount: hasPublishWorkflow(collection)
+        ? await store.countRecords(collection, { publishStatus: "queued_to_publish" })
+        : 0
     }))
   );
 }
@@ -321,4 +331,37 @@ export async function publishQueued(collectionId?: string): Promise<{ published:
   }
 
   return { published };
+}
+
+/**
+ * Bulk status override for the selection toolbar ("Update items"). Only
+ * `queued_to_publish` and `not_published` are valid targets — `published` is
+ * reached solely through `publishQueued` + a site deploy — and only
+ * collections with a publish workflow can be queued at all.
+ */
+export async function setPublishStatus(collectionId: string, recordIds: string[], status: PublishStatus): Promise<CmsRecord[]> {
+  const collection = assertWritable(getCollectionOrThrow(collectionId));
+
+  if (!Array.isArray(recordIds) || recordIds.length === 0 || !recordIds.every((id) => typeof id === "string")) {
+    throw new CmsError("validation", "recordIds must be a non-empty array of strings.");
+  }
+  if (recordIds.length > MAX_STATUS_RECORD_IDS) {
+    throw new CmsError("validation", `Status updates are limited to ${MAX_STATUS_RECORD_IDS} records per request.`);
+  }
+
+  if (status === "published") {
+    throw new CmsError(
+      "validation",
+      "Records are published by running publishQueued and deploying the site, not by setting status directly. Use 'queued_to_publish' to queue them first."
+    );
+  }
+  if (!STATUS_TARGETS.includes(status)) {
+    throw new CmsError("validation", "publishStatus must be 'queued_to_publish' or 'not_published'.");
+  }
+
+  if (!hasPublishWorkflow(collection)) {
+    throw new CmsError("validation", `${collection.label} has no publish workflow.`);
+  }
+
+  return getDataStore().setPublishStatus(collection, recordIds, status);
 }

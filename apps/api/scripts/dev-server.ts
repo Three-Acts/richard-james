@@ -25,6 +25,7 @@ const routes = {
   "/api/cms/collections/[collectionId]/import": () => import("../api/cms/collections/[collectionId]/import"),
   "/api/cms/collections/[collectionId]/assets/[fieldKey]": () =>
     import("../api/cms/collections/[collectionId]/assets/[fieldKey]"),
+  "/api/cms/collections/[collectionId]/status": () => import("../api/cms/collections/[collectionId]/status"),
   "/api/cms/publish": () => import("../api/cms/publish")
 } satisfies Record<string, RouteLoader>;
 

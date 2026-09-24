@@ -12,8 +12,10 @@ import type {
   ListRecordsOptions,
   ListRecordsResult,
   PublishBody,
+  PublishStatus,
   SaveRecordBody,
   SaveRecordOptions,
+  SetPublishStatusBody,
   UploadAssetBody
 } from "./types";
 
@@ -139,6 +141,11 @@ export function createRestCmsBackend(options: RestCmsBackendOptions): CmsBackend
       publishQueued(collectionId?: string) {
         const body: PublishBody = { collectionId };
         return cmsRequest<{ published: number }>(cmsApiPaths.publish(), jsonInit(body));
+      },
+
+      setPublishStatus(collectionId: string, recordIds: string[], status: Exclude<PublishStatus, "published">) {
+        const body: SetPublishStatusBody = { recordIds, publishStatus: status };
+        return cmsRequest<CmsRecord[]>(cmsApiPaths.status(collectionId), jsonInit(body));
       }
     },
 

@@ -75,8 +75,12 @@ export class MemoryDataStore implements CmsDataStore {
     return { records: page, total };
   }
 
-  async countRecords(collection: CmsCollection): Promise<number> {
-    return this.recordsFor(collection.id).length;
+  async countRecords(collection: CmsCollection, filter?: { publishStatus?: PublishStatus }): Promise<number> {
+    const records = this.recordsFor(collection.id);
+    if (!filter?.publishStatus) {
+      return records.length;
+    }
+    return records.filter((record) => record.publishStatus === filter.publishStatus).length;
   }
 
   async getRecord(collection: CmsCollection, recordId: string): Promise<CmsRecord | null> {
@@ -143,6 +147,25 @@ export class MemoryDataStore implements CmsDataStore {
     }
 
     return count;
+  }
+
+  async setPublishStatus(collection: CmsCollection, recordIds: string[], status: PublishStatus): Promise<CmsRecord[]> {
+    const records = this.recordsFor(collection.id);
+    const byId = new Map(records.map((record) => [record.id, record]));
+    const now = new Date().toISOString();
+    const updated: CmsRecord[] = [];
+
+    for (const id of recordIds) {
+      const record = byId.get(id);
+      if (!record) {
+        continue;
+      }
+      record.publishStatus = status;
+      record.modifiedAt = now;
+      updated.push(cloneRecord(record));
+    }
+
+    return updated;
   }
 }
 

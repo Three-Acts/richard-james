@@ -88,6 +88,8 @@ export type CmsCollection = {
 
 export type CmsCollectionSummary = CmsCollection & {
   count: number;
+  /** Records currently `queued_to_publish`; drives whether "Publish site" is offered. */
+  queuedCount: number;
 };
 
 export type AssetUploadResult = {
@@ -140,6 +142,12 @@ export type CmsDataAdapter = {
    * the data adapter.
    */
   publishQueued: (collectionId?: string) => Promise<{ published: number }>;
+  /**
+   * Bulk status override for the selection toolbar ("Update items"). Only
+   * `queued_to_publish` and `not_published` are valid targets: `published` is
+   * reached solely through `publishQueued` + a site deploy.
+   */
+  setPublishStatus: (collectionId: string, recordIds: string[], status: Exclude<PublishStatus, "published">) => Promise<CmsRecord[]>;
 };
 
 /** File storage. Independent from data so Postgres data can pair with R2/Supabase Storage. */
