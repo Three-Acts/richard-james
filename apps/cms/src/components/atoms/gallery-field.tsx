@@ -4,7 +4,7 @@ import { GripVertical, ImagePlus, Trash2, Upload } from "lucide-react";
 import { cn } from "@three-acts/utils";
 import { MAX_ASSET_UPLOAD_BYTES } from "../../cms/types";
 import type { GalleryItem } from "../../cms/types";
-import { fileNameFromUrl, formatFileSize, getAssetMeta, matchesAccept } from "./asset-utils";
+import { fileNameFromUrl, formatAssetSize, formatFileSize, getAssetMeta, isPendingUpload, matchesAccept } from "./asset-utils";
 import { BareIconButton } from "./bare-icon-button";
 import { Input } from "./input";
 import { buttonVariants, fileLabelFocusRing } from "./styles";
@@ -78,13 +78,15 @@ function splitExtension(fileName: string): [string, string] {
 
 type GalleryControlProps = {
   accept?: string;
+  /** Disables the drop zone (new files can't be added) — items already there can still be reordered, captioned, or removed. Used while this field's pending files are uploading, so a fresh drop can't race that upload. */
+  disabled?: boolean;
   /** Id of the hidden multi-file input, so `FormField`'s label stays wired to it. */
   inputId: string;
   items: GalleryItem[];
   /** Shown as "N / maxItems" next to the count when provided. */
   maxItems?: number;
-  /** Files still uploading for this field — rendered as skeleton rows. */
-  uploadingCount: number;
+  /** Files still being decoded/resized/re-encoded client-side for this field — rendered as skeleton rows. Nothing has been uploaded yet. */
+  optimizingCount: number;
   onFiles: (files: File[]) => void;
   onChange: (items: GalleryItem[]) => void;
 };
@@ -98,7 +100,7 @@ type GalleryControlProps = {
  * component only ever hands back the files the editor picked or dropped
  * (`onFiles`) and the reordered/captioned/trimmed item list (`onChange`).
  */
-export function GalleryControl({ accept, inputId, items, maxItems, uploadingCount, onFiles, onChange }: GalleryControlProps) {
+export function GalleryControl({ accept, disabled, inputId, items, maxItems, optimizingCount, onFiles, onChange }: GalleryControlProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [hasRejectedFile, setHasRejectedFile] = useState(false);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -126,7 +128,9 @@ export function GalleryControl({ accept, inputId, items, maxItems, uploadingCoun
 
   function handleDropZoneDragOver(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault();
-    setIsDragging(true);
+    if (!disabled) {
+      setIsDragging(true);
+    }
   }
 
   function handleDropZoneDragLeave(event: DragEvent<HTMLLabelElement>) {
@@ -137,7 +141,10 @@ export function GalleryControl({ accept, inputId, items, maxItems, uploadingCoun
   function handleDropZoneDrop(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault();
     setIsDragging(false);
-    acceptFiles(event.dataTransfer.files);
+
+    if (!disabled) {
+      acceptFiles(event.dataTransfer.files);
+    }
   }
 
   function removeItem(index: number) {
@@ -231,7 +238,7 @@ export function GalleryControl({ accept, inputId, items, maxItems, uploadingCoun
       <label
         className={cn(
           "relative flex min-h-20 flex-col items-center justify-center gap-1 rounded-cms border border-dashed border-cms-track bg-cms-surface px-4 py-3 text-center transition-colors",
-          "cursor-pointer",
+          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
           isDragging && "border-cms-accent bg-cms-raised",
           fileLabelFocusRing
         )}
@@ -253,7 +260,8 @@ export function GalleryControl({ accept, inputId, items, maxItems, uploadingCoun
             new to scroll to. */}
         <input
           accept={accept}
-          className="absolute inset-0 cursor-pointer opacity-0"
+          className="absolute inset-0 cursor-[inherit] opacity-0"
+          disabled={disabled}
           id={inputId}
           multiple
           onChange={(event) => {
@@ -265,13 +273,14 @@ export function GalleryControl({ accept, inputId, items, maxItems, uploadingCoun
       </label>
       {errorMessage}
 
-      {items.length > 0 || uploadingCount > 0 ? (
+      {items.length > 0 || optimizingCount > 0 ? (
         <div className="grid gap-1.5">
           {items.map((item, index) => {
             const meta = getAssetMeta(item.src);
             const fileName = meta?.fileName ?? fileNameFromUrl(item.src);
             const [baseName, extension] = splitExtension(fileName);
-            const sizeLabel = meta ? formatFileSize(meta.size) : null;
+            const sizeLabel = formatAssetSize(meta);
+            const isPending = isPendingUpload(item.src);
             const occurrence = (srcOccurrences.get(item.src) ?? 0) + 1;
             srcOccurrences.set(item.src, occurrence);
             const rowKey = occurrence > 1 ? `${item.src}#${occurrence}` : item.src;
@@ -310,9 +319,16 @@ export function GalleryControl({ accept, inputId, items, maxItems, uploadingCoun
                 </div>
                 <div className="flex-1">
                   <div className="min-w-24 shrink-0">
-                    <p className="m-0 truncate text-ui font-medium text-cms-text">
-                      {baseName}
-                      <span className="text-cms-subtle">{extension}</span>
+                    <p className="m-0 flex items-center gap-1.5 truncate text-ui font-medium text-cms-text">
+                      <span className="truncate">
+                        {baseName}
+                        <span className="text-cms-subtle">{extension}</span>
+                      </span>
+                      {isPending ? (
+                        <span className="shrink-0 rounded-cms-sm bg-cms-pending/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cms-pending">
+                          Pending upload
+                        </span>
+                      ) : null}
                     </p>
                     {sizeLabel ? <p className="m-0 text-ui text-cms-subtle">{sizeLabel}</p> : null}
                   </div>
@@ -333,11 +349,11 @@ export function GalleryControl({ accept, inputId, items, maxItems, uploadingCoun
               </div>
             );
           })}
-          {Array.from({ length: uploadingCount }, (_, index) => (
+          {Array.from({ length: optimizingCount }, (_, index) => (
             <div
               aria-hidden="true"
               className="flex items-center gap-2.5 rounded-cms border border-cms-line-strong bg-cms-surface p-2"
-              key={`uploading-${index}`}
+              key={`optimizing-${index}`}
             >
               <div className="size-16 shrink-0 animate-pulse rounded-cms bg-cms-raised" />
               <div className="grid flex-1 gap-1.5">
@@ -354,9 +370,9 @@ export function GalleryControl({ accept, inputId, items, maxItems, uploadingCoun
           {items.length}
           {maxItems ? ` / ${maxItems}` : ""} image{items.length === 1 ? "" : "s"}
         </span>
-        {uploadingCount > 0 ? (
+        {optimizingCount > 0 ? (
           <span>
-            · Uploading {uploadingCount} image{uploadingCount === 1 ? "" : "s"}…
+            · Optimising {optimizingCount} image{optimizingCount === 1 ? "" : "s"}…
           </span>
         ) : null}
       </div>

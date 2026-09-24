@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { DragEvent } from "react";
 import { ArrowUpRight, FileText, Film, Image as ImageIcon, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { cn } from "@three-acts/utils";
-import { fileNameFromUrl, formatFileSize, getAssetMeta, matchesAccept } from "./asset-utils";
+import { fileNameFromUrl, formatAssetSize, getAssetMeta, isPendingUpload, matchesAccept } from "./asset-utils";
 import { BareIconButton } from "./bare-icon-button";
 import { Button } from "./button";
 import { Tooltip } from "./tooltip";
@@ -74,14 +74,15 @@ type AssetControlProps = {
   accept?: string;
   /** Id of whichever file input is currently mounted, so `FormField`'s label stays wired to it. */
   inputId: string;
-  isUploading: boolean;
+  /** True while a just-picked file is being decoded/resized/re-encoded client-side — nothing has been uploaded yet. */
+  isOptimizing: boolean;
   onClear: () => void;
   onFile: (file: File) => void;
   value: string;
 };
 
 /** Webflow-style asset picker: a drop zone when empty, a preview card with actions once a file is set. */
-export function AssetControl({ accept, inputId, isUploading, onClear, onFile, value }: AssetControlProps) {
+export function AssetControl({ accept, inputId, isOptimizing, onClear, onFile, value }: AssetControlProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [hasRejectedFile, setHasRejectedFile] = useState(false);
   const [mediaFailed, setMediaFailed] = useState(false);
@@ -117,7 +118,7 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
 
   function handleDragOver(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault();
-    if (!isUploading) {
+    if (!isOptimizing) {
       setIsDragging(true);
     }
   }
@@ -131,7 +132,7 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
     event.preventDefault();
     setIsDragging(false);
 
-    if (!isUploading) {
+    if (!isOptimizing) {
       acceptFiles(event.dataTransfer.files);
     }
   }
@@ -146,7 +147,7 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
         <label
           className={cn(
             "relative flex min-h-24 flex-col items-center justify-center gap-1 rounded-cms border border-dashed border-cms-track bg-cms-surface px-4 py-4 text-center transition-colors",
-            isUploading ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+            isOptimizing ? "cursor-not-allowed opacity-60" : "cursor-pointer",
             isDragging && "border-cms-accent bg-cms-raised",
             fileLabelFocusRing
           )}
@@ -154,10 +155,10 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
-          {isUploading ? (
+          {isOptimizing ? (
             <>
               <Loader2 aria-hidden="true" className="animate-spin text-cms-muted" size={20} />
-              <span className="text-ui font-medium text-cms-text">Uploading…</span>
+              <span className="text-ui font-medium text-cms-text">Optimising…</span>
             </>
           ) : (
             <>
@@ -176,7 +177,7 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
           <input
             accept={accept}
             className="absolute inset-0 cursor-[inherit] opacity-0"
-            disabled={isUploading}
+            disabled={isOptimizing}
             id={inputId}
             onChange={(event) => {
               acceptFiles(event.target.files);
@@ -194,8 +195,9 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
   const meta = getAssetMeta(value);
   const fileName = meta?.fileName ?? fileNameFromUrl(value);
   const dimensionLabel = kind === "image" && naturalSize ? `${naturalSize.width} × ${naturalSize.height}` : null;
-  const sizeLabel = meta ? formatFileSize(meta.size) : null;
+  const sizeLabel = formatAssetSize(meta);
   const detailLabel = [dimensionLabel, sizeLabel].filter(Boolean).join(" • ");
+  const isPending = isPendingUpload(value);
 
   return (
     <div className="grid gap-1.5">
@@ -226,7 +228,14 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="m-0 truncate text-ui font-medium text-cms-text">{fileName}</p>
+          <p className="m-0 flex items-center gap-1.5 truncate text-ui font-medium text-cms-text">
+            <span className="truncate">{fileName}</span>
+            {isPending ? (
+              <span className="shrink-0 rounded-cms-sm bg-cms-pending/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cms-pending">
+                Pending upload
+              </span>
+            ) : null}
+          </p>
           {detailLabel ? <p className="m-0 truncate text-ui text-cms-subtle">{detailLabel}</p> : null}
         </div>
         <Tooltip content="Open">
@@ -246,7 +255,7 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
           className={cn(
             "relative",
             buttonVariants({ variant: "normal" }),
-            isUploading ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+            isOptimizing ? "cursor-not-allowed opacity-50" : "cursor-pointer",
             fileLabelFocusRing
           )}
         >
@@ -256,7 +265,7 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
           <input
             accept={accept}
             className="absolute inset-0 cursor-[inherit] opacity-0"
-            disabled={isUploading}
+            disabled={isOptimizing}
             id={inputId}
             onChange={(event) => {
               acceptFiles(event.target.files);

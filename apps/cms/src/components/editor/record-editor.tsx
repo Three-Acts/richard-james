@@ -6,7 +6,7 @@ import { getRecordTitle, hasPublishWorkflow, isEditable } from "../../lib/record
 import { BareIconButton, Button, ConfirmDialog, PanelHeader, ScrollArea, SplitButton, StatusPill, Tooltip } from "../atoms";
 import { EditorSection } from "./editor-section";
 import { DetailRow } from "./detail-row";
-import { FieldControl, type GalleryUploadProgress } from "./field-control";
+import { FieldControl, type GalleryOptimizeProgress, type UploadProgress } from "./field-control";
 
 const READ_ONLY_HINT = "Records in this collection are created by the site and cannot be edited.";
 
@@ -22,7 +22,7 @@ function sectionOf(field: CmsField): "basic" | "custom" | "seo" {
 type RecordEditorProps = {
   collection: CmsCollectionSummary;
   draftRecord: CmsRecord;
-  galleryUpload: GalleryUploadProgress;
+  galleryOptimizing: GalleryOptimizeProgress;
   isDirty: boolean;
   isSaving: boolean;
   onAssetUpload: (field: AssetField, file: File) => void;
@@ -35,13 +35,15 @@ type RecordEditorProps = {
   onGalleryUpload: (field: GalleryField, files: File[]) => void;
   onSave: () => void;
   onUpdateValue: (fieldKey: string, value: CmsRecordValue) => void;
-  uploadingField: string | null;
+  optimizingField: string | null;
+  /** Non-null while `onSave`'s pending files are uploading — overrides the Save/Queue button labels with "Uploading N of M…". */
+  uploadProgress: UploadProgress;
 };
 
 export function RecordEditor({
   collection,
   draftRecord,
-  galleryUpload,
+  galleryOptimizing,
   isDirty,
   isSaving,
   onAssetUpload,
@@ -53,26 +55,38 @@ export function RecordEditor({
   onGalleryUpload,
   onSave,
   onUpdateValue,
-  uploadingField
+  optimizingField,
+  uploadProgress
 }: RecordEditorProps) {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const editable = isEditable(collection);
   const publishable = hasPublishWorkflow(collection);
   const allowCreate = collection.allowCreate ?? true;
   const allowDelete = collection.allowDelete ?? true;
+  // Files are uploading (the network phase, distinct from `optimizingField`/
+  // `galleryOptimizing`'s client-side phase): don't let a new drop start
+  // mid-upload, since that file's own eventual Save would race this one.
+  // Everything else — title, other text fields — stays editable; a value
+  // edited now is preserved (see `handleSaveRecord`'s use of
+  // `replaceBlobUrlsForKeys`), it just won't be part of THIS save.
+  const isUploading = uploadProgress !== null;
+  const savingLabel = uploadProgress
+    ? `Uploading ${Math.min(uploadProgress.completed + 1, uploadProgress.total)} of ${uploadProgress.total}…`
+    : "Saving…";
 
   function renderField(field: CmsField) {
     return (
       <FieldControl
         field={field}
-        galleryUpload={galleryUpload}
+        galleryOptimizing={galleryOptimizing}
         key={field.key}
+        locked={isUploading}
         onAssetUpload={onAssetUpload}
         onGalleryUpload={onGalleryUpload}
         onUpdateValue={onUpdateValue}
         readOnly={!editable}
         record={draftRecord}
-        uploadingField={uploadingField}
+        optimizingField={optimizingField}
       />
     );
   }
@@ -109,7 +123,7 @@ export function RecordEditor({
               <StatusPill status={draftRecord.publishStatus} />
               <SplitButton
                 disabled={isSaving}
-                label={isSaving ? "Saving…" : "Queue to publish"}
+                label={isSaving ? savingLabel : "Queue to publish"}
                 onClick={() => onChangeStatus("queued_to_publish")}
                 options={[
                   // Keeping the current status a draft is "not published", not
@@ -128,7 +142,7 @@ export function RecordEditor({
           ) : null}
           {editable ? (
             <Button disabled={isSaving} onClick={onSave} variant={publishable ? "normal" : "primary"}>
-              {isSaving ? "Saving…" : "Save"}
+              {isSaving ? savingLabel : "Save"}
             </Button>
           ) : (
             <Tooltip content={READ_ONLY_HINT} side="left">

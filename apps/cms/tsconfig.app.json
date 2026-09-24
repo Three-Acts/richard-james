@@ -1,7 +1,13 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["vite/client", "react", "react-dom"]
+    "types": ["vite/client", "react", "react-dom"],
+    // optimize-image.test.ts imports image-dimensions.ts with an explicit
+    // ".ts" extension so it can run directly under `node
+    // --experimental-strip-types` (Node's ESM resolver requires it) — this
+    // just permits that at type-check time too. `noEmit` (tsconfig.base.json)
+    // already satisfies the flag's own requirement.
+    "allowImportingTsExtensions": true
   },
   "include": ["src", "vite.config.ts", "vercel.ts"]
 }

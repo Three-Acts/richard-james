@@ -16,24 +16,31 @@ import { formatDateTime, fromDateTimeLocal, toDateTimeLocal } from "../../lib/fo
 import { useReferenceOptions } from "../../hooks/use-reference-options";
 
 /**
- * Upload progress for the currently-uploading `gallery` field, if any. Keyed
- * by both the record and the field: without `recordId`, switching to a
- * different record mid-upload would show that record's gallery as "still
- * uploading" too, since only the field key was being compared.
+ * Client-side optimisation progress for the currently-processing `gallery`
+ * field, if any — no network upload has happened yet at this point, files
+ * are only being decoded/resized/re-encoded and staged as pending. Keyed by
+ * both the record and the field: without `recordId`, switching to a
+ * different record mid-batch would show that record's gallery as "still
+ * optimising" too, since only the field key was being compared.
  */
-export type GalleryUploadProgress = { recordId: string; fieldKey: string; remaining: number } | null;
+export type GalleryOptimizeProgress = { recordId: string; fieldKey: string; remaining: number } | null;
+
+/** Save-time network upload progress for a record's pending files, if any — shown in place of the plain "Saving…" label. */
+export type UploadProgress = { completed: number; total: number } | null;
 
 type FieldControlProps = {
   field: CmsField;
   /** Files an editor picked/dropped onto a `gallery` field's control. */
   onGalleryUpload: (field: GalleryField, files: File[]) => void;
-  galleryUpload: GalleryUploadProgress;
+  galleryOptimizing: GalleryOptimizeProgress;
+  /** True while this record's pending files are uploading (the Save-time network phase) — disables new asset/gallery drops so a fresh pick can't race the in-flight save. Every other field type stays fully editable. */
+  locked?: boolean;
   onAssetUpload: (field: AssetField, file: File) => void;
   onUpdateValue: (fieldKey: string, value: CmsRecordValue) => void;
   /** Render the value as a plain display instead of an editable control. */
   readOnly?: boolean;
   record: CmsRecord;
-  uploadingField: string | null;
+  optimizingField: string | null;
 };
 
 function readOnlyDisplay(field: CmsField, value: CmsRecordValue): string {
@@ -113,13 +120,14 @@ function ReferenceFieldControl({
 
 export function FieldControl({
   field,
-  galleryUpload,
+  galleryOptimizing,
+  locked,
   onAssetUpload,
   onGalleryUpload,
   onUpdateValue,
   readOnly,
   record,
-  uploadingField
+  optimizingField
 }: FieldControlProps) {
   const value = record.values[field.key] ?? "";
   // Base UI Field wires labels to its own control parts; only the raw file input needs an id.
@@ -159,19 +167,20 @@ export function FieldControl({
       );
     }
 
-    const isUploadingThisField =
-      galleryUpload !== null && galleryUpload.recordId === record.id && galleryUpload.fieldKey === field.key;
+    const isOptimizingThisField =
+      galleryOptimizing !== null && galleryOptimizing.recordId === record.id && galleryOptimizing.fieldKey === field.key;
 
     return (
       <FormField description={field.helpText} htmlFor={uploadId} label={field.label} required={field.required}>
         <GalleryControl
           accept={galleryField.accept}
+          disabled={locked}
           inputId={uploadId}
           items={items}
           maxItems={galleryField.maxItems ?? 200}
           onChange={(nextItems) => onUpdateValue(field.key, serializeGalleryValue(nextItems))}
           onFiles={(files) => onGalleryUpload(galleryField, files)}
-          uploadingCount={isUploadingThisField ? galleryUpload.remaining : 0}
+          optimizingCount={isOptimizingThisField ? galleryOptimizing.remaining : 0}
         />
       </FormField>
     );
@@ -247,7 +256,7 @@ export function FieldControl({
         <AssetControl
           accept={assetField.accept}
           inputId={uploadId}
-          isUploading={uploadingField === field.key}
+          isOptimizing={optimizingField === field.key || Boolean(locked)}
           onClear={() => onUpdateValue(field.key, "")}
           onFile={(file) => onAssetUpload(assetField, file)}
           value={String(value)}

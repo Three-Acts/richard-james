@@ -32,7 +32,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
     draftRecord,
     error,
     filteredRecords,
-    galleryUpload,
+    galleryOptimizing,
     groups,
     handleAssetUpload,
     handleCreateRecord,
@@ -49,6 +49,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
     isLoadingCollections,
     isLoadingRecords,
     isSaving,
+    optimizingField,
     queuedCount,
     records,
     refreshCollections,
@@ -65,7 +66,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
     toggleSelectAll,
     toggleSelectionMode,
     updateDraftValue,
-    uploadingField
+    uploadProgress
   } = useCmsWorkspace();
 
   const toast = useToast();
@@ -168,7 +169,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
               <RecordEditor
                 collection={activeCollection}
                 draftRecord={draftRecord}
-                galleryUpload={galleryUpload}
+                galleryOptimizing={galleryOptimizing}
                 isDirty={isDirty}
                 isSaving={isSaving}
                 onAssetUpload={handleAssetUpload}
@@ -181,7 +182,8 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                 onGalleryUpload={handleGalleryUpload}
                 onSave={() => handleSaveRecord()}
                 onUpdateValue={updateDraftValue}
-                uploadingField={uploadingField}
+                optimizingField={optimizingField}
+                uploadProgress={uploadProgress}
               />
             ) : (
               <div className="grid flex-1 place-items-center p-8 text-center">
@@ -258,7 +260,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                 <RecordEditor
                   collection={activeCollection}
                   draftRecord={draftRecord}
-                  galleryUpload={galleryUpload}
+                  galleryOptimizing={galleryOptimizing}
                   isDirty={isDirty}
                   isSaving={isSaving}
                   onAssetUpload={handleAssetUpload}
@@ -270,7 +272,8 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                   onGalleryUpload={handleGalleryUpload}
                   onSave={() => handleSaveRecord()}
                   onUpdateValue={updateDraftValue}
-                  uploadingField={uploadingField}
+                  optimizingField={optimizingField}
+                  uploadProgress={uploadProgress}
                 />
               ) : (
                 <div aria-busy="true" className="flex min-h-0 min-w-0 flex-1 flex-col bg-cms-bg">

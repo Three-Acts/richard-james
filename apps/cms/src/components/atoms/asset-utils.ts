@@ -3,7 +3,12 @@
 // `react-refresh/only-export-components` — that rule expects a component
 // file to export components only.
 
-export type AssetMeta = { fileName: string; size: number };
+export type AssetMeta = {
+  fileName: string;
+  size: number;
+  /** Set when this file went through client-side optimisation and shrank — drives the "2.4 MB → 180 kB" line. Omitted (or equal to `size`) shows just the plain size. */
+  originalSize?: number;
+};
 
 // The upload response is the only place a fresh file's real name/size live —
 // the record only ever stores the URL. Keyed by URL so a control can recover
@@ -36,6 +41,24 @@ export function formatFileSize(bytes: number): string {
 
   const rounded = value.toFixed(1).replace(/\.0$/, "");
   return `${rounded} ${BYTE_UNITS[unitIndex]}`;
+}
+
+/** "180 kB", or "2.4 MB → 180 kB" when `meta` records a shrink from client-side optimisation. */
+export function formatAssetSize(meta: AssetMeta | undefined): string | null {
+  if (!meta) {
+    return null;
+  }
+
+  if (meta.originalSize && meta.originalSize > meta.size) {
+    return `${formatFileSize(meta.originalSize)} → ${formatFileSize(meta.size)}`;
+  }
+
+  return formatFileSize(meta.size);
+}
+
+/** A field value/gallery item `src` still pending upload — created by `URL.createObjectURL` and only ever replaced with a real bucket URL on Save. */
+export function isPendingUpload(src: string): boolean {
+  return src.startsWith("blob:");
 }
 
 export function fileNameFromUrl(url: string): string {
