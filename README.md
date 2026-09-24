@@ -1,43 +1,45 @@
-# Three Acts React
+# Richard James
 
-Astro, React, Tailwind, and Vercel API monorepo with a static public web app, an auth-gated CMS app, and a server-side API bridge.
+The portfolio site for the artist Richard James: an Astro monorepo with a static public
+site, a private CMS, and a Vercel API app that is the **only** thing that talks to Neon.
+Neon supplies Postgres (content), object storage (images), and Auth (editor login).
+Swapping Neon for another provider later means touching `apps/api` only.
+
+```
+apps/web  --build-time GET /api/content/*-->  apps/api  --pg-->          Neon Postgres
+apps/cms  --Bearer session token /api/cms/*--> apps/api  --S3 API-->     Neon object storage (bucket "public")
+apps/cms  --POST /api/auth/sign-in       -->  apps/api  --REST-->        Neon Auth
+```
 
 ## Apps
 
-- `apps/web` - public **Astro** website that prerenders to **zero-JS static HTML**, with React **islands** for interactivity, a **build-time content layer** (mock by default, Supabase-ready), route-level SEO + AEO metadata (JSON-LD, `sitemap.xml`, `robots.txt`, `llms.txt`), build-time **AVIF** image compression, and a same-origin `/api/*` convention.
-- `apps/cms` - private CMS shell with `noindex,nofollow`, disallowing `robots.txt`, a provider-shaped auth interface ready for Clerk, Auth0, or Supabase, a pluggable CMS backend (mock or REST) built on the shared `packages/cms-schema` collection registry, and the same same-origin `/api/*` convention.
-- `apps/api` - Vercel serverless API app for server-only template functionality such as CMS writes, payment callbacks, webhook handling, record validation, and integration bridges.
-- `packages/cms-schema` - shared collection registry, field types, typed errors, REST wire contract, and column-mapping helpers for the CMS, exported from `@three-acts/cms-schema`. Consumed by `apps/cms` and `apps/api` so both validate against the same schema. See [ADR 0003](docs/adr/0003-pluggable-cms-backend.md).
-- `packages/utils` - shared utility helpers such as `cn`, `clsx`, and `cv`, exported from `@three-acts/utils`.
-- `packages/config` - shared theme tokens consumed by Tailwind.
+- `apps/web` (`@three-acts/web`) - the public **Astro** site. Prerenders to static HTML
+  with a React island for the home stage experience, a build-time content layer that
+  reads `apps/api`'s `/api/content/*` (there is no local content and no offline
+  fallback — `API_ORIGIN` is required), route-level SEO/AEO metadata, and a same-origin
+  `/api/*` convention.
+- `apps/cms` (`@three-acts/cms`) - the private, `noindex,nofollow` editorial workspace.
+  Reads and writes content through the REST bridge in `apps/api`, and signs editors in
+  through the same API's `/api/auth/*` bridge to Neon Auth.
+- `apps/api` (`@three-acts/api`) - a Vercel serverless app: the single gateway to Neon
+  Postgres, Neon object storage, and Neon Auth. Also hosts the public content API, the
+  contact form endpoint, and the Vercel deploy-hook bridge for Publish.
+- `packages/cms-schema` (`@three-acts/cms-schema`) - the shared collection registry,
+  field types, typed errors, the CMS REST wire contract, the public content contract,
+  the auth contract, and column-mapping helpers. Consumed by `apps/cms` and `apps/api`
+  so both validate against the same schema. See [ADR 0003](docs/adr/0003-pluggable-cms-backend.md)
+  and [ADR 0004](docs/adr/0004-neon-single-provider.md).
+- `packages/utils` (`@three-acts/utils`) - shared utility helpers (`cn`, `clsx`, `cv`).
+- `packages/config` (`@three-acts/config`) - shared theme tokens consumed by Tailwind.
 
-Base UI is installed per app through `@base-ui-components/react`, and web-specific template components live inside `apps/web`.
-
-## Template UI
-
-Template components use element-scoped dot notation and subpath exports for tree shaking:
-
-```tsx
-import { Section } from "./components/layout/section";
-import { Button } from "./components/ui/button";
-import { Card } from "./components/ui/card";
-import { Typography } from "./components/ui/typography";
-
-<Section.Root>
-  <Section.Container>
-    <Typography.Eyebrow>Marketing site system</Typography.Eyebrow>
-    <Card.Marketing title="Launch pages" body="Campaign-ready pages." />
-    <Button.Root>Save draft</Button.Root>
-    <Button.Link href="/about">About</Button.Link>
-  </Section.Container>
-</Section.Root>
-```
+The workspace root package is named `three-acts` for historical reasons (see `git log`);
+the product itself is Richard James's portfolio, not a template.
 
 ## Scripts
 
 ```sh
 npm install
-npm run dev
+npm run dev          # web + cms + api together
 npm run dev:web
 npm run dev:cms
 npm run dev:api
@@ -46,135 +48,313 @@ npm run lint
 npm run typecheck
 ```
 
-Set `VITE_SITE_URL` before `npm run build:web` to control canonical URLs and sitemap locations. Set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` to source content from Supabase instead of the built-in mock (see `apps/web/.env.example`).
+See **Local dev setup** below for the env files `npm run dev` needs.
 
-## API App
+## Local dev setup
 
-`apps/api` is designed to deploy as its own Vercel project from the `apps/api` root. It starts with:
+There is no mock/offline mode anywhere in this stack — the CMS always talks to the real
+REST + auth bridges, and `apps/web` always reads live content from `apps/api`. Local dev
+needs a repo-root `.env.local` (generated, not hand-written) plus three small per-app
+`.env` files (hand-written once, gitignored):
 
-- `GET /api/health` - health check endpoint.
-- `GET /api/meta` - template metadata endpoint.
-- `POST /api/deploy` - trigger a Vercel deploy hook (used by the CMS Publish flow).
-- `GET /api/deploy-status` - normalized Vercel deployment state for progress feedback.
-- `POST /api/contact` - accepts the public site's contact form (`name`, `email`, `message`, optional `website` honeypot).
-- `API_ALLOWED_ORIGINS` - optional comma-separated browser origins for direct cross-origin calls.
-- `PUBLISH_TOKEN` (API) + `VITE_PUBLISH_TOKEN` (CMS) - shared bearer secret for the Publish flow; the two values must match exactly.
-- `VERCEL_API_BASE` - optional override for the Vercel REST API base URL (self-hosted proxies or local testing); defaults to `https://api.vercel.com`.
-- Server-side Supabase (service-role) client foundation in `api/_lib/supabase.ts` for privileged writes/webhooks/payment callbacks. See `apps/api/.env.example` for all variables.
+1. Link the repo to the Neon project (see **Neon setup** below) so `neon link` writes a
+   repo-root `.env.local` with the live `DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
+   `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, and `AWS_*` values. `apps/api`'s dev
+   server, and its `db:migrate`/`db:seed`/`auth:create-editor` scripts, load this file
+   automatically — never create or edit it by hand.
+2. Create `apps/api/.env`:
 
-`apps/web` and `apps/cms` call `/api/*` by default. In local development, their Vite dev servers proxy `/api/*` to `API_ORIGIN`. In Vercel, their `vercel.ts` files rewrite `/api/*` to the deployed API app. This keeps browser requests same-origin and avoids per-app CORS configuration for normal traffic.
+   ```sh
+   NEON_AUTH_ORIGIN=http://localhost:5175
+   API_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
+   ```
 
-For local development, copy the relevant examples:
+3. Create `apps/cms/.env`:
+
+   ```sh
+   API_ORIGIN=http://localhost:5175
+   ```
+
+4. Create `apps/web/.env`:
+
+   ```sh
+   VITE_SITE_URL=http://localhost:5199
+   API_ORIGIN=http://localhost:5175
+   ```
+
+5. `npm run dev` (or `dev:web`/`dev:cms`/`dev:api` individually).
+
+All three `.env` files (and the root `.env.local`) are covered by `.gitignore`'s `.env`
+and `*.local` rules — never commit any of them. Each app also ships an `*.env.example`
+with the same keys and comments for reference.
+
+## Neon setup
+
+Everything Neon-related — Postgres, object storage, and Auth — lives on one Neon
+project and is provisioned by the Neon CLI, not by hand:
 
 ```sh
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
-cp apps/cms/.env.example apps/cms/.env
+npm install -g neonctl                 # or: brew install neonctl
+neon login
+neon link --project-id winter-tooth-70046024 --branch production -y
+neon deploy                            # applies neon.ts (auth + the "public" bucket)
+npm run db:migrate -w @three-acts/api  # creates tables from the collection registry
+npm run db:seed -w @three-acts/api -- --dry-run   # preview: no writes, no uploads
+npm run db:seed -w @three-acts/api                # uploads images + inserts content
+npm run db:seed -w @three-acts/api -- --skip-images  # re-run without touching the bucket
+npm run auth:create-editor -w @three-acts/api -- --email you@example.com --password '...'
+neon neon-auth config email-password update --disable-sign-up
+neon neon-auth domain add https://your-cms.vercel.app
 ```
 
-Set `API_ORIGIN` in the web and CMS projects to the API origin, for example `https://your-api.vercel.app`. The browser-facing API client still calls `/api/*`; the dev server or Vercel rewrite performs the bridge.
+Notes:
 
-If a specific deployment needs to call the API directly from the browser, set `PUBLIC_API_URL` (web) or `VITE_API_URL` (CMS) to the full API base URL and allow the caller with `API_ALLOWED_ORIGINS`. The web app's client bundle only ever sees `PUBLIC_`-prefixed vars, so it does not use `VITE_API_URL`.
+- `neon link` and `neon deploy` both write the linked branch's live env vars
+  (`DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`,
+  `AWS_*`) to a repo-root `.env.local`. That file is gitignored (`*.local`) — never
+  commit it.
+- `db:migrate` runs the generated schema SQL over `DATABASE_URL_UNPOOLED` (a direct
+  connection; DDL doesn't work over the pooled/PgBouncer `DATABASE_URL`). It's
+  idempotent, so re-running it is safe.
+- `db:seed` uploads the portfolio's images from `apps/api/seed/images` to the `public`
+  bucket and inserts site settings, pages, and projects (each project's `gallery` field
+  embedded) as published, from `apps/api/seed/data/*.ts` — the one checked-in copy of
+  the portfolio's content (`apps/web` has none of its own). It's idempotent by
+  slug/key/object key, so re-running it after a partial failure is safe; `--dry-run`
+  computes everything without writing or uploading, and `--skip-images` skips
+  re-uploading images that are already in the bucket.
+- `auth:create-editor` calls Neon Auth's sign-up endpoint directly — this is the only
+  way an editor account gets created; the CMS itself has no sign-up screen. Run
+  `neon neon-auth config email-password update --disable-sign-up` right after the first
+  editor exists, since anyone who finds the CMS's Neon Auth base URL can otherwise sign
+  themselves up.
+- `neon neon-auth domain add <origin>` registers a production origin (e.g. the deployed
+  CMS's URL) with Neon Auth. Without it, sign-in/sign-up/sign-out from that origin are
+  rejected with `MISSING_ORIGIN`. Localhost origins are pre-approved for local dev.
+- To get the same values for Vercel's dashboard, run `neon-env export --format dotenv`
+  (from `@neon/env`, a root devDependency) and copy the relevant keys into each Vercel
+  project's env vars (or `vercel env add`).
+
+## API app
+
+`apps/api` deploys as its own Vercel project from the `apps/api` root. It hosts:
+
+- `GET /api/health`, `GET /api/meta` - health/metadata.
+- `GET /api/content/site`, `GET /api/content/projects`, `GET /api/content/projects/:slug`,
+  `GET /api/content/pages`, `GET /api/content/pages/:key` - the public, unauthenticated
+  content contract that `apps/web` reads at build time (published records only,
+  `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`).
+- `POST /api/auth/sign-in`, `GET /api/auth/session`, `POST /api/auth/sign-out` - the
+  editor auth bridge to Neon Auth (see **CMS backend** below).
+- `/api/cms/*` - the REST bridge the CMS talks to for everything (list/create/save/
+  delete/import records, bulk publish-status updates, asset upload).
+- `POST /api/deploy` - triggers a Vercel deploy hook (the CMS's Publish flow).
+- `GET /api/deploy-status` - normalized Vercel deployment state for progress feedback.
+- `POST /api/contact` - accepts the public site's contact form (`name`, `email`,
+  `message`, optional `website` honeypot), inserting into the `contact-submissions`
+  collection through the data store.
+
+`apps/web` and `apps/cms` call `/api/*` by default. In local development, their dev
+servers proxy `/api/*` to `API_ORIGIN`. On Vercel, each app's `vercel.ts` rewrites
+`/api/(.*)` to `${API_ORIGIN}/api/$1`. This keeps browser requests same-origin and
+avoids per-app CORS configuration for normal traffic. `API_ALLOWED_ORIGINS` is an
+optional comma-separated list of extra browser origins allowed to call the API
+directly; it already defaults to the local Vite/Astro dev ports.
 
 ## CMS backend
 
-The CMS reads and writes content through a swappable backend (`@three-acts/cms-schema`'s `CmsBackend`), injected via `CmsBackendProvider`. Two implementations ship today, picked by `VITE_CMS_BACKEND`:
+There is exactly one CMS backend now: the CMS always talks to the REST bridge in
+`apps/api` (`@three-acts/cms-schema`'s `CmsBackend`, injected via `CmsBackendProvider`)
+and always signs editors in through `apps/api`'s `/api/auth/*` bridge to Neon Auth
+(`AuthClient`). There is no mock mode, no `VITE_CMS_BACKEND`, no `VITE_CMS_AUTH`, and no
+`VITE_PUBLISH_TOKEN` — `apps/cms/.env.example` is just `API_ORIGIN` (plus an optional
+`VITE_API_URL` to point at the API dev server directly instead of the dev proxy). Both
+interfaces stay named/shaped as `CmsBackend`/`AuthClient` in code so a future backend or
+identity provider is still a matter of implementing the interface, not a rewrite — the
+mock implementations were simply deleted, not replaced by a flag.
 
-- `mock` (default) - an in-browser Test Collection Set. No env vars, no network calls.
-- `rest` - talks to the REST bridge in `apps/api` (`/api/cms/*`), which reads and writes through a server-side data store and blob store.
+### Data Store and Blob Store
 
-### Running mock vs rest locally
+Behind the REST bridge, `apps/api/api/_lib/cms/` implements two provider-agnostic
+interfaces, `CmsDataStore` and `CmsBlobStore`. Neon is the only backend — there is no
+`CMS_DATA_BACKEND`/`CMS_STORAGE_BACKEND` env var and no in-memory fallback:
 
-Mock needs nothing beyond the normal dev command:
+- `NeonDataStore` runs parameterised SQL over a `pg` `Pool` on `DATABASE_URL`.
+- `NeonBlobStore` uploads to Neon's S3-compatible object storage
+  (`@aws-sdk/client-s3`, `forcePathStyle: true`). Public URLs are
+  `${AWS_ENDPOINT_URL_S3}/<bucket>/<key>`.
 
-```sh
-npm run dev:cms
-```
+`resolve-store.ts`'s `getDataStore()`/`getBlobStore()` always return these two; each
+throws a clear "unavailable" error naming the specific missing env var (`DATABASE_URL`,
+or `AWS_ENDPOINT_URL_S3`/`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`) the first time a
+request actually needs it, rather than at import time.
 
-Rest needs `apps/api` running too, with matching tokens on both sides. Copy the env files:
+Run `npm run schema:sql -w @three-acts/api` to print the `CREATE TABLE` SQL generated
+from the collection registry, so any Postgres-compatible database can be provisioned
+from the same schema the CMS renders.
 
-```sh
-cp apps/cms/.env.example apps/cms/.env
-cp apps/api/.env.example apps/api/.env
-```
+### Auth: Neon Auth, not a JWT
 
-In `apps/cms/.env`, set:
+Neon Auth is managed Better Auth, reached by `apps/api` over plain REST at
+`NEON_AUTH_BASE_URL`. The CMS never talks to it directly. Its JWTs expire after 15
+minutes, so the token handed to the CMS is the opaque **session token** (the value of
+the `__Secure-neon-auth.session_token` cookie Neon Auth sets on sign-in), which lasts 7
+days:
 
-```
-VITE_CMS_BACKEND=rest
-VITE_PUBLISH_TOKEN=some-shared-secret
-```
-
-In `apps/api/.env`, set the matching token:
-
-```
-PUBLISH_TOKEN=some-shared-secret
-```
-
-`PUBLISH_TOKEN` and `VITE_PUBLISH_TOKEN` must match exactly. Leave `CMS_DATA_BACKEND` and `CMS_STORAGE_BACKEND` unset to use the in-process Memory store, which needs no external project. Set them to `supabase`, with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/api/.env`, to use a real Supabase project instead. Then run:
-
-```sh
-npm run dev
-```
+- Sign-in (`POST /api/auth/sign-in`): the API calls Neon Auth's `sign-in/email`,
+  captures the session cookie, then calls `get-session` to read the user and expiry.
+- Verification (`requireAuth`, guarding every `/api/cms/*` route plus `/api/deploy` and
+  `/api/deploy-status`): a bearer token is accepted when it equals `PUBLISH_TOKEN`
+  (constant-time, for scripts/CI), or when replaying it as a cookie against
+  `get-session` returns a live session. Positive results are cached in memory for 60s
+  per token to avoid a round trip to Neon Auth on every request.
+- `sign-in/email`, `sign-up/email`, and `sign-out` all require an `Origin` header
+  (`NEON_AUTH_ORIGIN`) or Neon Auth rejects them with `MISSING_ORIGIN`. Localhost is
+  pre-approved; a production origin needs `neon neon-auth domain add`.
+- Sign-up is never exposed through the CMS. The first (and any additional) editor is
+  created with `npm run auth:create-editor -w @three-acts/api`, and sign-up should be
+  disabled at the Neon Auth level immediately afterwards.
+- Auth is required in every environment: when neither `PUBLISH_TOKEN` nor
+  `NEON_AUTH_BASE_URL` is set, every one of these endpoints responds `503` — there is no
+  dev-mode bypass, so a local `apps/api/.env` needs at least `NEON_AUTH_ORIGIN` set and
+  the repo linked to Neon (see **Local dev setup**) before the CMS can do anything.
 
 ### Publishing is two steps
 
 Clicking Publish in the CMS runs:
 
-1. **Publish transition** - the data store flips every record queued to publish over to published.
-2. **Site deploy** - `POST /api/deploy` rebuilds the static site.
+1. **Publish transition** - the data store flips every record queued to publish over to
+   published.
+2. **Site deploy** - `POST /api/deploy` rebuilds the static site via a Vercel deploy
+   hook.
 
-The CMS then polls `GET /api/deploy-status`, first with `?after=` and `?since=` to find the new deployment, then by `?id=`, until the rebuild finishes.
+The CMS then polls `GET /api/deploy-status` until the rebuild finishes, surfacing
+progress as **queued → building → deployed** (or failed).
 
 ### Adding a backend
 
-A new backend means implementing two server-side interfaces in `apps/api/api/_lib/cms/`, one for records and one for asset uploads, and registering them alongside `CMS_DATA_BACKEND` / `CMS_STORAGE_BACKEND`. Nothing in `apps/cms` changes, since it only ever talks to the REST bridge. Plain Postgres (via `pg` or Drizzle) and Cloudflare R2 both fit this shape.
+A new backend means implementing `CmsDataStore` and/or `CmsBlobStore` in
+`apps/api/api/_lib/cms/` and registering it in `resolve-store.ts`. Nothing in `apps/cms`
+changes, since it only ever talks to the REST bridge.
 
-Run `npm run schema:sql -w @three-acts/api` to print `CREATE TABLE` SQL for every collection in the registry, so any Postgres-compatible database can be provisioned from the same schema the CMS renders.
-
-See [ADR 0003](docs/adr/0003-pluggable-cms-backend.md) for the full decision and interface names.
+See [ADR 0003](docs/adr/0003-pluggable-cms-backend.md) for the backend-splitting
+decision and [ADR 0004](docs/adr/0004-neon-single-provider.md) for why Neon is the
+provider behind every one of those interfaces today.
 
 ### Env matrix
 
 | Variable | App | Purpose |
 | --- | --- | --- |
-| `PUBLISH_TOKEN` | api | Bearer secret required by `/api/deploy`, `/api/deploy-status`, and `/api/cms/*`. Unset is dev-only and 503s in production. |
-| `VITE_PUBLISH_TOKEN` | cms | Must match `PUBLISH_TOKEN` exactly; sent as `Authorization: Bearer <token>`. |
-| `VITE_CMS_BACKEND` | cms | `mock` (default) or `rest`. Picks the CMS backend implementation. |
-| `CMS_DATA_BACKEND` | api | `supabase` or `memory`. Defaults to `supabase` when the Supabase env vars below are set, otherwise `memory`. |
-| `CMS_STORAGE_BACKEND` | api | `supabase` or `memory`, same default rule as `CMS_DATA_BACKEND`. |
-| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | api | Service-role Supabase project used by the `supabase` data store and blob store. |
+| `DATABASE_URL` | api | Pooled (PgBouncer) Neon Postgres connection for request traffic. |
+| `DATABASE_URL_UNPOOLED` | api | Direct Neon Postgres connection, used only by `db:migrate`. |
+| `NEON_AUTH_BASE_URL` | api | Base URL of the linked branch's Neon Auth (Better Auth REST API). |
+| `NEON_AUTH_SESSION_COOKIE` | api | Name of the session cookie Neon Auth sets; defaults to `__Secure-neon-auth.session_token`. |
+| `NEON_AUTH_ORIGIN` | api | Origin header sent to Neon Auth on sign-in/sign-up/sign-out; must be registered with `neon neon-auth domain add` in production. |
+| `NEON_AUTH_JWKS_URL` | api | Reserved for future direct-JWT verification; not used by `requireAuth` today. |
+| `AWS_ENDPOINT_URL_S3` / `AWS_REGION` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | api | Standard AWS SDK vars pointed at Neon's S3-compatible object storage. Neon is the only Data Store/Blob Store backend — there's no backend-selection var. |
+| `PUBLISH_TOKEN` | api | Optional shared secret accepted by `/api/cms/*`, `/api/deploy`, `/api/deploy-status` (scripts/CI). Auth is required in every environment: unset alongside an unset `NEON_AUTH_BASE_URL` always 503s, with no dev-mode bypass. |
 | `VERCEL_DEPLOY_HOOK_URL` / `VERCEL_TOKEN` / `VERCEL_PROJECT_ID` / `VERCEL_TEAM_ID` / `VERCEL_API_BASE` | api | Deploy hook and polling credentials used by the site deploy step. |
+| `API_ALLOWED_ORIGINS` | api | Optional extra browser origins allowed to call the API directly (cross-origin). |
+| `API_ORIGIN` | web, cms | Where `/api/*` gets rewritten/proxied to. Required for both — `apps/web` has no local content to fall back to. |
+| `VITE_SITE_URL` | web | Canonical site origin, used for URLs, sitemap, and social tags. |
+| `VITE_API_URL` | cms | Optional direct API URL, bypassing the dev proxy. |
 
 ## Web rendering model
 
-`apps/web` is an [Astro](https://astro.build) app (`output: "static"`, React via `@astrojs/react`). Pages live in `src/pages/*.astro` and compose React views from `src/views/` and sections/primitives from `src/components/`. Three kinds of pages:
+`apps/web` is an [Astro 7](https://astro.build) app (`output: "static"`, React 19 via
+`@astrojs/react`). Pages live in `src/pages/*.astro`.
 
-- **Static, no interactivity** → no `client:*` directive, prerendered HTML + CSS, **zero JavaScript**.
-- **Static with islands** → the page is static HTML; interactive components get a `client:*` directive and hydrate individually. See _Islands_ below.
-- **Client routes** → the page's root React component uses `client:load`, server-renders as a static shell with baked SEO head, then hydrates and fetches live data at runtime (login, account, dashboard, checkout). `/dashboard` is the reference example.
+- **Home (`/`)** is the signature scroll-synced experience: a single eager React island,
+  `HomeExperience` (`client:load`), renders the cinematic stage (GSAP-driven, Lenis for
+  smooth scroll) around a visually-hidden, fully crawlable list of every project so
+  search engines and no-JS visitors still get the whole portfolio.
+- **Project pages** are static Astro markup (a gallery grid) with no React shipped by
+  default; clicking an image dynamically imports a small React-rendered fullscreen
+  lightbox module on demand, so a project page that's only read ships zero JavaScript
+  from that viewer.
+- **About, essay, contact, 404** are static pages. Contact is a mailto/tel index, not a
+  form — `POST /api/contact` and the `contact-submissions` collection still exist on the
+  API side (see **API app** above) but nothing in `apps/web` currently calls it.
+- `astro:transitions`' `ClientRouter` keeps navigation feeling like a single-page app
+  without turning the site into one.
 
-In development, `npm run dev:web` (`astro dev`) renders every request with live data and mirrors production. `npm run build:web` (`astro build`) freezes the same output into static files, then compresses images (`scripts/optimize-images.mjs`).
+In development, `npm run dev:web` (`astro dev`, port 5199) renders every request with
+live data fetched from `apps/api` (`API_ORIGIN` is required — see **Local dev setup**).
+`npm run build:web` runs `astro build`, then `scripts/gen-sitemap.mjs`.
 
-Per-page SEO + sitemap metadata is centralized in `src/page-meta.ts` and rendered by `src/layouts/BaseLayout.astro`. Only pages with `includeInSitemap: true` are written to `sitemap.xml` (with `lastmod`/`changefreq`/`priority`) by the `src/pages/sitemap.xml.ts` endpoint; `robots.txt` and `llms.txt` are generated the same way. `src/pages/404.astro` emits `404.html`.
+### Content model
 
-### Islands
+Content is authored in the CMS across four collections (`packages/cms-schema/src/registry.ts`):
 
-An island is a self-contained React component with JSON-serializable props that server-renders into the HTML (indexable, works with no JS) and hydrates on its own. Render it in an `.astro` page with a client directive, e.g. `<ContactFormIsland client:visible />`. Only pages containing an island load Astro's tiny hydration runtime + that island's chunk. The home page contact form is the reference example.
+- **Projects** - one record per artwork/body of work: title, slug, year, sort order
+  (drives the browsing order and the home stage), subtitle/original-title fields,
+  medium, description, meta description, a hero asset, an optional thumb (falls back to
+  hero), a **gallery** field, and an optional grid stride. The gallery field holds the
+  project's whole image set as one ordered value (JSON `{ src, caption? }[]`) on the
+  project row itself - there is no separate per-image collection or table. The CMS
+  editor renders it as a persistent drop zone (always visible, at the top, even once
+  images exist) above a list of rows, one per image: a thumbnail, file name and size, a
+  drag handle for reordering (with an ArrowUp/ArrowDown keyboard fallback), a wide
+  optional-caption input, and a delete button. Each dropped file uploads through the
+  same asset-upload route into the bucket; there is no per-image database row. The
+  public content API builds `ProjectContent.images` straight from this field.
+- **Pages** - standalone pages (About, the artist's essay) with a lightweight markdown
+  body (`# `/`## `/`### ` headings, `- ` list items, blank-line-separated paragraphs).
+- **Site Settings** - one record (mode `data`, no publish workflow): name, tagline,
+  location, email, phone, description, and an optional social image. The site always
+  reads the most recently modified record.
+- **Contact Submissions** - read-only records created by `POST /api/contact`, not by
+  editors.
 
-### Content layer
+The shared schema also still defines a generic **reference** field type (a select
+pointing at another collection's records, validated against it server-side), but no
+collection uses one today - it was `project-images`' link back to `projects` before that
+collection was folded into the `gallery` field (see [ADR 0004](docs/adr/0004-neon-single-provider.md)).
 
-Content is read through a source in `src/content/`:
+To add a project as an editor: create a **Projects** record, upload its hero image, drag
+its images into the **Gallery** drop zone, reorder them and add captions where useful,
+set the project's own sort order to place it in the browsing sequence, queue it to
+publish, then click **Publish** in the CMS top bar.
 
-- `mock-source.ts` is the default, so builds work with **zero credentials**.
-- `supabase-source.ts` activates automatically when `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` are set (read-only, anon key). It is loaded lazily, so mock builds never bundle Supabase.
-
-`src/pages/blog/[slug].astro` expands the collection into concrete static routes via `getStaticPaths`, with per-entry SEO from `blogPostMeta` in `src/page-meta.ts`. The content source is only imported from build-time code, so the Supabase client never ships to the browser. Server-side writes belong in `apps/api`, not here.
+Content is read through `apps/web/src/content/`, a `ContentSource` interface with a
+single implementation, `api-source.ts`, which fetches `${API_ORIGIN}/api/content/*` at
+build/dev time. There is no local content and no fallback: `API_ORIGIN` is required in
+every environment, and `getContentSource()` probes the API up front so a missing or
+unreachable API fails the build/dev server immediately with one clear error, instead of
+surfacing as scattered fetch failures across individual pages.
+`next`/`previous` project links and `years` are derived from the project list's
+`sortOrder`, not hand-maintained fields.
 
 ### Images
 
-Put owned raster images in `apps/web/public/` and render them with `<Image>` (`src/components/ui/image`). The build emits an `.avif` sibling for every `.png`/`.jpg`/`.jpeg`/`.webp`, and `<Image>` renders a zero-JS `<picture>` that prefers AVIF with the original as fallback. External/CDN URLs pass through as a plain `<img>`.
+There are no owned raster images in `apps/web` at all — every image comes from the CMS's
+Neon object storage bucket (`public`), read back as an absolute URL over the Content API
+and rendered with a plain `<img>` (no build-time AVIF step). The portfolio's seed images
+live in `apps/api/seed/images/` and are uploaded to the bucket under `images/...` by
+`db:seed`; editor-uploaded assets land under `uploads/`.
 
 ## Publishing (CMS → Vercel)
 
-Editors change data, then click **Publish** in the CMS top bar. That calls `POST /api/deploy` (which triggers a Vercel Deploy Hook to rebuild the static site) and polls `GET /api/deploy-status` for live state, surfacing progress in a bottom-right toast: **queued → building → deployed ✓** (or failed). Configure `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, and `VERCEL_PROJECT_ID` in `apps/api`; when unset, the flow degrades gracefully with a clear message.
+Editors change data, then click **Publish** in the CMS top bar. That runs the **Publish
+transition** (flips queued records to published in the data store) and then triggers
+`POST /api/deploy` (a Vercel Deploy Hook that rebuilds the static site), polling
+`GET /api/deploy-status` for live state: **queued → building → deployed ✓** (or failed).
+Configure `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, and `VERCEL_PROJECT_ID` in
+`apps/api`; when unset, the flow degrades gracefully with a clear message.
+
+## Deploying to Vercel
+
+The three apps deploy as three separate Vercel projects, each rooted at its own
+directory:
+
+| Vercel project | Root directory | Framework preset | Key env vars |
+| --- | --- | --- | --- |
+| web | `apps/web` | Astro | `VITE_SITE_URL`, `API_ORIGIN` (required — no local content fallback) |
+| cms | `apps/cms` | Vite | `API_ORIGIN` (optionally `VITE_API_URL`) |
+| api | `apps/api` | Other/Node (Vercel Functions) | `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_ORIGIN`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, optionally `PUBLISH_TOKEN` and `API_ALLOWED_ORIGINS` |
+
+`web` and `cms` each set `API_ORIGIN` to the deployed `api` project's URL; their
+`vercel.ts` files then rewrite `/api/(.*)` to `${API_ORIGIN}/api/$1` at the edge (a
+production build fails fast if `API_ORIGIN` is missing). Pull the `api` project's Neon
+values from `neon-env export --format dotenv` (see **Neon setup**) rather than typing
+them by hand.
