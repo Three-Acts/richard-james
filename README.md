@@ -442,6 +442,17 @@ directory:
 | cms | `apps/cms` | Vite | `API_ORIGIN` (optionally `VITE_API_URL`) |
 | api | `apps/api` | Other/Node (Vercel Functions) | `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_ORIGIN`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, optionally `PUBLISH_TOKEN` and `API_ALLOWED_ORIGINS` (`DATABASE_URL_UNPOOLED` is only used by the local `db:migrate` script, so it isn't needed on Vercel) |
 
+Vercel installs dependencies per workspace (it runs `npm install` inside the project's
+root directory, which npm treats as `npm install -w <that app>`), so root-level
+`devDependencies` are **not** available in a Vercel build. Every tool an app's `build`
+script runs must be declared in that app's own `package.json` — `typescript` is in
+`apps/cms` and `apps/api` for exactly this reason. Two further `apps/api` files exist
+only for Vercel: `public/.gitkeep` gives the functions-only project the output directory
+Vercel insists on after a build command runs, and `tsconfig.json` spells out `module` /
+`moduleResolution` so `@vercel/node`'s per-function compile doesn't fall back to NodeNext
+and print a wall of TS2835/TS2305 errors (non-fatal, but noisy). Local builds and
+`npm run typecheck` keep using `tsconfig.app.json` directly.
+
 `web` and `cms` each set `API_ORIGIN` to the deployed `api` project's URL; their
 `vercel.ts` files then rewrite `/api/(.*)` to `${API_ORIGIN}/api/$1` at the edge (a
 production build fails fast if `API_ORIGIN` is missing). Pull the `api` project's Neon
