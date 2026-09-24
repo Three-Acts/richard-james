@@ -42,11 +42,11 @@ a single Neon project (`winter-tooth-70046024`, branch `production`).
   (`__Secure-neon-auth.session_token`, confirmed empirically; the assumed
   `neonauth` name in the original spec was wrong) and hands that value to the CMS as
   its bearer token. Verification replays it as a cookie against Neon Auth's
-  `get-session`, with a 60-second in-memory positive-result cache (keyed by token,
+  `get-session`, with a 5-minute in-memory positive-result cache (keyed by token,
   capped at 500 entries) so a burst of CMS requests doesn't round-trip to Neon Auth on
   every call. Sessions last 7 days.
 - **A build-time content API, and the only content source `apps/web` has.**
-  `GET /api/content/{site,projects,projects/:slug,pages,pages/:key}` returns only
+  `GET /api/content/{site,projects,projects/:slug,pages,pages/:slug}` returns only
   published records, shaped to `SiteContent`/`ProjectContent`/`PageContent`, with
   `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`. `apps/web`'s
   `ContentSource` always fetches this over HTTP; there is no local data, no `local`
@@ -86,6 +86,26 @@ a single Neon project (`winter-tooth-70046024`, branch `production`).
   doesn't need a runtime-computed `file://` import) and walks the images directory,
   uploading to the `public` bucket and upserting site settings, pages, and projects —
   including each project's `gallery` field — as published.
+- **Rich text is stored as markdown, not HTML.** The new `richtext` field type
+  (`projects.description`, `pages.body`) stores GitHub-flavoured markdown plus `<u>`
+  for underline, edited through a TipTap WYSIWYG toolbar (lazy-loaded, and round-tripped
+  through `tiptap-markdown` so what's saved is still markdown) rather than storing
+  TipTap's own HTML output. The Content API keeps serving plain markdown text, and
+  `apps/web` sanitizes and renders it at build time (`marked` + `sanitize-html`) — the
+  stored value stays diffable and the same shape it always was, and there's exactly one
+  place (the web renderer) that turns editor input into HTML, not two.
+- **Site Settings is a Singleton Collection.** `singleton: true` opens its one record
+  directly as a form, with no list view and no New/Delete controls — matching the fact
+  that there's exactly one row and creating or deleting it was never a real operation.
+- **Pages are fixed.** `allowCreate`/`allowDelete: false` on the Pages collection: editors
+  edit copy, imagery, and SEO fields, but can't add or remove a page, since each one
+  (About, the essay) is looked up by a hardcoded route on the site, not discovered from
+  the collection. Its `key` field was renamed `slug` to match Projects' naming and to
+  render as a link to the live page the same way.
+- **The contact form is gone entirely.** `contact-submissions` and `POST /api/contact`
+  were removed rather than kept unused; the site's Contact page is a static mailto/tel
+  index with nothing to submit. Re-adding a form later means restoring both sides
+  together, not just the endpoint.
 
 ## Alternatives considered
 
@@ -97,7 +117,7 @@ a single Neon project (`winter-tooth-70046024`, branch `production`).
 - **JWT + JWKS verification instead of session-cookie replay.** Considered because it
   would avoid a network call per request. Rejected for now because Neon Auth's JWTs
   expire in 15 minutes, which is too short to hand to a CMS session, and because
-  `requireAuth`'s 60-second positive cache already removes most of the round-trip cost.
+  `requireAuth`'s 5-minute positive cache already removes most of the round-trip cost.
   `NEON_AUTH_JWKS_URL` is documented in `apps/api/.env.example` as a future option for
   verifying tokens minted by other Neon services, not built now.
 - **Cloudflare R2 for object storage instead of Neon's built-in bucket.** Rejected for
@@ -124,7 +144,7 @@ a single Neon project (`winter-tooth-70046024`, branch `production`).
 
 - Every CMS request that needs verification makes an extra hop to `apps/api`, and on a
   cache miss a further hop from `apps/api` to Neon Auth's `get-session` — two network
-  hops beyond what a same-process auth check would cost. The 60-second cache keeps this
+  hops beyond what a same-process auth check would cost. The 5-minute cache keeps this
   off the hot path for a single editing session.
 - Sign-up must be disabled by hand (`neon neon-auth config email-password update
   --disable-sign-up`) immediately after the first editor is created via
@@ -149,3 +169,6 @@ a single Neon project (`winter-tooth-70046024`, branch `production`).
   Neon project already linked (`neon link`) and Neon Auth reachable — there is no
   mock/offline mode to develop the CMS or `apps/web` against. A new contributor's first
   step is always **Neon setup**, not `npm install && npm run dev`.
+- Seed content (`apps/api/seed/data/*.ts`) was proofread against the live
+  richardjamesart.com during this migration, catching and fixing one artwork dimension
+  typo — a reminder that the seed is the editorial record now, not just fixture data.

@@ -22,8 +22,8 @@ apps/cms  --POST /api/auth/sign-in       -->  apps/api  --REST-->        Neon Au
   Reads and writes content through the REST bridge in `apps/api`, and signs editors in
   through the same API's `/api/auth/*` bridge to Neon Auth.
 - `apps/api` (`@three-acts/api`) - a Vercel serverless app: the single gateway to Neon
-  Postgres, Neon object storage, and Neon Auth. Also hosts the public content API, the
-  contact form endpoint, and the Vercel deploy-hook bridge for Publish.
+  Postgres, Neon object storage, and Neon Auth. Also hosts the public content API and
+  the Vercel deploy-hook bridge for Publish.
 - `packages/cms-schema` (`@three-acts/cms-schema`) - the shared collection registry,
   field types, typed errors, the CMS REST wire contract, the public content contract,
   the auth contract, and column-mapping helpers. Consumed by `apps/cms` and `apps/api`
@@ -47,6 +47,10 @@ npm run build
 npm run lint
 npm run typecheck
 ```
+
+`apps/api`'s dev server (`scripts/dev-server.ts`) runs under `tsx watch`, so editing any
+`api/**`/`scripts/**` file restarts it automatically - no manual restart needed while
+iterating on API routes.
 
 See **Local dev setup** below for the env files `npm run dev` needs.
 
@@ -141,7 +145,7 @@ Notes:
 
 - `GET /api/health`, `GET /api/meta` - health/metadata.
 - `GET /api/content/site`, `GET /api/content/projects`, `GET /api/content/projects/:slug`,
-  `GET /api/content/pages`, `GET /api/content/pages/:key` - the public, unauthenticated
+  `GET /api/content/pages`, `GET /api/content/pages/:slug` - the public, unauthenticated
   content contract that `apps/web` reads at build time (published records only,
   `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`).
 - `POST /api/auth/sign-in`, `GET /api/auth/session`, `POST /api/auth/sign-out` - the
@@ -150,9 +154,10 @@ Notes:
   delete/import records, bulk publish-status updates, asset upload).
 - `POST /api/deploy` - triggers a Vercel deploy hook (the CMS's Publish flow).
 - `GET /api/deploy-status` - normalized Vercel deployment state for progress feedback.
-- `POST /api/contact` - accepts the public site's contact form (`name`, `email`,
-  `message`, optional `website` honeypot), inserting into the `contact-submissions`
-  collection through the data store.
+
+There is no contact form and no `/api/contact` route or `contact-submissions`
+collection - both were removed; the site's Contact page (see **Web rendering model**)
+is a plain mailto/tel index with nothing to submit.
 
 `apps/web` and `apps/cms` call `/api/*` by default. In local development, their dev
 servers proxy `/api/*` to `API_ORIGIN`. On Vercel, each app's `vercel.ts` rewrites
@@ -206,8 +211,8 @@ days:
 - Verification (`requireAuth`, guarding every `/api/cms/*` route plus `/api/deploy` and
   `/api/deploy-status`): a bearer token is accepted when it equals `PUBLISH_TOKEN`
   (constant-time, for scripts/CI), or when replaying it as a cookie against
-  `get-session` returns a live session. Positive results are cached in memory for 60s
-  per token to avoid a round trip to Neon Auth on every request.
+  `get-session` returns a live session. Positive results are cached in memory for 5
+  minutes per token to avoid a round trip to Neon Auth on every request.
 - `sign-in/email`, `sign-up/email`, and `sign-out` all require an `Origin` header
   (`NEON_AUTH_ORIGIN`) or Neon Auth rejects them with `MISSING_ORIGIN`. Localhost is
   pre-approved; a production origin needs `neon neon-auth domain add`.
@@ -272,9 +277,9 @@ provider behind every one of those interfaces today.
   default; clicking an image dynamically imports a small React-rendered fullscreen
   lightbox module on demand, so a project page that's only read ships zero JavaScript
   from that viewer.
-- **About, essay, contact, 404** are static pages. Contact is a mailto/tel index, not a
-  form — `POST /api/contact` and the `contact-submissions` collection still exist on the
-  API side (see **API app** above) but nothing in `apps/web` currently calls it.
+- **About, essay, contact, 404** are static pages. Contact is a plain mailto/tel index
+  — there is no contact form, and no `/api/contact` route to submit one to (see
+  **API app**).
 - `astro:transitions`' `ClientRouter` keeps navigation feeling like a single-page app
   without turning the site into one.
 
@@ -284,37 +289,66 @@ live data fetched from `apps/api` (`API_ORIGIN` is required — see **Local dev 
 
 ### Content model
 
-Content is authored in the CMS across four collections (`packages/cms-schema/src/registry.ts`):
+Content is authored in the CMS across three collections (`packages/cms-schema/src/registry.ts`):
 
-- **Projects** - one record per artwork/body of work: title, slug, year, sort order
-  (drives the browsing order and the home stage), subtitle/original-title fields,
-  medium, description, meta description, a hero asset, an optional thumb (falls back to
-  hero), a **gallery** field, and an optional grid stride. The gallery field holds the
-  project's whole image set as one ordered value (JSON `{ src, caption? }[]`) on the
-  project row itself - there is no separate per-image collection or table. The CMS
-  editor renders it as a persistent drop zone (always visible, at the top, even once
-  images exist) above a list of rows, one per image: a thumbnail, file name and size, a
-  drag handle for reordering (with an ArrowUp/ArrowDown keyboard fallback), a wide
-  optional-caption input, and a delete button. Each dropped file uploads through the
-  same asset-upload route into the bucket; there is no per-image database row. The
-  public content API builds `ProjectContent.images` straight from this field.
-- **Pages** - standalone pages (About, the artist's essay) with a lightweight markdown
-  body (`# `/`## `/`### ` headings, `- ` list items, blank-line-separated paragraphs).
-- **Site Settings** - one record (mode `data`, no publish workflow): name, tagline,
-  location, email, phone, description, and an optional social image. The site always
-  reads the most recently modified record.
-- **Contact Submissions** - read-only records created by `POST /api/contact`, not by
-  editors.
+- **Projects** (editorial) - one record per artwork/body of work: title, slug, year,
+  sort order (drives the browsing order and the home stage), subtitle/original-title
+  fields, medium, a rich-text description, a hero asset, an optional thumb (falls back
+  to hero), a **gallery** field, and an optional grid stride, plus a Meta title/Meta
+  description/Social image SEO group. The gallery field holds the project's whole image
+  set as one ordered value (JSON `{ src, caption? }[]`) on the project row itself -
+  there is no separate per-image collection or table. The CMS editor renders it as a
+  persistent drop zone (always visible, at the top, even once images exist) above a
+  list of rows, one per image: a thumbnail, file name and size, a drag handle for
+  reordering (with an ArrowUp/ArrowDown keyboard fallback), a wide optional-caption
+  input, and a delete button. Each dropped file uploads through the same asset-upload
+  route into the bucket; there is no per-image database row. The public content API
+  builds `ProjectContent.images` straight from this field.
+- **Pages** (editorial, fixed) - the site's standalone pages (About, the artist's
+  essay): title, slug, an optional image (About's portrait), a rich-text body, and the
+  same SEO group. `allowCreate`/`allowDelete` are both `false` - editors edit copy and
+  imagery but can't add or remove pages, since each one is wired to a specific route on
+  the site. The slug field renders as a link to the page's live URL, same as on
+  Projects.
+- **Site Settings** (`data` mode, `singleton: true`) - exactly one record: name,
+  tagline, location, email, phone, description, and an optional social image. No list
+  view - opening the collection opens its one record directly as a form, with no
+  New/Delete controls. The site always reads the most recently modified record.
 
-The shared schema also still defines a generic **reference** field type (a select
-pointing at another collection's records, validated against it server-side), but no
-collection uses one today - it was `project-images`' link back to `projects` before that
-collection was folded into the `gallery` field (see [ADR 0004](docs/adr/0004-neon-single-provider.md)).
+Two collections that existed earlier in this migration are gone: **Project Images**
+(folded into the `gallery` field - see [ADR 0004](docs/adr/0004-neon-single-provider.md))
+and **Contact Submissions** (the contact form was removed; see **API app**). The schema
+still defines a generic **reference** field type, but no collection uses one today.
+
+### Rich text
+
+`projects.description` and `pages.body` are `richtext` fields: GitHub-flavoured
+markdown plus `<u>` for underline, stored as plain text. The CMS edits them with a
+TipTap-based WYSIWYG toolbar (bold/italic/underline/strikethrough, headings, lists,
+links, blockquotes), lazy-loaded (`apps/cms/src/components/atoms/rich-text-field.tsx`
+dynamically imports the TipTap editor, so the ~main CMS bundle doesn't pay for it until
+a rich-text field is actually on screen) and round-tripped through `tiptap-markdown` so
+what's saved is the same markdown the content API serves. `apps/web` renders it with
+`marked` (GFM parsing) piped through `sanitize-html` (an explicit tag/attribute
+allowlist) at build time (`apps/web/src/content/markdown.ts`) - never raw HTML from the
+editor.
+
+### Editor sections and SEO fields
+
+Every field declares a `section`: **Basic info** (title/slug), **SEO settings**
+(Meta title, Meta description, Social image), or **Custom fields** (everything else,
+default when omitted) - the Record Editor Pane groups a record's fields under these
+three headings. The SEO fields are optional on both Projects and Pages; the live site
+falls back when they're empty: meta title falls back to the record's own title; meta
+description falls back to the record's own description/body (stripped of markdown) and
+then the site's default description; the social image falls back to the record's hero
+(Projects) or the site's own social image, and finally to a bundled `/og-default.jpg`.
 
 To add a project as an editor: create a **Projects** record, upload its hero image, drag
 its images into the **Gallery** drop zone, reorder them and add captions where useful,
 set the project's own sort order to place it in the browsing sequence, queue it to
-publish, then click **Publish** in the CMS top bar.
+publish, then click **Publish** in the CMS top bar. SEO fields are optional - leave them
+blank to use the fallbacks above.
 
 Content is read through `apps/web/src/content/`, a `ContentSource` interface with a
 single implementation, `api-source.ts`, which fetches `${API_ORIGIN}/api/content/*` at
@@ -332,6 +366,29 @@ Neon object storage bucket (`public`), read back as an absolute URL over the Con
 and rendered with a plain `<img>` (no build-time AVIF step). The portfolio's seed images
 live in `apps/api/seed/images/` and are uploaded to the bucket under `images/...` by
 `db:seed`; editor-uploaded assets land under `uploads/`.
+
+## Performance
+
+A handful of deliberate optimizations keep the CMS responsive against a real database
+instead of an in-memory mock:
+
+- **Grouped status counts.** `GET /api/cms/collections` counts each collection with one
+  `GROUP BY publish_status` query (`countByStatus`) instead of three separate `COUNT`
+  queries, and runs every collection's count in parallel (`Promise.all`).
+- **Parallel list + count.** `listRecords` runs its `SELECT` and its `COUNT` as two
+  concurrent queries (`Promise.all`) rather than two round trips in series.
+- **Slim list payloads.** `GET .../records?fields=list` trims each record's `values` to
+  just what the record list needs (the title field, every `listColumns` key, every
+  slug/reference field) - large `richtext`/`gallery`/`textarea` values never cross the
+  wire for a list view that doesn't render them.
+- **A 5-minute session cache.** `requireAuth`'s positive-result cache (see **Auth: Neon
+  Auth, not a JWT**) keeps a repeat request from round-tripping to Neon Auth.
+- **`Server-Timing: db;dur=…`** on every API response, so real database time is visible
+  in browser devtools with no extra instrumentation.
+- **The CMS fetches in parallel and shows skeletons.** The workspace requests
+  collections and the active collection's records at the same time instead of waiting
+  for collections to resolve first, and the record editor shows a skeleton placeholder
+  while a record (or a lazy-loaded rich-text editor) is still loading.
 
 ## Publishing (CMS → Vercel)
 

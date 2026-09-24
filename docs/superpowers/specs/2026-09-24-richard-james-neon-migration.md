@@ -241,3 +241,30 @@ Its JWTs expire after 15 minutes, so the CMS never holds a JWT. Instead:
 
 Presigned uploads for files over 4 MB, per-editor roles, version history,
 Cloudflare R2 (would be a second `CmsBlobStore`).
+
+## 8. Revision 2026-09-24 (afternoon): editorial feedback
+
+- **Rich text.** `pages.body` and `projects.description` are `richtext` fields:
+  GitHub-flavoured markdown plus `<u>` for underline, edited in the CMS with a
+  WYSIWYG markdown editor and rendered on the site with a real markdown
+  renderer (sanitised). The hand-rolled block parser is gone.
+- **Editor sections.** Fields carry `section: basic | custom | seo`; the record
+  editor shows "Basic info", "Custom fields", "SEO settings", then "Item details".
+- **SEO fields.** Projects and pages have `metaTitle`, `metaDescription`,
+  `ogImage` (`ProjectContent.seo`, `PageContent.seo`); the site falls back to
+  title / site description / hero / default social image.
+- **Pages.** `key` is renamed `slug`; slug fields render as links to the live
+  page (`urlPrefix` is a full https prefix). Pages are fixed:
+  `allowCreate: false`, `allowDelete: false`. Pages have an `image` field; the
+  about page's portrait comes from it (this fixed the missing portrait, which
+  broke when `public/images` moved to the seed folder).
+- **Site settings** is a `singleton`: opened directly as a form, no list, no New.
+- **Contact submissions** removed (the site has no contact form), along with
+  `/api/contact` and its table.
+- **Content verification.** Seed data was checked against
+  https://www.richardjamesart.com/ (subtitles, texts, order); differences were
+  folded into `apps/api/seed/data` and re-seeded.
+- **Load time.** Collection counts use one grouped query per collection run in
+  parallel; list and count queries run in parallel; session verification is
+  cached for five minutes; the CMS fetches collections and records in parallel
+  and shows skeletons while loading.

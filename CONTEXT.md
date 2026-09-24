@@ -16,6 +16,18 @@ _Avoid_: Auto-discovery, table browser
 An editable property of a CMS Collection record as defined by the collection config.
 _Avoid_: Raw column, inferred field
 
+**Editor Section**:
+One of three groups a Collection Field's config assigns it to for display in the Record Editor Pane: **Basic info** (title/slug), **Custom fields** (everything else, the default), or **SEO Settings**. Purely a display grouping — it doesn't change how a field is stored or validated.
+_Avoid_: Tab, accordion, a field-type inference
+
+**SEO Settings**:
+The Editor Section — and its Meta title / Meta description / Social image fields — a CMS Collection record uses to override the live site's default search and social metadata. Every field in it is optional; the site falls back through the record's own content, then the site's own settings, wherever one is left blank.
+_Avoid_: Required metadata, a separate SEO collection
+
+**Rich Text Field**:
+A Collection Field storing GitHub-flavoured markdown (plus `<u>` for underline) as plain text, edited through a WYSIWYG toolbar rather than as raw markdown, with the editing library itself lazy-loaded so it isn't in the CMS's main bundle.
+_Avoid_: HTML field, raw markdown textarea, a second content format alongside markdown
+
 **Asset Field**:
 A Collection Field that uploads a file to the Blob Store and stores the file reference on the record.
 _Avoid_: Asset library, media collection
@@ -65,8 +77,16 @@ The shared `@three-acts/cms-schema` package: the Collection Registry, field type
 _Avoid_: Duplicated types, app-local schema
 
 **Collection Mode**:
-How editors work with a CMS Collection's records: `editorial` (publish workflow), `data` (editable, no publish workflow), or `readonly` (system-generated records like form submissions — view, export, delete only).
+How editors work with a CMS Collection's records: `editorial` (publish workflow), `data` (editable, no publish workflow), or `readonly` (system-generated records — view, export, delete only). No shipped CMS Collection uses `readonly` today.
 _Avoid_: Per-record permissions, role-based access
+
+**Singleton Collection**:
+A CMS Collection with exactly one record (`singleton: true`), opened directly as a form — no record list, no New or Delete controls. Site Settings is one.
+_Avoid_: A one-row table, a config file
+
+**Fixed Pages**:
+A CMS Collection whose records editors can edit but never create or delete (`allowCreate`/`allowDelete: false`), because the site looks each one up by a specific route rather than discovering pages from the collection. The Pages collection is fixed for this reason — its record set (About, the artist's essay) is closed, even though each record's own fields, including its slug, stay editable.
+_Avoid_: A page builder, freeform routes, arbitrary new pages
 
 **Publish Status**:
 The editor-facing state that indicates whether a record is published, unpublished, or queued to publish. Only records in `editorial` mode collections carry one.
@@ -106,6 +126,9 @@ _Avoid_: Inferred name, display guess
 - `apps/web`'s **Content Source** always reads the **Content API**; it never talks to a **Data Store** directly and has no other source to fall back to.
 - The **Collection Schema Package** defines the **Collection Registry** and field types once, shared by the CMS and the **REST Bridge**.
 - A **CMS Collection** has one **Collection Mode** (`editorial` by default).
+- A **Collection Field** belongs to exactly one **Editor Section**; a field with no section set defaults to Custom fields.
+- **SEO Settings** is the **Editor Section** that groups a record's Meta title, Meta description, and Social image **Collection Fields**.
+- A **CMS Collection** is a **Singleton Collection** when it holds exactly one record; **Fixed Pages** is a **CMS Collection** whose records editors can edit but never create or delete. A collection can be neither, either, or (in principle) both.
 - A CMS Collection record has one **Publish Status** only when its collection's **Collection Mode** is `editorial`.
 - Publishing runs a **Publish Transition** first, then a **Site Deploy**.
 - The **Editorial Workspace** is optimized for desktop editorial work.
@@ -144,6 +167,15 @@ _Avoid_: Inferred name, display guess
 > **Domain expert:** "No — records open in a **Record Editor Pane** like the Webflow CMS reference."
 > **Dev:** "How does the CMS label a record in the list?"
 > **Domain expert:** "Use the configured **Title Field** first, then fall back only when the config omits one."
+> **Dev:** "Why does the description field on a project show a formatting toolbar instead of a plain textarea?"
+> **Domain expert:** "It's a **Rich Text Field** — the stored value is still plain markdown, but editors get bold/italic/headings/lists instead of typing `#` and `-` by hand."
+> **Dev:** "Do editors have to fill in a meta description for every project?"
+> **Domain expert:** "No — **SEO Settings** fields are all optional. Leave them blank and the site falls back to the record's own content, then the site's defaults."
+> **Dev:** "Can an editor add a new page, like a second essay?"
+> **Domain expert:** "No — Pages is **Fixed Pages**. Editors edit what's there; adding or removing a page is a code change, since the site looks each one up by its route."
+> **Dev:** "Why does Site Settings open straight into a form instead of a list?"
+> **Domain expert:** "It's a **Singleton Collection** — there's only ever one record, so there's nothing to list."
+
 ## Flagged ambiguities
 
 - "collection" was used to mean both a UI section and a data source. Resolved: a **CMS Collection** is an editable table backed by a **Data Store**.
@@ -156,4 +188,5 @@ _Avoid_: Inferred name, display guess
 - "Figma-like" was used for the visual target — resolved: the intended reference is Webflow CMS, and the **Editorial Workspace** should be compact and desktop-first.
 - "same as screenshot" means a split-pane **Record Editor Pane**, not a modal or drawer.
 - "record title" is resolved by the **Title Field**, with fallback only for incomplete collection config.
+- "SEO fields" could mean required per-record metadata. Resolved: **SEO Settings** fields are always optional, with the live site supplying fallbacks.
 </content>
