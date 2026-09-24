@@ -38,6 +38,10 @@ export interface Project {
   description: string
   /** Trimmed description for <meta> tags */
   metaDescription: string
+  /** Overrides the page title in search results and browser tabs. Defaults to `title` when unset. */
+  metaTitle?: string
+  /** Absolute-from-root or bucket social-share image path. Defaults to `hero` when unset. */
+  ogImage?: string
   /** Hero image path, e.g. "/images/<slug>/01.avif" */
   hero: string
   /** Thumbnail image path */
@@ -61,9 +65,19 @@ export interface Project {
   next: string
 }
 
-/** A single block of long-form content (about / essay). */
-export interface ContentBlock {
-  /** Original semantic tag: h1 | h2 | h3 | p | li */
-  tag: string
-  text: string
+/** A fixed, singleton content page (about / essay). */
+export type SeedPage = {
+  /** Page's address on the site, e.g. "about" */
+  slug: string
+  title: string
+  /** GitHub-flavoured Markdown plus `<u>` for underline — see `apps/api/scripts/seed.ts`. */
+  body: string
+  /** Portrait/lead image path, e.g. "/images/about/richard-james.avif" */
+  image?: string
+  /** Overrides the page title in search results and browser tabs. Defaults to `title` when unset. */
+  metaTitle?: string
+  /** Short description for search engines and social cards. Falls back to the site description when unset. */
+  metaDescription?: string
+  /** Absolute-from-root or bucket social-share image path. */
+  ogImage?: string
 }

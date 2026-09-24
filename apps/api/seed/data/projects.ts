@@ -459,7 +459,7 @@ export const projects: Project[] = [
     slug: "black-photos-1995",
     title: "Black Photos and Poems",
     year: "1995",
-    medium: "Photos 96/96cm mounted on aluminium; text 32/32cm etched traffolyte",
+    medium: "Photos 96/34cm mounted on aluminium; text 32/32cm etched traffolyte",
     description: "A series of work attempting to express a sense of more than this ‘locked in reactive body,’ and at the same time staying true to mundane reality i.e. not transcendence away from this body, but more of a descending into the body. Immanence. My awareness of this at the time might be described as more or less disturbed peace. And of course less disturbed was appreciated!\n\nThe black photos came from a wall I was meditating in front of, which is the approach in Soto Zen. The poems arose from an enjoyment of concrete poetry, and were a further attempt to bring transcendence back down to earth: to the body.\n\nThere was also another layer of ambiguity: a black wall, and ending, a difficult urban landscape.\n\nA willingness to not turn away from this.",
     metaDescription: "Black Photos and Poems, a 1995 series by Richard James — photographs of a meditation wall with concrete poems, bringing transcendence back to the body.",
     hero: "/images/projects/black-photos-1995/black-photos-1995-01.avif",
