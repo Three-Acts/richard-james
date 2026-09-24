@@ -9,3 +9,5 @@ coverage
 *.local
 .playwright-mcp
 .astro
+.neon
+.claude
