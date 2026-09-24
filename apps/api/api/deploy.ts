@@ -10,6 +10,6 @@ import { triggerDeploy } from "./_lib/vercel";
  * for progress on the deployment this call started specifically.
  */
 export default withApi(["POST"], async (request, response) => {
-  requireAuth(request);
+  await requireAuth(request);
   ok(response, await triggerDeploy());
 });

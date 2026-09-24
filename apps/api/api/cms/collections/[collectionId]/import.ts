@@ -7,7 +7,7 @@ const readStringParam = (value: unknown): string | undefined => (typeof value ==
 
 /** POST /api/cms/collections/:collectionId/import  body ImportRecordsBody -> CmsRecord[] */
 export default withApi(["POST"], async (request, response) => {
-  requireAuth(request);
+  await requireAuth(request);
 
   const collectionId = readStringParam(request.query.collectionId);
   if (!collectionId) {

@@ -2,6 +2,9 @@ import {
   CmsError,
   MAX_ASSET_UPLOAD_BYTES,
   collectionRegistry,
+  parseGalleryValue,
+  referenceFieldsOf,
+  serializeGalleryValue,
   type AssetField,
   type AssetUploadResult,
   type CmsCollection,
@@ -9,6 +12,7 @@ import {
   type CmsField,
   type CmsRecord,
   type CmsRecordValue,
+  type GalleryField,
   type ListRecordsOptions,
   type ListRecordsResult,
   type PublishStatus,
@@ -61,7 +65,8 @@ function validateFieldValue(field: CmsField, raw: CmsRecordValue, enforceRequire
     case "text":
     case "textarea":
     case "slug":
-    case "asset": {
+    case "asset":
+    case "reference": {
       const text = raw === null || raw === undefined ? "" : String(raw);
       if (enforceRequired && field.required && !text.trim()) {
         throw validationError(field, `${field.label} is required.`);
@@ -118,6 +123,53 @@ function validateFieldValue(field: CmsField, raw: CmsRecordValue, enforceRequire
       }
       return new Date(parsed).toISOString();
     }
+    case "gallery": {
+      const galleryField = field as GalleryField;
+      const maxItems = galleryField.maxItems ?? 200;
+
+      if (raw === null || raw === undefined || raw === "") {
+        if (enforceRequired && field.required) {
+          throw validationError(field, `${field.label} is required.`);
+        }
+        return serializeGalleryValue([]);
+      }
+
+      // The client sends either the stored JSON string or (from the editor's
+      // in-memory state) an already-parsed array — accept both, but unlike
+      // `parseGalleryValue` (used for trusted, already-stored values) be
+      // strict here: malformed JSON or a non-array is a validation error,
+      // not silently swallowed to an empty gallery.
+      const rawValue: unknown = raw;
+      let parsedArray: unknown;
+      if (Array.isArray(rawValue)) {
+        parsedArray = rawValue;
+      } else if (typeof rawValue === "string") {
+        try {
+          parsedArray = JSON.parse(rawValue);
+        } catch {
+          throw validationError(field, `${field.label} must be a list of images.`);
+        }
+      } else {
+        throw validationError(field, `${field.label} must be a list of images.`);
+      }
+
+      if (!Array.isArray(parsedArray)) {
+        throw validationError(field, `${field.label} must be a list of images.`);
+      }
+
+      // Now apply `parseGalleryValue`'s tolerant per-item cleaning (drop
+      // entries without a string `src`, trim/drop empty captions) and cap.
+      const items = parseGalleryValue(JSON.stringify(parsedArray)).slice(0, maxItems);
+
+      // The empty-check above only catches "" / null / undefined — a client
+      // sending "[]" or [] (an explicitly empty gallery) reaches here with
+      // an empty `items`, which must still fail a required gallery.
+      if (enforceRequired && field.required && items.length === 0) {
+        throw validationError(field, `${field.label} is required.`);
+      }
+
+      return serializeGalleryValue(items);
+    }
     default:
       return raw ?? "";
   }
@@ -159,6 +211,40 @@ function buildRecordValues(
   }
 
   return values;
+}
+
+/**
+ * Validates every `reference` field's value against the referenced
+ * collection: empty is allowed here (required-ness is `validateFieldValue`'s
+ * job); a non-empty value must be an id that actually exists in that
+ * collection. Kept as a separate async pass after `buildRecordValues`
+ * (which is synchronous) rather than folding it into per-field validation.
+ */
+async function assertReferencesExist(collection: CmsCollection, values: Record<string, CmsRecordValue>): Promise<void> {
+  const refFields = referenceFieldsOf(collection);
+  if (refFields.length === 0) {
+    return;
+  }
+
+  const store = getDataStore();
+
+  for (const field of refFields) {
+    const raw = values[field.key];
+    const id = typeof raw === "string" ? raw.trim() : "";
+    if (!id) {
+      continue;
+    }
+
+    const referencedCollection = collectionRegistry.find((item) => item.id === field.collection);
+    if (!referencedCollection) {
+      throw validationError(field, `${field.label} must reference an existing ${field.collection}.`);
+    }
+
+    const referenced = await store.getRecord(referencedCollection, id);
+    if (!referenced) {
+      throw validationError(field, `${field.label} must reference an existing ${referencedCollection.label}.`);
+    }
+  }
 }
 
 function isPublishStatus(value: unknown): value is PublishStatus {
@@ -205,6 +291,7 @@ export async function getRecord(collectionId: string, recordId: string): Promise
 export async function createRecord(collectionId: string, values?: Partial<Record<string, CmsRecordValue>>): Promise<CmsRecord> {
   const collection = assertWritable(getCollectionOrThrow(collectionId));
   const normalizedValues = buildRecordValues(collection, values, undefined);
+  await assertReferencesExist(collection, normalizedValues);
   const [record] = await getDataStore().insertRecords(collection, [{ publishStatus: "not_published", values: normalizedValues }]);
   return record;
 }
@@ -231,6 +318,7 @@ export async function saveRecord(
   // Required fields gate publishing, not drafting.
   const enforceRequired = publishStatus === "published" || publishStatus === "queued_to_publish";
   const normalizedValues = buildRecordValues(collection, record.values, existing.values, enforceRequired);
+  await assertReferencesExist(collection, normalizedValues);
 
   const nextRecord: CmsRecord = {
     id: existing.id,
@@ -276,6 +364,10 @@ export async function importRecords(collectionId: string, rows: Array<Record<str
     values: buildRecordValues(collection, row, undefined)
   }));
 
+  for (const row of prepared) {
+    await assertReferencesExist(collection, row.values);
+  }
+
   return getDataStore().insertRecords(collection, prepared);
 }
 
@@ -283,10 +375,14 @@ export async function uploadAsset(collectionId: string, fieldKey: string, body: 
   const collection = assertWritable(getCollectionOrThrow(collectionId));
   const field = collection.fields.find((item) => item.key === fieldKey);
 
-  if (!field || field.type !== "asset") {
+  // A `gallery` field uploads one file per request too (the editor's
+  // multi-file drop zone issues one upload call per file, then appends the
+  // returned URL to the field's JSON item list) — both field types carry
+  // `bucket`/`accept`, so the upload itself is identical either way.
+  if (!field || (field.type !== "asset" && field.type !== "gallery")) {
     throw new CmsError("not_found", `Unknown asset field: ${fieldKey}`);
   }
-  const assetField = field as AssetField;
+  const assetField: AssetField | GalleryField = field;
 
   if (!body || typeof body.fileName !== "string" || !body.fileName.trim()) {
     throw new CmsError("validation", "fileName is required.");
@@ -313,7 +409,9 @@ export async function uploadAsset(collectionId: string, fieldKey: string, body: 
   }
 
   const safeName = sanitizeFileName(body.fileName);
-  const path = `${collection.tableName}/${Date.now()}-${safeName}`;
+  // Prefixed so editor uploads never collide with keys the seed script writes
+  // under `images/...` for the same collection/table names.
+  const path = `uploads/${collection.tableName}/${Date.now()}-${safeName}`;
   const contentType = typeof body.contentType === "string" && body.contentType ? body.contentType : "application/octet-stream";
 
   const uploaded = await getBlobStore().upload({ bucket: assetField.bucket, path, contentType, data: buffer });

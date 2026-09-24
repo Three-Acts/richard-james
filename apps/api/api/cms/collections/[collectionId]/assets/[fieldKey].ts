@@ -7,7 +7,7 @@ const readStringParam = (value: unknown): string | undefined => (typeof value ==
 
 /** POST /api/cms/collections/:collectionId/assets/:fieldKey  body UploadAssetBody -> AssetUploadResult */
 export default withApi(["POST"], async (request, response) => {
-  requireAuth(request);
+  await requireAuth(request);
 
   const collectionId = readStringParam(request.query.collectionId);
   const fieldKey = readStringParam(request.query.fieldKey);

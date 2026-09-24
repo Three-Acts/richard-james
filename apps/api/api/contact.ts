@@ -1,5 +1,6 @@
+import { collectionRegistry } from "@three-acts/cms-schema";
 import { ApiError, ok, withApi } from "./_lib/http";
-import { getServiceClient } from "./_lib/supabase";
+import { getDataStore } from "./_lib/cms/resolve-store";
 
 type ContactPayload = {
   name?: unknown;
@@ -37,8 +38,9 @@ const parseBody = (body: unknown): ContactPayload => {
  *
  * `website` is a honeypot: real visitors never fill it in, so any non-empty
  * value short-circuits as a normal-looking success without doing anything.
- * Stores to Supabase (`form_submissions`) when configured; otherwise
- * acknowledges receipt without persisting.
+ * Stores into the `contact-submissions` collection through the CMS data
+ * store, as `not_published` (it has no publish workflow — see
+ * `CollectionMode` — editors only view/export/delete it).
  */
 export default withApi(["POST"], async (request, response) => {
   const payload = parseBody(request.body);
@@ -64,24 +66,17 @@ export default withApi(["POST"], async (request, response) => {
     throw new ApiError(400, "validation_error", "message must be between 1 and 5000 characters.");
   }
 
-  const client = getServiceClient();
-  if (!client) {
-    ok(response, { received: true, stored: false });
-    return;
+  const collection = collectionRegistry.find((item) => item.id === "contact-submissions");
+  if (!collection) {
+    throw new Error("contact-submissions is missing from the collection registry.");
   }
 
-  const { error: insertError } = await client.from("form_submissions").insert({
-    submitted_by: name,
-    email,
-    message,
-    source: "website",
-    consent: false,
-    submitted_at: new Date().toISOString()
-  });
-
-  if (insertError) {
-    throw insertError;
-  }
+  await getDataStore().insertRecords(collection, [
+    {
+      publishStatus: "not_published",
+      values: { name, email, message, submittedAt: new Date().toISOString() }
+    }
+  ]);
 
   ok(response, { received: true, stored: true });
 });

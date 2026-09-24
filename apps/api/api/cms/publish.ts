@@ -11,7 +11,7 @@ import { publishQueued } from "../_lib/cms/service";
  * separate step — see /api/deploy.
  */
 export default withApi(["POST"], async (request, response) => {
-  requireAuth(request);
+  await requireAuth(request);
   const body = readJsonBody<PublishBody>(request);
   ok(response, await publishQueued(body.collectionId));
 });

@@ -18,7 +18,7 @@ const readStringParam = (value: unknown): string | undefined =>
  * Requires publish auth (see `requireAuth`).
  */
 export default withApi(["GET"], async (request, response) => {
-  requireAuth(request);
+  await requireAuth(request);
 
   const id = readStringParam(request.query.id);
   const after = readStringParam(request.query.after);

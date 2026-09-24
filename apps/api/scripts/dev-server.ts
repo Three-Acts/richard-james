@@ -1,7 +1,17 @@
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { URL } from "node:url";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { loadEnvFiles } from "./load-env";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// apps/api/.env first (app-local overrides), then the repo-root .env.local
+// pulled by `neon link`/`neon deploy` (live Neon branch vars) — so `npm run
+// dev:api` works with zero manual env setup once the branch is linked.
+loadEnvFiles([resolve(__dirname, "../.env"), resolve(__dirname, "../../../.env.local")]);
 
 const port = Number(process.env.PORT ?? 5175);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -18,6 +28,14 @@ const routes = {
   "/api/deploy": () => import("../api/deploy"),
   "/api/deploy-status": () => import("../api/deploy-status"),
   "/api/contact": () => import("../api/contact"),
+  "/api/content/site": () => import("../api/content/site"),
+  "/api/content/projects": () => import("../api/content/projects"),
+  "/api/content/projects/[slug]": () => import("../api/content/projects/[slug]"),
+  "/api/content/pages": () => import("../api/content/pages"),
+  "/api/content/pages/[key]": () => import("../api/content/pages/[key]"),
+  "/api/auth/sign-in": () => import("../api/auth/sign-in"),
+  "/api/auth/session": () => import("../api/auth/session"),
+  "/api/auth/sign-out": () => import("../api/auth/sign-out"),
   "/api/cms/collections": () => import("../api/cms/collections"),
   "/api/cms/collections/[collectionId]/records": () => import("../api/cms/collections/[collectionId]/records"),
   "/api/cms/collections/[collectionId]/records/[recordId]": () =>

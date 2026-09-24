@@ -11,7 +11,7 @@ const readStringParam = (value: unknown): string | undefined => (typeof value ==
  * DELETE /api/cms/collections/:collectionId/records/:recordId -> { deleted: true }
  */
 export default withApi(["GET", "PUT", "DELETE"], async (request, response) => {
-  requireAuth(request);
+  await requireAuth(request);
 
   const collectionId = readStringParam(request.query.collectionId);
   const recordId = readStringParam(request.query.recordId);

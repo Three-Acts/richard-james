@@ -10,10 +10,21 @@ import type { CmsCollection, CmsRecord, CmsRecordValue, ListRecordsOptions, List
  * S3 API, ...), implement these two interfaces and register the result in
  * `resolve-store.ts`.
  */
+/**
+ * `listRecords` options plus a store-only `filter`, used by `api/_lib/content.ts`
+ * to read only published records straight from the store instead of
+ * over-fetching and filtering in application code. Kept local to this file
+ * (not added to the shared `ListRecordsOptions` in `@three-acts/cms-schema`)
+ * because it's a server-storage concern, not part of the CMS wire contract.
+ */
+export type ListRecordsStoreOptions = ListRecordsOptions & {
+  filter?: { publishStatus?: PublishStatus };
+};
+
 export interface CmsDataStore {
   readonly name: string;
 
-  listRecords(collection: CmsCollection, options: ListRecordsOptions): Promise<ListRecordsResult>;
+  listRecords(collection: CmsCollection, options: ListRecordsStoreOptions): Promise<ListRecordsResult>;
 
   countRecords(collection: CmsCollection, filter?: { publishStatus?: PublishStatus }): Promise<number>;
 
