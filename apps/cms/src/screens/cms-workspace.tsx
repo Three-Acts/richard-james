@@ -18,12 +18,14 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
     draftRecord,
     error,
     filteredRecords,
+    galleryUpload,
     groups,
     handleAssetUpload,
     handleCreateRecord,
     handleDeleteRecords,
     handleDuplicateRecord,
     handleExport,
+    handleGalleryUpload,
     handleImportRecords,
     handleSaveRecord,
     handleSelectCollection,
@@ -199,6 +201,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                 <RecordEditor
                   collection={activeCollection}
                   draftRecord={draftRecord}
+                  galleryUpload={galleryUpload}
                   isDirty={isDirty}
                   isSaving={isSaving}
                   onAssetUpload={handleAssetUpload}
@@ -207,6 +210,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                   onDelete={() => handleDeleteRecords([draftRecord.id])}
                   onDiscard={reloadRecord}
                   onDuplicate={handleDuplicateRecord}
+                  onGalleryUpload={handleGalleryUpload}
                   onSave={() => handleSaveRecord()}
                   onUpdateValue={updateDraftValue}
                   uploadingField={uploadingField}

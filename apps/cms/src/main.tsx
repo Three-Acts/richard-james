@@ -1,17 +1,21 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app";
+import { apiAuthClient } from "./auth/api-auth-client";
 import { AuthProvider } from "./auth/auth-provider";
-import { mockAuthClient } from "./auth/mock-auth-client";
 import { CmsBackendProvider } from "./cms/backend-context";
-import { resolveCmsBackend } from "./cms/resolve-backend";
+import { createRestCmsBackend } from "./cms/rest-backend";
+import { apiFetch } from "./lib/api-client";
 import "./styles.css";
 
-const cmsBackend = resolveCmsBackend();
+// The CMS talks to the real API only: `apps/api`'s `/api/cms/*` routes for
+// data and storage, `/api/auth/*` (Neon Auth) for editor sign-in.
+const cmsBackend = createRestCmsBackend({ apiFetch });
+const authClient = apiAuthClient;
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
-    <AuthProvider client={mockAuthClient}>
+    <AuthProvider client={authClient}>
       <CmsBackendProvider backend={cmsBackend}>
         <App />
       </CmsBackendProvider>

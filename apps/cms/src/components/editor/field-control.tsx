@@ -1,11 +1,33 @@
 import { ExternalLink } from "lucide-react";
 import { cn } from "@three-acts/utils";
-import type { AssetField, CmsField, CmsRecord, CmsRecordValue, SelectField, SlugField } from "../../cms/types";
-import { AssetControl, FormField, Input, inputVariants, NumberInput, Select, Textarea, Toggle } from "../atoms";
+import type {
+  AssetField,
+  CmsField,
+  CmsRecord,
+  CmsRecordValue,
+  GalleryField,
+  ReferenceField,
+  SelectField,
+  SlugField
+} from "../../cms/types";
+import { parseGalleryValue, serializeGalleryValue } from "../../cms/types";
+import { AssetControl, FormField, GalleryControl, Input, inputVariants, NumberInput, Select, Textarea, Toggle } from "../atoms";
 import { formatDateTime, fromDateTimeLocal, toDateTimeLocal } from "../../lib/format";
+import { useReferenceOptions } from "../../hooks/use-reference-options";
+
+/**
+ * Upload progress for the currently-uploading `gallery` field, if any. Keyed
+ * by both the record and the field: without `recordId`, switching to a
+ * different record mid-upload would show that record's gallery as "still
+ * uploading" too, since only the field key was being compared.
+ */
+export type GalleryUploadProgress = { recordId: string; fieldKey: string; remaining: number } | null;
 
 type FieldControlProps = {
   field: CmsField;
+  /** Files an editor picked/dropped onto a `gallery` field's control. */
+  onGalleryUpload: (field: GalleryField, files: File[]) => void;
+  galleryUpload: GalleryUploadProgress;
   onAssetUpload: (field: AssetField, file: File) => void;
   onUpdateValue: (fieldKey: string, value: CmsRecordValue) => void;
   /** Render the value as a plain display instead of an editable control. */
@@ -41,7 +63,64 @@ function toNumberValue(value: CmsRecordValue): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, record, uploadingField }: FieldControlProps) {
+/**
+ * A `reference` field: a Select over the referenced collection's records
+ * (label = its titleField value, value = record id), loaded through
+ * `useReferenceOptions`. Split out from `FieldControl` so the hook is only
+ * ever called for an actual reference field, never behind a runtime branch
+ * inside one component (which `react-hooks/rules-of-hooks` would flag).
+ */
+function ReferenceFieldControl({
+  field,
+  onUpdateValue,
+  readOnly,
+  record
+}: {
+  field: ReferenceField;
+  onUpdateValue: (fieldKey: string, value: CmsRecordValue) => void;
+  readOnly?: boolean;
+  record: CmsRecord;
+}) {
+  const value = String(record.values[field.key] ?? "");
+  const { options, isLoading, error } = useReferenceOptions(field.collection);
+
+  if (readOnly) {
+    const match = options.find((option) => option.value === value);
+    const shown = match?.label ?? value;
+
+    return (
+      <FormField description={field.helpText} label={field.label}>
+        <div className={cn(inputVariants({ tone: "display" }))}>{shown || "—"}</div>
+      </FormField>
+    );
+  }
+
+  return (
+    <FormField description={field.helpText} label={field.label} required={field.required}>
+      <Select
+        onValueChange={(next) => onUpdateValue(field.key, next)}
+        options={[{ label: isLoading ? "Loading…" : "Select…", value: "" }, ...options]}
+        value={value}
+      />
+      {error ? (
+        <p className="m-0 text-ui text-cms-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </FormField>
+  );
+}
+
+export function FieldControl({
+  field,
+  galleryUpload,
+  onAssetUpload,
+  onGalleryUpload,
+  onUpdateValue,
+  readOnly,
+  record,
+  uploadingField
+}: FieldControlProps) {
   const value = record.values[field.key] ?? "";
   // Base UI Field wires labels to its own control parts; only the raw file input needs an id.
   const uploadId = `${record.id}-${field.key}`;
@@ -58,6 +137,42 @@ export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, re
     return (
       <FormField description={field.helpText} label={field.label}>
         <div className={cn(inputVariants({ tone: "display" }), isIdentifier && "font-mono tabular-nums")}>{shown}</div>
+      </FormField>
+    );
+  }
+
+  if (field.type === "reference") {
+    return <ReferenceFieldControl field={field} onUpdateValue={onUpdateValue} readOnly={readOnly} record={record} />;
+  }
+
+  if (field.type === "gallery") {
+    const galleryField = field as GalleryField;
+    const items = parseGalleryValue(value);
+
+    if (readOnly) {
+      return (
+        <FormField description={field.helpText} label={field.label}>
+          <div className={cn(inputVariants({ tone: "display" }))}>
+            {items.length > 0 ? `${items.length} image${items.length === 1 ? "" : "s"}` : "—"}
+          </div>
+        </FormField>
+      );
+    }
+
+    const isUploadingThisField =
+      galleryUpload !== null && galleryUpload.recordId === record.id && galleryUpload.fieldKey === field.key;
+
+    return (
+      <FormField description={field.helpText} htmlFor={uploadId} label={field.label} required={field.required}>
+        <GalleryControl
+          accept={galleryField.accept}
+          inputId={uploadId}
+          items={items}
+          maxItems={galleryField.maxItems ?? 200}
+          onChange={(nextItems) => onUpdateValue(field.key, serializeGalleryValue(nextItems))}
+          onFiles={(files) => onGalleryUpload(galleryField, files)}
+          uploadingCount={isUploadingThisField ? galleryUpload.remaining : 0}
+        />
       </FormField>
     );
   }

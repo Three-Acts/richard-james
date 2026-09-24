@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { DragEvent } from "react";
 import { ArrowUpRight, FileText, Film, Image as ImageIcon, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { cn } from "@three-acts/utils";
+import { fileNameFromUrl, formatFileSize, getAssetMeta, matchesAccept } from "./asset-utils";
 import { BareIconButton } from "./bare-icon-button";
 import { Button } from "./button";
 import { Tooltip } from "./tooltip";
@@ -9,25 +10,8 @@ import { buttonVariants, fileLabelFocusRing } from "./styles";
 
 type AssetKind = "image" | "video" | "file";
 
-type AssetMeta = { fileName: string; size: number };
-
-// The upload response is the only place a fresh file's real name/size live —
-// the record only ever stores the URL. Keyed by URL so the card can recover
-// them right after upload, even though nothing about the URL itself carries
-// that information (and a `/mock-storage/...` URL never will).
-const assetMetaByUrl = new Map<string, AssetMeta>();
-
-export function rememberAssetMeta(url: string, meta: AssetMeta): void {
-  assetMetaByUrl.set(url, meta);
-}
-
-export function getAssetMeta(url: string): AssetMeta | undefined {
-  return assetMetaByUrl.get(url);
-}
-
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "svg"]);
 const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "m4v"]);
-const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB"];
 
 function kindFromAccept(accept?: string): AssetKind {
   if (accept?.startsWith("image/")) {
@@ -84,59 +68,6 @@ function kindNoun(kind: AssetKind): string {
   }
 
   return "file";
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1000) {
-    return `${bytes} B`;
-  }
-
-  let value = bytes;
-  let unitIndex = 0;
-
-  while (value >= 1000 && unitIndex < BYTE_UNITS.length - 1) {
-    value /= 1000;
-    unitIndex += 1;
-  }
-
-  const rounded = value.toFixed(1).replace(/\.0$/, "");
-  return `${rounded} ${BYTE_UNITS[unitIndex]}`;
-}
-
-function fileNameFromUrl(url: string): string {
-  const path = url.split(/[?#]/)[0];
-  const segment = path.slice(path.lastIndexOf("/") + 1);
-
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
-
-function matchesAccept(file: File, accept?: string): boolean {
-  const patterns = accept
-    ? accept
-        .split(",")
-        .map((pattern) => pattern.trim())
-        .filter(Boolean)
-    : [];
-
-  if (patterns.length === 0) {
-    return true;
-  }
-
-  return patterns.some((pattern) => {
-    if (pattern.startsWith(".")) {
-      return file.name.toLowerCase().endsWith(pattern.toLowerCase());
-    }
-
-    if (pattern.endsWith("/*")) {
-      return file.type.startsWith(pattern.slice(0, -1));
-    }
-
-    return file.type === pattern;
-  });
 }
 
 type AssetControlProps = {
@@ -214,7 +145,7 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
       <div className="grid gap-1.5">
         <label
           className={cn(
-            "flex min-h-24 flex-col items-center justify-center gap-1 rounded-cms border border-dashed border-cms-track bg-cms-surface px-4 py-4 text-center transition-colors",
+            "relative flex min-h-24 flex-col items-center justify-center gap-1 rounded-cms border border-dashed border-cms-track bg-cms-surface px-4 py-4 text-center transition-colors",
             isUploading ? "cursor-not-allowed opacity-60" : "cursor-pointer",
             isDragging && "border-cms-accent bg-cms-raised",
             fileLabelFocusRing
@@ -235,9 +166,16 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
               <span className="text-ui text-cms-subtle">or click to browse for a file</span>
             </>
           )}
+          {/* Covers the label's own footprint instead of `sr-only`: a `sr-only`
+              input keeps its normal-flow ("static") position, which can sit far
+              down a long scrollable form. Focusing it (the label→input click
+              forwarding does this, and so does the OS file picker returning
+              focus) then triggers the browser's default scroll-into-view,
+              jumping the whole pane. Matching the visible control's own
+              position means that scroll is always a no-op. */}
           <input
             accept={accept}
-            className="sr-only"
+            className="absolute inset-0 cursor-[inherit] opacity-0"
             disabled={isUploading}
             id={inputId}
             onChange={(event) => {
@@ -304,12 +242,20 @@ export function AssetControl({ accept, inputId, isUploading, onClear, onFile, va
       </div>
 
       <div className="flex gap-1.5">
-        <label className={cn(buttonVariants({ variant: "normal" }), isUploading ? "cursor-not-allowed opacity-50" : "cursor-pointer", fileLabelFocusRing)}>
+        <label
+          className={cn(
+            "relative",
+            buttonVariants({ variant: "normal" }),
+            isUploading ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+            fileLabelFocusRing
+          )}
+        >
           <RefreshCw aria-hidden="true" size={13} />
           Replace
+          {/* See the empty-state input above for why this isn't `sr-only`. */}
           <input
             accept={accept}
-            className="sr-only"
+            className="absolute inset-0 cursor-[inherit] opacity-0"
             disabled={isUploading}
             id={inputId}
             onChange={(event) => {

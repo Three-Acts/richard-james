@@ -1,11 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCmsBackend } from "../cms/backend-context";
 import { describeCmsError } from "../cms/errors";
-import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, PublishStatus } from "../cms/types";
-import { rememberAssetMeta } from "../components/atoms";
+import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, GalleryField, PublishStatus } from "../cms/types";
+import { parseGalleryValue, serializeGalleryValue } from "../cms/types";
+import { rememberAssetMeta, useToast } from "../components/atoms";
+import type { GalleryUploadProgress } from "../components/editor/field-control";
 import type { CollectionGroup } from "../components/workspace";
 import { getRecordTitle } from "../lib/records";
 import { exportRecords } from "../lib/export-records";
+import { bumpReferenceCache } from "./use-reference-options";
+
+/** How many gallery files upload at once — matches the concurrency asset-field's single-file flow gets "for free". */
+const GALLERY_UPLOAD_CONCURRENCY = 3;
+
+/**
+ * Surfaces a write-action failure as its own error toast (title names the
+ * action, description is `describeCmsError`'s message — e.g. the `conflict`
+ * copy that tells the editor to reload). Kept separate from the generic
+ * `error` state below, which still drives a toast for passive load failures
+ * (initial collection/record fetches) — see `CmsWorkspace`'s effect.
+ */
+function pushActionErrorToast(toast: ReturnType<typeof useToast>, title: string, error: unknown) {
+  toast.push({ tone: "error", title, description: describeCmsError(error), duration: 8000 });
+}
 
 /** Shallow-compares two records' editable surface: field values plus publish status. */
 function areValuesEqual(a: Record<string, CmsRecordValue>, b: Record<string, CmsRecordValue>): boolean {
@@ -22,6 +39,7 @@ function areValuesEqual(a: Record<string, CmsRecordValue>, b: Record<string, Cms
 
 export function useCmsWorkspace() {
   const { data, storage } = useCmsBackend();
+  const toast = useToast();
   const [collections, setCollections] = useState<CmsCollectionSummary[]>([]);
   const [activeCollectionId, setActiveCollectionId] = useState("");
   const [records, setRecords] = useState<CmsRecord[]>([]);
@@ -39,6 +57,7 @@ export function useCmsWorkspace() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [galleryUpload, setGalleryUpload] = useState<GalleryUploadProgress>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -317,8 +336,11 @@ export function useCmsWorkspace() {
       const { records: nextRecords } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
       await refreshCollections();
+      // A deleted record may be referenced elsewhere by id — drop it from the
+      // shared reference-options cache so those selects/columns stop offering it.
+      bumpReferenceCache(activeCollection.id);
     } catch (nextError) {
-      setError(describeCmsError(nextError));
+      pushActionErrorToast(toast, "Delete failed", nextError);
       return;
     }
 
@@ -337,7 +359,12 @@ export function useCmsWorkspace() {
     }
 
     if (failedCount > 0) {
-      setError(`Unable to delete ${failedCount} of ${ids.length} record${ids.length === 1 ? "" : "s"}.`);
+      toast.push({
+        tone: "error",
+        title: "Delete failed",
+        description: `Unable to delete ${failedCount} of ${ids.length} record${ids.length === 1 ? "" : "s"}.`,
+        duration: 8000
+      });
     }
   }
 
@@ -353,9 +380,10 @@ export function useCmsWorkspace() {
       const { records: nextRecords } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
       await refreshCollections();
+      bumpReferenceCache(activeCollection.id);
       setIsImportOpen(false);
     } catch (nextError) {
-      setError(describeCmsError(nextError));
+      pushActionErrorToast(toast, "Import failed", nextError);
     }
   }
 
@@ -379,11 +407,12 @@ export function useCmsWorkspace() {
       const { records: nextRecords } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
       await refreshCollections();
+      bumpReferenceCache(activeCollection.id);
       setSelectedRecordId(record.id);
       setDraftRecordState(record);
       setLastSavedRecordState(record);
     } catch (nextError) {
-      setError(describeCmsError(nextError));
+      pushActionErrorToast(toast, "Create failed", nextError);
     }
   }
 
@@ -413,6 +442,7 @@ export function useCmsWorkspace() {
       const { records: nextRecords } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
       await refreshCollections();
+      bumpReferenceCache(activeCollection.id);
 
       if (copy) {
         setSelectedRecordId(copy.id);
@@ -420,7 +450,7 @@ export function useCmsWorkspace() {
         setLastSavedRecordState(copy);
       }
     } catch (nextError) {
-      setError(describeCmsError(nextError));
+      pushActionErrorToast(toast, "Duplicate failed", nextError);
     }
   }
 
@@ -462,6 +492,10 @@ export function useCmsWorkspace() {
       });
       setLastSavedRecordState(savedRecord);
       setRecords((currentRecords) => currentRecords.map((record) => (record.id === savedRecord.id ? savedRecord : record)));
+      // The saved values may include this collection's titleField (or the
+      // record could be new to a reference select's page size), so any
+      // cached options for this collection could now be stale.
+      bumpReferenceCache(activeCollection.id);
 
       // A plain field-value save never moves a record in or out of
       // "queued_to_publish", so only a status-changing save needs to refresh
@@ -470,7 +504,12 @@ export function useCmsWorkspace() {
         await refreshCollections();
       }
     } catch (nextError) {
-      setError(describeCmsError(nextError));
+      // Deliberately does not touch draftRecordState/lastSavedRecordState: a
+      // failed save (e.g. a 409 conflict or a validation error) must leave the
+      // draft exactly as the editor left it, still marked dirty, rather than
+      // silently discarding their edits. For a `conflict`, describeCmsError's
+      // message is what tells them to reload before trying again.
+      pushActionErrorToast(toast, "Save failed", nextError);
     } finally {
       setIsSaving(false);
     }
@@ -532,7 +571,7 @@ export function useCmsWorkspace() {
       setRecords((currentRecords) => currentRecords.map((record) => updatedById.get(record.id) ?? record));
       await refreshCollections();
     } catch (nextError) {
-      setError(describeCmsError(nextError));
+      pushActionErrorToast(toast, "Update failed", nextError);
     }
   }
 
@@ -584,8 +623,7 @@ export function useCmsWorkspace() {
       const result = await storage.uploadAsset(activeCollection.id, field.key, file);
 
       // The record only ever stores the URL, so the real file name/size must
-      // be captured now — nothing about the URL itself carries them, and a
-      // mock-storage URL never will.
+      // be captured now — nothing about the object storage URL itself carries them.
       rememberAssetMeta(result.url, { fileName: result.fileName, size: result.size });
 
       setDraftRecordState((current) => {
@@ -608,6 +646,100 @@ export function useCmsWorkspace() {
     }
   }
 
+  /**
+   * Uploads several files onto a `gallery` field, `GALLERY_UPLOAD_CONCURRENCY`
+   * at a time, appending each `{ src }` to the field's items as soon as it
+   * finishes (so tiles appear one by one rather than all at once at the end).
+   * One file failing doesn't stop the others — each failure gets its own
+   * toast and the rest of the batch keeps going.
+   */
+  async function handleGalleryUpload(field: GalleryField, files: File[]) {
+    if (!activeCollection || !draftRecord || files.length === 0) {
+      return;
+    }
+
+    // Same guard as handleAssetUpload: if the editor switches records mid
+    // upload, a late-arriving file must not land on the new draft.
+    const uploadRecordId = draftRecord.id;
+    const fieldKey = field.key;
+    const collectionId = activeCollection.id;
+
+    // Enforce the field's cap client-side: the server would otherwise accept
+    // the save and silently drop the overflow, which reads as data loss.
+    const maxItems = field.maxItems ?? 200;
+    const currentCount = parseGalleryValue(draftRecord.values[fieldKey]).length;
+    const allowed = Math.max(0, maxItems - currentCount);
+    const filesToUpload = files.length > allowed ? files.slice(0, allowed) : files;
+
+    if (files.length > allowed) {
+      toast.push({
+        tone: "info",
+        title: "Gallery limit reached",
+        description: `Only ${allowed} more image${allowed === 1 ? "" : "s"} can be added (limit ${maxItems}).`,
+        duration: 8000
+      });
+    }
+
+    if (filesToUpload.length === 0) {
+      return;
+    }
+
+    let remaining = filesToUpload.length;
+    // Keyed by record as well as field: without `recordId`, switching to a
+    // different record's gallery mid-upload would show ITS progress as
+    // "uploading" too, since only the field key was being compared.
+    setGalleryUpload({ recordId: uploadRecordId, fieldKey, remaining });
+    setError(null);
+
+    let nextIndex = 0;
+
+    function isSameUpload(current: GalleryUploadProgress) {
+      return current !== null && current.recordId === uploadRecordId && current.fieldKey === fieldKey;
+    }
+
+    async function worker() {
+      while (nextIndex < filesToUpload.length) {
+        const file = filesToUpload[nextIndex];
+        nextIndex += 1;
+
+        try {
+          const result = await storage.uploadAsset(collectionId, fieldKey, file);
+          rememberAssetMeta(result.url, { fileName: result.fileName, size: result.size });
+
+          setDraftRecordState((current) => {
+            if (!current || current.id !== uploadRecordId) {
+              return current;
+            }
+
+            const items = parseGalleryValue(current.values[fieldKey]);
+            return {
+              ...current,
+              values: {
+                ...current.values,
+                [fieldKey]: serializeGalleryValue([...items, { src: result.url }])
+              }
+            };
+          });
+        } catch (nextError) {
+          toast.push({
+            tone: "error",
+            title: "Upload failed",
+            description: `${file.name}: ${describeCmsError(nextError)}`,
+            duration: 8000
+          });
+        } finally {
+          remaining -= 1;
+          setGalleryUpload((current) => (isSameUpload(current) ? { recordId: uploadRecordId, fieldKey, remaining } : current));
+        }
+      }
+    }
+
+    const workerCount = Math.min(GALLERY_UPLOAD_CONCURRENCY, filesToUpload.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+    setGalleryUpload((current) => (isSameUpload(current) ? null : current));
+  }
+
   function clearError() {
     setError(null);
   }
@@ -619,12 +751,14 @@ export function useCmsWorkspace() {
     draftRecord,
     error,
     filteredRecords,
+    galleryUpload,
     groups,
     handleAssetUpload,
     handleCreateRecord,
     handleDeleteRecords,
     handleDuplicateRecord,
     handleExport,
+    handleGalleryUpload,
     handleImportRecords,
     handleSaveRecord,
     handleSelectCollection,

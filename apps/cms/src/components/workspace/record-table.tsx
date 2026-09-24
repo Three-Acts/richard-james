@@ -1,9 +1,14 @@
+import { useMemo } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@three-acts/utils";
 import type { CmsCollectionSummary, CmsRecord } from "../../cms/types";
+import { parseGalleryValue } from "../../cms/types";
 import { formatDateTime } from "../../lib/format";
 import { getRecordTitle } from "../../lib/records";
 import { Checkbox, columnHeaderClass, focusRing, ScrollArea, StatusPill } from "../atoms";
+import { useReferenceLookup } from "../../hooks/use-reference-options";
+
+type ResolveReferenceLabel = (collectionId: string, recordId: string) => string | undefined;
 
 type RecordTableProps = {
   collection: CmsCollectionSummary;
@@ -34,6 +39,28 @@ export function RecordTable({
   const gridTemplateColumns = selectionMode ? `var(--spacing-select-col) ${columnTemplate}` : columnTemplate;
   const allSelected = records.length > 0 && records.every((record) => selectedIds.has(record.id));
   const someSelected = records.some((record) => selectedIds.has(record.id));
+
+  // Every reference column's referenced collection id, deduped and memoized
+  // so `useReferenceLookup`'s effect doesn't refire every render.
+  const referenceCollectionIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    for (const column of columns) {
+      if (column.valueType !== "reference") {
+        continue;
+      }
+
+      const field = collection.fields.find((item) => item.key === column.key);
+
+      if (field?.type === "reference") {
+        ids.add(field.collection);
+      }
+    }
+
+    return Array.from(ids);
+  }, [collection, columns]);
+
+  const { resolveLabel } = useReferenceLookup(referenceCollectionIds);
 
   if (isLoading) {
     return <div className="flex-1 p-4 text-ui text-cms-subtle">Loading records…</div>;
@@ -122,7 +149,7 @@ export function RecordTable({
               ) : null}
               {columns.map((column) => (
                 <span className={cn("min-w-0 truncate px-3", isDataColumn(column.valueType) && "tabular-nums")} key={column.key} role="gridcell">
-                  {renderColumnValue(collection, record, column.key, column.valueType)}
+                  {renderColumnValue(collection, record, column.key, column.valueType, resolveLabel)}
                 </span>
               ))}
             </div>
@@ -139,7 +166,13 @@ function isDataColumn(valueType?: string) {
   return valueType === "datetime";
 }
 
-function renderColumnValue(collection: CmsCollectionSummary, record: CmsRecord, key: string, valueType?: string) {
+function renderColumnValue(
+  collection: CmsCollectionSummary,
+  record: CmsRecord,
+  key: string,
+  valueType: string | undefined,
+  resolveReferenceLabel: ResolveReferenceLabel
+) {
   if (key === "publishStatus" || valueType === "status") {
     return <StatusPill status={record.publishStatus} />;
   }
@@ -152,6 +185,30 @@ function renderColumnValue(collection: CmsCollectionSummary, record: CmsRecord, 
 
   if (valueType === "boolean") {
     return value ? "Yes" : "No";
+  }
+
+  if (valueType === "gallery") {
+    const items = parseGalleryValue(value);
+    return `${items.length} image${items.length === 1 ? "" : "s"}`;
+  }
+
+  if (valueType === "reference") {
+    const recordId = String(value ?? "");
+
+    if (!recordId) {
+      return "";
+    }
+
+    const field = collection.fields.find((item) => item.key === key);
+    const label = field?.type === "reference" ? resolveReferenceLabel(field.collection, recordId) : undefined;
+
+    if (label) {
+      return label;
+    }
+
+    // Not resolvable yet (still loading) or the referenced record is gone —
+    // fall back to a shortened id, with the full id available on hover.
+    return <span title={recordId}>{recordId.slice(0, 8)}</span>;
   }
 
   if (key === collection.titleField) {

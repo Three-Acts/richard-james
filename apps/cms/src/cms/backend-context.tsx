@@ -5,7 +5,7 @@ import type { CmsBackend } from "./types";
 
 const CmsBackendContext = createContext<CmsBackend | null>(null);
 
-/** Injects the active `CmsBackend` (mock or REST) for `useCmsBackend` below. */
+/** Injects the active `CmsBackend` for `useCmsBackend` below. */
 export function CmsBackendProvider({ backend, children }: { backend: CmsBackend; children: ReactNode }) {
   return <CmsBackendContext.Provider value={backend}>{children}</CmsBackendContext.Provider>;
 }

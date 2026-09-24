@@ -1,18 +1,19 @@
 import { useState } from "react";
 import { ArrowLeft, Copy, Lock, Trash2 } from "lucide-react";
-import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, PublishStatus } from "../../cms/types";
+import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, GalleryField, PublishStatus } from "../../cms/types";
 import { formatDateTime } from "../../lib/format";
 import { getRecordTitle, hasPublishWorkflow, isEditable } from "../../lib/records";
 import { BareIconButton, Button, ConfirmDialog, PanelHeader, ScrollArea, SplitButton, StatusPill, Tooltip } from "../atoms";
 import { EditorSection } from "./editor-section";
 import { DetailRow } from "./detail-row";
-import { FieldControl } from "./field-control";
+import { FieldControl, type GalleryUploadProgress } from "./field-control";
 
 const READ_ONLY_HINT = "Records in this collection are created by the site and cannot be edited.";
 
 type RecordEditorProps = {
   collection: CmsCollectionSummary;
   draftRecord: CmsRecord;
+  galleryUpload: GalleryUploadProgress;
   isDirty: boolean;
   isSaving: boolean;
   onAssetUpload: (field: AssetField, file: File) => void;
@@ -22,6 +23,7 @@ type RecordEditorProps = {
   /** Drops local edits and reloads the stored record (also the recovery path after a save conflict). */
   onDiscard: () => void;
   onDuplicate: () => void;
+  onGalleryUpload: (field: GalleryField, files: File[]) => void;
   onSave: () => void;
   onUpdateValue: (fieldKey: string, value: CmsRecordValue) => void;
   uploadingField: string | null;
@@ -30,6 +32,7 @@ type RecordEditorProps = {
 export function RecordEditor({
   collection,
   draftRecord,
+  galleryUpload,
   isDirty,
   isSaving,
   onAssetUpload,
@@ -38,6 +41,7 @@ export function RecordEditor({
   onDelete,
   onDiscard,
   onDuplicate,
+  onGalleryUpload,
   onSave,
   onUpdateValue,
   uploadingField
@@ -113,8 +117,10 @@ export function RecordEditor({
           {collection.fields.slice(0, 3).map((field) => (
             <FieldControl
               field={field}
+              galleryUpload={galleryUpload}
               key={field.key}
               onAssetUpload={onAssetUpload}
+              onGalleryUpload={onGalleryUpload}
               onUpdateValue={onUpdateValue}
               readOnly={!editable}
               record={draftRecord}
@@ -127,8 +133,10 @@ export function RecordEditor({
           {collection.fields.slice(3).map((field) => (
             <FieldControl
               field={field}
+              galleryUpload={galleryUpload}
               key={field.key}
               onAssetUpload={onAssetUpload}
+              onGalleryUpload={onGalleryUpload}
               onUpdateValue={onUpdateValue}
               readOnly={!editable}
               record={draftRecord}
