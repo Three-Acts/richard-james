@@ -24,9 +24,9 @@ const { site } = Astro.props
   data-preloader
   transition:persist
   aria-hidden="true"
-  class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink"
+  class="fixed inset-0 z-100 flex flex-col items-center justify-center bg-ink"
 >
-  <div data-preloader-body class="preloader-body flex flex-col items-center gap-7 px-[var(--gutter)] text-center">
+  <div data-preloader-body class="preloader-body flex flex-col items-center gap-7 px-(--gutter) text-center">
     <span class="preloader-in u-eyebrow" style="--d:0.1s">{site.location}</span>
 
     <div

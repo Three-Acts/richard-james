@@ -29,7 +29,7 @@ const isActive = (href: string) =>
   data-nav
   data-nav-transparent={transparent ? '' : undefined}
   data-solid={transparent ? undefined : ''}
-  class="fixed inset-x-0 top-0 z-[70]"
+  class="fixed inset-x-0 top-0 z-70"
 >
   {/* Background wash — fades in independently so type never flickers. */}
   <div
@@ -45,7 +45,7 @@ const isActive = (href: string) =>
   >
     <a
       href="/"
-      class="u-display text-sm tracking-[0.22em] text-bone transition-colors duration-500 hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold"
+      class="u-display text-sm tracking-[0.22em] text-bone transition-colors duration-500 hover:text-gold-bright focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold"
     >
       {site.name}
     </a>
@@ -64,7 +64,7 @@ const isActive = (href: string) =>
                   href={item.href}
                   aria-current={active ? 'page' : undefined}
                   class:list={[
-                    'link-underline u-eyebrow transition-colors duration-500 hover:text-bone focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold',
+                    'link-underline u-eyebrow transition-colors duration-500 hover:text-bone focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold',
                     active && 'text-gold',
                   ]}
                 >
@@ -84,9 +84,9 @@ const isActive = (href: string) =>
       aria-haspopup="dialog"
       aria-expanded="false"
       aria-label="Open menu"
-      class="flex h-10 w-10 -mr-2 items-center justify-end text-bone transition-colors duration-500 hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gold md:hidden"
+      class="flex h-10 w-10 -mr-2 items-center justify-end text-bone transition-colors duration-500 hover:text-gold-bright focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gold md:hidden"
     >
-      <span aria-hidden="true" class="flex flex-col items-end gap-[6px]">
+      <span aria-hidden="true" class="flex flex-col items-end gap-1.5">
         <span class="block h-px w-6 bg-current"></span>
         <span class="block h-px w-4 bg-current"></span>
       </span>

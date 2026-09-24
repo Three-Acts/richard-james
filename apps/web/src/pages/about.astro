@@ -43,7 +43,7 @@ const site = { ...siteContent, url: staticSite.url }
       {/* Prose column — rendered from the API's markdown body. */}
       <Reveal
         as="div"
-        class="prose-body prose-dropcap max-w-[42rem] text-[1.02rem] text-bone-dim"
+        class="prose-body prose-dropcap max-w-2xl text-[1.02rem] text-bone-dim"
         set:html={bodyHtml}
       />
 
@@ -72,7 +72,7 @@ const site = { ...siteContent, url: staticSite.url }
     <Reveal class="mt-28 border-t border-line-soft pt-16 text-center">
       <p class="u-eyebrow text-muted">Contact</p>
       <p
-        class="mx-auto mt-6 max-w-xl font-display text-[clamp(1.4rem,4vw,2.25rem)] leading-tight text-bone [text-wrap:balance]"
+        class="mx-auto mt-6 max-w-xl font-display text-[clamp(1.4rem,4vw,2.25rem)] leading-tight text-bone text-balance"
       >
         Get in touch with Richard.
       </p>
