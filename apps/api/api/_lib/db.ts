@@ -1,4 +1,4 @@
-import { CmsError } from "@three-acts/cms-schema";
+import { CmsError } from "./schema.js";
 import { Pool, type PoolClient } from "pg";
 import { attachDatabasePool } from "@vercel/functions";
 

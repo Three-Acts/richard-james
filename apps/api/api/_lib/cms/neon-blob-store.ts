@@ -1,6 +1,6 @@
 import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { CmsError } from "@three-acts/cms-schema";
-import type { CmsBlobStore } from "./store";
+import { CmsError } from "../schema.js";
+import type { CmsBlobStore } from "./store.js";
 
 let client: S3Client | undefined;
 

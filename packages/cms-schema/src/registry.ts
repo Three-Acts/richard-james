@@ -1,4 +1,4 @@
-import type { CmsCollection } from "./types";
+import type { CmsCollection } from "./types.js";
 
 export const collectionRegistry: CmsCollection[] = [
   {

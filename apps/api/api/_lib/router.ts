@@ -1,25 +1,25 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { applyCors, handleOptions } from "./cors";
+import { applyCors, handleOptions } from "./cors.js";
 
-import health from "../_routes/health";
-import meta from "../_routes/meta";
-import deploy from "../_routes/deploy";
-import deployStatus from "../_routes/deploy-status";
-import contentSite from "../_routes/content/site";
-import contentProjects from "../_routes/content/projects";
-import contentProjectBySlug from "../_routes/content/projects/[slug]";
-import contentPages from "../_routes/content/pages";
-import contentPageBySlug from "../_routes/content/pages/[slug]";
-import authSignIn from "../_routes/auth/sign-in";
-import authSession from "../_routes/auth/session";
-import authSignOut from "../_routes/auth/sign-out";
-import cmsCollections from "../_routes/cms/collections";
-import cmsRecords from "../_routes/cms/collections/[collectionId]/records";
-import cmsRecordById from "../_routes/cms/collections/[collectionId]/records/[recordId]";
-import cmsImport from "../_routes/cms/collections/[collectionId]/import";
-import cmsAssets from "../_routes/cms/collections/[collectionId]/assets/[fieldKey]";
-import cmsStatus from "../_routes/cms/collections/[collectionId]/status";
-import cmsPublish from "../_routes/cms/publish";
+import health from "../_routes/health.js";
+import meta from "../_routes/meta.js";
+import deploy from "../_routes/deploy.js";
+import deployStatus from "../_routes/deploy-status.js";
+import contentSite from "../_routes/content/site.js";
+import contentProjects from "../_routes/content/projects.js";
+import contentProjectBySlug from "../_routes/content/projects/[slug].js";
+import contentPages from "../_routes/content/pages.js";
+import contentPageBySlug from "../_routes/content/pages/[slug].js";
+import authSignIn from "../_routes/auth/sign-in.js";
+import authSession from "../_routes/auth/session.js";
+import authSignOut from "../_routes/auth/sign-out.js";
+import cmsCollections from "../_routes/cms/collections.js";
+import cmsRecords from "../_routes/cms/collections/[collectionId]/records.js";
+import cmsRecordById from "../_routes/cms/collections/[collectionId]/records/[recordId].js";
+import cmsImport from "../_routes/cms/collections/[collectionId]/import.js";
+import cmsAssets from "../_routes/cms/collections/[collectionId]/assets/[fieldKey].js";
+import cmsStatus from "../_routes/cms/collections/[collectionId]/status.js";
+import cmsPublish from "../_routes/cms/publish.js";
 
 export type ApiHandler = (request: VercelRequest, response: VercelResponse) => void | Promise<void>;
 

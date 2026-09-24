@@ -1,5 +1,5 @@
-import { listPagesContent } from "../../_lib/content";
-import { ok, withApi } from "../../_lib/http";
+import { listPagesContent } from "../../_lib/content.js";
+import { ok, withApi } from "../../_lib/http.js";
 
 /** GET /api/content/pages -> PageContent[]. Public, unauthenticated. */
 export default withApi(["GET"], async (_request, response) => {

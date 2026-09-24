@@ -1,4 +1,4 @@
-import { ok, withApi } from "../_lib/http";
+import { ok, withApi } from "../_lib/http.js";
 
 export default withApi(["GET"], (_request, response) => {
   ok(response, {

@@ -14,7 +14,7 @@
  * un-provisioned previews degrade gracefully instead of erroring.
  */
 
-import { ApiError } from "./http";
+import { ApiError } from "./http.js";
 
 export type DeploymentState =
   | "QUEUED"

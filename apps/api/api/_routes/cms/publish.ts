@@ -1,7 +1,7 @@
-import type { PublishBody } from "@three-acts/cms-schema";
-import { ok, readJsonBody, withApi } from "../../_lib/http";
-import { requireAuth } from "../../_lib/auth";
-import { publishQueued } from "../../_lib/cms/service";
+import type { PublishBody } from "../../_lib/schema.js";
+import { ok, readJsonBody, withApi } from "../../_lib/http.js";
+import { requireAuth } from "../../_lib/auth.js";
+import { publishQueued } from "../../_lib/cms/service.js";
 
 /**
  * POST /api/cms/publish  body PublishBody -> { published: number }

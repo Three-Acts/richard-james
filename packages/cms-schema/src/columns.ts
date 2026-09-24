@@ -1,4 +1,4 @@
-import type { CmsCollection, CmsField } from "./types";
+import type { CmsCollection, CmsField } from "./types.js";
 
 /** snake_case for camelCase keys: heroImage -> hero_image. */
 export function toSnakeCase(value: string): string {

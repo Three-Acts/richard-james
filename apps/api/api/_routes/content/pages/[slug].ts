@@ -1,5 +1,5 @@
-import { getPageContentBySlug } from "../../../_lib/content";
-import { ApiError, ok, withApi } from "../../../_lib/http";
+import { getPageContentBySlug } from "../../../_lib/content.js";
+import { ApiError, ok, withApi } from "../../../_lib/http.js";
 
 const readStringParam = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
 

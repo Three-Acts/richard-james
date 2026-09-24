@@ -1,5 +1,5 @@
-import { listProjectsContent } from "../../_lib/content";
-import { ok, withApi } from "../../_lib/http";
+import { listProjectsContent } from "../../_lib/content.js";
+import { ok, withApi } from "../../_lib/http.js";
 
 /** GET /api/content/projects -> ProjectContent[] (sortOrder asc, images embedded). Public, unauthenticated. */
 export default withApi(["GET"], async (_request, response) => {

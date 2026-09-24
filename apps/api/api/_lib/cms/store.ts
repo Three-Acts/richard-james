@@ -1,4 +1,4 @@
-import type { CmsCollection, CmsRecord, CmsRecordValue, ListRecordsOptions, ListRecordsResult, PublishStatus } from "@three-acts/cms-schema";
+import type { CmsCollection, CmsRecord, CmsRecordValue, ListRecordsOptions, ListRecordsResult, PublishStatus } from "../schema.js";
 
 /**
  * Server-side storage contracts for the CMS API, deliberately provider-agnostic.

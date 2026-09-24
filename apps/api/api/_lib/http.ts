@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { isCmsError } from "@three-acts/cms-schema";
-import { applyCors, handleOptions } from "./cors";
-import { getDbTimingMs, withDbTiming } from "./server-timing";
+import { isCmsError } from "./schema.js";
+import { applyCors, handleOptions } from "./cors.js";
+import { getDbTimingMs, withDbTiming } from "./server-timing.js";
 
 export type ApiSuccess<TData> = {
   ok: true;

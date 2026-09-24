@@ -1,4 +1,4 @@
-import type { CmsRecordValue, GalleryItem } from "./types";
+import type { CmsRecordValue, GalleryItem } from "./types.js";
 
 /** Tolerant parse of a gallery field's stored value into a clean `GalleryItem[]`. */
 export function parseGalleryValue(value: CmsRecordValue): GalleryItem[] {

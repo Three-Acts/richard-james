@@ -1,5 +1,5 @@
-import { collectionRegistry } from "./registry";
-import type { CmsCollection, ReferenceField } from "./types";
+import { collectionRegistry } from "./registry.js";
+import type { CmsCollection, ReferenceField } from "./types.js";
 
 export function findCollection(collectionId: string): CmsCollection | undefined {
   return collectionRegistry.find((collection) => collection.id === collectionId);

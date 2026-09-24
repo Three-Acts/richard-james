@@ -1,7 +1,7 @@
 import type { VercelRequest } from "@vercel/node";
 import { timingSafeEqual } from "node:crypto";
-import { ApiError } from "./http";
-import { getSession } from "./neon-auth";
+import { ApiError } from "./http.js";
+import { getSession } from "./neon-auth.js";
 
 /**
  * Guards every `/api/cms/*` route plus `/api/deploy` and `/api/deploy-status`.

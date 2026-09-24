@@ -172,6 +172,16 @@ it dispatches each request to the right handler through the route table in
 `api/_lib/router.ts`. Add a new route by adding its file under `api/_routes` and a line
 to that table.
 
+Two more rules keep that single function loadable on Vercel. `@vercel/node` transpiles
+every traced `.ts` file to `.js` one at a time (no bundling) and, because `apps/api` is
+`"type": "module"`, Node loads them as ES modules — so every relative import under
+`api/` and `packages/cms-schema/src` carries an explicit `.js` extension (TypeScript
+maps it back to the `.ts` source). And `api/_lib/schema.ts` is the API's only import of
+`@three-acts/cms-schema`, via a relative path to its source: the package's `exports`
+points at the `.ts` file, which no longer exists once the tracer has transpiled it, so
+resolving the package by name fails at runtime on Vercel. Every other file under `api/`
+imports the schema from `_lib/schema.js` instead.
+
 There is no contact form and no `/api/contact` route or `contact-submissions`
 collection - both were removed; the site's Contact page (see **Web rendering model**)
 is a plain mailto/tel index with nothing to submit.

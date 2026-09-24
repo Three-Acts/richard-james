@@ -1,7 +1,7 @@
-import type { CreateRecordBody, ListRecordsOptions } from "@three-acts/cms-schema";
-import { ApiError, ok, readJsonBody, withApi } from "../../../../_lib/http";
-import { requireAuth } from "../../../../_lib/auth";
-import { createRecord, listRecords } from "../../../../_lib/cms/service";
+import type { CreateRecordBody, ListRecordsOptions } from "../../../../_lib/schema.js";
+import { ApiError, ok, readJsonBody, withApi } from "../../../../_lib/http.js";
+import { requireAuth } from "../../../../_lib/auth.js";
+import { createRecord, listRecords } from "../../../../_lib/cms/service.js";
 
 const MAX_LIMIT = 500;
 

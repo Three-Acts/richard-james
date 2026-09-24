@@ -1,4 +1,4 @@
-import type { CmsRecord, CmsRecordValue, ListRecordsOptions, PublishStatus } from "./types";
+import type { CmsRecord, CmsRecordValue, ListRecordsOptions, PublishStatus } from "./types.js";
 
 /**
  * Wire contract for the CMS REST bridge (`apps/api/api/cms/*`), consumed by

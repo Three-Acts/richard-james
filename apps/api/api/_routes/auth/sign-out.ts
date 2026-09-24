@@ -1,6 +1,6 @@
-import { extractBearerToken, forgetSessionToken } from "../../_lib/auth";
-import { ApiError, ok, withApi } from "../../_lib/http";
-import { signOut } from "../../_lib/neon-auth";
+import { extractBearerToken, forgetSessionToken } from "../../_lib/auth.js";
+import { ApiError, ok, withApi } from "../../_lib/http.js";
+import { signOut } from "../../_lib/neon-auth.js";
 
 /** POST /api/auth/sign-out  Authorization: Bearer <token> -> { signedOut: true } */
 export default withApi(["POST"], async (request, response) => {

@@ -1,5 +1,5 @@
-import type { AuthSession } from "@three-acts/cms-schema";
-import { ApiError } from "./http";
+import type { AuthSession } from "./schema.js";
+import { ApiError } from "./http.js";
 
 /**
  * Fetch wrappers for Neon Auth (managed Better Auth), reached over plain REST

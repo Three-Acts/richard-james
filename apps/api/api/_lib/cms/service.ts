@@ -18,8 +18,8 @@ import {
   type PublishStatus,
   type SelectField,
   type UploadAssetBody
-} from "@three-acts/cms-schema";
-import { getBlobStore, getDataStore } from "./resolve-store";
+} from "../schema.js";
+import { getBlobStore, getDataStore } from "./resolve-store.js";
 
 const MAX_IMPORT_ROWS = 1000;
 const MAX_STATUS_RECORD_IDS = 1000;

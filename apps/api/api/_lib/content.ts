@@ -13,10 +13,10 @@ import {
   type ProjectContent,
   type SeoContent,
   type SiteContent
-} from "@three-acts/cms-schema";
-import { ApiError } from "./http";
-import { getDataStore } from "./cms/resolve-store";
-import type { ListRecordsStoreOptions } from "./cms/store";
+} from "./schema.js";
+import { ApiError } from "./http.js";
+import { getDataStore } from "./cms/resolve-store.js";
+import type { ListRecordsStoreOptions } from "./cms/store.js";
 
 function getCollection(id: string): CmsCollection {
   const collection = collectionRegistry.find((item) => item.id === id);

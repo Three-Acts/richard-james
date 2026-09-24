@@ -7,10 +7,10 @@ import {
   type CmsRecordValue,
   type ListRecordsResult,
   type PublishStatus
-} from "@three-acts/cms-schema";
-import { getPool } from "../db";
-import { timeDb } from "../server-timing";
-import type { CmsDataStore, ListRecordsStoreOptions } from "./store";
+} from "../schema.js";
+import { getPool } from "../db.js";
+import { timeDb } from "../server-timing.js";
+import type { CmsDataStore, ListRecordsStoreOptions } from "./store.js";
 
 /** Field types whose backing column is free text and safe to `ILIKE` search over. */
 const SEARCHABLE_FIELD_TYPES = new Set<CmsField["type"]>(["text", "textarea", "slug", "richtext"]);

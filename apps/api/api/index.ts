@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { dispatch } from "./_lib/router";
+import { dispatch } from "./_lib/router.js";
 
 /**
  * The single Vercel Serverless Function for this app.

@@ -1,6 +1,6 @@
-import { NeonBlobStore } from "./neon-blob-store";
-import { NeonDataStore } from "./neon-store";
-import type { CmsBlobStore, CmsDataStore } from "./store";
+import { NeonBlobStore } from "./neon-blob-store.js";
+import { NeonDataStore } from "./neon-store.js";
+import type { CmsBlobStore, CmsDataStore } from "./store.js";
 
 /**
  * Neon is the only backend: no local/in-memory fallback exists. Constructing

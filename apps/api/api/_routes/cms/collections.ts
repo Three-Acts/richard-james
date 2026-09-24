@@ -1,6 +1,6 @@
-import { ok, withApi } from "../../_lib/http";
-import { requireAuth } from "../../_lib/auth";
-import { listCollections } from "../../_lib/cms/service";
+import { ok, withApi } from "../../_lib/http.js";
+import { requireAuth } from "../../_lib/auth.js";
+import { listCollections } from "../../_lib/cms/service.js";
 
 /** GET /api/cms/collections -> CmsCollectionSummary[] */
 export default withApi(["GET"], async (request, response) => {

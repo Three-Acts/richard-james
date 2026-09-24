@@ -1,9 +1,9 @@
-export * from "./types";
-export * from "./errors";
-export * from "./api-contract";
-export * from "./columns";
-export { collectionRegistry } from "./registry";
-export * from "./registry-helpers";
-export * from "./gallery";
-export * from "./content-contract";
-export * from "./auth-contract";
+export * from "./types.js";
+export * from "./errors.js";
+export * from "./api-contract.js";
+export * from "./columns.js";
+export { collectionRegistry } from "./registry.js";
+export * from "./registry-helpers.js";
+export * from "./gallery.js";
+export * from "./content-contract.js";
+export * from "./auth-contract.js";
