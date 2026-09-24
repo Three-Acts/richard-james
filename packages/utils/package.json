@@ -16,6 +16,10 @@
     "./component-variants": {
       "types": "./src/component-variants.ts",
       "default": "./src/component-variants.ts"
+    },
+    "./api-client": {
+      "types": "./src/api-client.ts",
+      "default": "./src/api-client.ts"
     }
   },
   "dependencies": {
