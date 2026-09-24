@@ -1,0 +1,120 @@
+---
+import Base from '@/layouts/Base.astro'
+import Reveal from '@/components/ui/Reveal.astro'
+import { getContentSource } from '@/content'
+import { parsePageBody } from '@/content/body'
+import { site as staticSite } from '@/data/site'
+import { articleJsonLd } from '@/lib/structuredData'
+
+const essayDescription =
+  'An essay by Richard James on the Buddhist kesa, affect theory and the Unborn — placing the 2,500-year-old robe of discarded rags alongside Massumi and Laplanche to open psychotherapy beyond pathology.'
+
+/**
+ * Long-form reading layout for the essay "The Unborn Rags of the Mind".
+ * h1 → hero title (with "Essay" eyebrow); h2 → section headings; p → prose in a
+ * measured column; li → reference list at the foot. The first paragraph
+ * receives a drop-cap.
+ */
+const source = await getContentSource()
+const [page, siteContent] = await Promise.all([source.getPage('essay'), source.getSite()])
+if (!page) {
+  throw new Error('Content source has no "essay" page — run the API seed script or check API_ORIGIN.')
+}
+const essayBlocks = parsePageBody(page.body)
+const essayTitle = page.title
+const site = { ...siteContent, url: staticSite.url }
+
+// Index of the first prose paragraph, so only it gets the drop-cap.
+const firstParagraph = essayBlocks.findIndex((b) => b.tag === 'p')
+---
+
+<Base
+  title={essayTitle}
+  description={essayDescription}
+  path="/essay"
+  type="article"
+  jsonLd={articleJsonLd(
+    {
+      headline: essayTitle,
+      description: essayDescription,
+      path: '/essay',
+      keywords: ['Kesa', 'Unborn', 'affect', 'Buddhism', 'psychotherapy'],
+    },
+    site,
+  )}
+>
+  <article class="u-container pb-32 pt-[calc(var(--nav-h)+clamp(4rem,12vw,9rem))]">
+    {
+      essayBlocks.map((block, i) => {
+        if (block.tag === 'h1') {
+          return (
+            <Reveal as="header" class="u-prose mx-auto text-center">
+              <p class="u-eyebrow text-gold">Essay</p>
+              <h1 class="u-display mt-6 text-[clamp(2rem,6vw,3.75rem)] leading-[1.06] text-bone">
+                {block.text}
+              </h1>
+              <span aria-hidden class="mx-auto mt-10 block h-px w-16 bg-gold/60" />
+            </Reveal>
+          )
+        }
+
+        if (block.tag === 'h2') {
+          const isReferences = block.text.toLowerCase() === 'references'
+          return (
+            <Reveal
+              as="h2"
+              class:list={[
+                'u-prose u-display mx-auto text-balance text-[1.1rem] leading-snug text-bone',
+                isReferences ? 'mt-24 border-t border-line-soft pt-12' : 'mt-20',
+              ]}
+            >
+              {block.text}
+            </Reveal>
+          )
+        }
+
+        if (block.tag === 'h3') {
+          return (
+            <Reveal
+              as="h3"
+              class="u-prose u-display mx-auto mt-12 text-[0.95rem] tracking-[0.06em] text-bone-dim"
+            >
+              {block.text}
+            </Reveal>
+          )
+        }
+
+        if (block.tag === 'li') {
+          return (
+            <Reveal
+              as="p"
+              y={14}
+              class="u-prose mx-auto mt-4 pl-6 -indent-6 text-[0.85rem] leading-relaxed text-muted [text-wrap:pretty]"
+            >
+              {block.text}
+            </Reveal>
+          )
+        }
+
+        // Paragraph
+        return (
+          <Reveal
+            as="p"
+            class:list={[
+              'u-prose mx-auto mt-6 text-[1.02rem] leading-[1.85] text-bone-dim [text-wrap:pretty]',
+              i === firstParagraph &&
+                'first-letter:float-left first-letter:mr-3 first-letter:mt-2 first-letter:font-display first-letter:text-[3.4rem] first-letter:leading-[0.72] first-letter:text-gold',
+            ]}
+          >
+            {block.text}
+          </Reveal>
+        )
+      })
+    }
+
+    {/* Closing flourish */}
+    <Reveal class="u-prose mx-auto mt-24 text-center">
+      <span aria-hidden class="mx-auto block h-px w-10 bg-line"></span>
+    </Reveal>
+  </article>
+</Base>

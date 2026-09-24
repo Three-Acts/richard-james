@@ -1,0 +1,124 @@
+---
+import type { ProjectContent } from '@/content/types'
+import Image from '@/components/ui/Image.astro'
+
+export interface Props {
+  project: ProjectContent
+  /** 1-based position in the full project sequence (for the index eyebrow). */
+  index: number
+  total: number
+}
+
+/**
+ * Tall, full-bleed cinematic hero. The artwork bleeds edge-to-edge behind a
+ * vertical scrim so the fixed nav and the overlaid title stay legible. The image
+ * drifts slowly on scroll (parallax) and the title rises on entrance.
+ *
+ * The markup (image + title) is fully present and visible without JS; all motion
+ * lives in the script below, which re-arms on every ClientRouter navigation and
+ * respects reduced motion.
+ */
+const { project, index, total } = Astro.props
+---
+
+<section
+  data-hero
+  class="relative isolate flex min-h-[88svh] w-full items-end overflow-hidden bg-ink-soft"
+>
+  {/* Artwork — slightly over-scaled so parallax never reveals an edge. */}
+  <div data-hero-image class="u-fill will-change-transform">
+    <Image src={project.hero} alt={project.title} priority sizes="100vw" class="h-full w-full" />
+  </div>
+
+  {/* Scrim: darken top (under nav) and bottom (under title) for legibility. */}
+  <div aria-hidden class="u-fill bg-gradient-to-b from-ink/70 via-ink/10 to-ink/85"></div>
+  <div aria-hidden class="u-fill bg-gradient-to-t from-ink via-transparent to-transparent"></div>
+
+  <div class="u-container relative z-10 pb-[clamp(2.5rem,7vh,6rem)] pt-[var(--nav-h)]">
+    <div data-hero-title class="max-w-[60rem]">
+      <p class="u-eyebrow text-bone-dim">
+        <span class="text-gold">{String(index).padStart(2, '0')}</span>
+        <span class="mx-3 text-faint">/</span>
+        <span>{String(total).padStart(2, '0')}</span>
+      </p>
+
+      <h1 class="u-display mt-5 text-balance text-[clamp(2.4rem,7vw,6rem)] leading-[0.98] text-bone">
+        {project.title}
+      </h1>
+
+      {
+        project.subtitle && (
+          <p class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 font-body text-[clamp(1rem,2vw,1.35rem)] text-bone-dim">
+            {project.originalTitle && (
+              <bdi lang={project.originalTitleLang} dir="auto" class="text-[1.12em] text-gold-bright">
+                {project.originalTitle}
+              </bdi>
+            )}
+            <span>{project.subtitle}</span>
+          </p>
+        )
+      }
+
+      <!-- <p class="mt-5 flex items-center gap-4 font-body text-sm text-bone-dim">
+        <span class="u-display tracking-[0.22em] text-gold-bright">{project.year}</span>
+        <span aria-hidden class="h-px w-10 bg-line"></span>
+        <span class="max-w-[28rem] truncate text-muted">{project.medium}</span>
+      </p> -->
+    </div>
+  </div>
+</section>
+
+<script>
+  import { gsap, ScrollTrigger } from '@/lib/gsap'
+  import { initScrollSync } from '@/lib/scrollSync'
+  import { onEachPage } from '@/lib/pageScript'
+
+  // This page animates on scroll, so hand Lenis's frame over to the GSAP ticker.
+  initScrollSync()
+
+  onEachPage(() => {
+    const section = document.querySelector<HTMLElement>('[data-hero]')
+    const image = section?.querySelector<HTMLElement>('[data-hero-image]')
+    const title = section?.querySelector<HTMLElement>('[data-hero-title]')
+    if (!section || !image || !title) return
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const ctx = gsap.context(() => {
+      if (reduce) {
+        gsap.set(title.children, { opacity: 1, y: 0 })
+        return
+      }
+
+      // Slow, balanced entrance for the overlaid title lines.
+      gsap.from(title.children, {
+        opacity: 0,
+        y: 40,
+        duration: 1.4,
+        ease: 'expo.out',
+        stagger: 0.12,
+        delay: 0.15,
+      })
+
+      // Subtle parallax: the image scales slightly and drifts as we scroll past.
+      gsap.fromTo(
+        image,
+        { yPercent: -8, scale: 1.08 },
+        {
+          yPercent: 8,
+          scale: 1.08,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: true,
+          },
+        },
+      )
+    }, section)
+
+    ScrollTrigger.refresh()
+    return () => ctx.revert()
+  })
+</script>

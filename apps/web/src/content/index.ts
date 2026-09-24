@@ -1,51 +1,66 @@
-import type { ContentSource } from "./content-source";
-import { mockContentSource } from "./mock-source";
+import { createApiContentSource } from "./api-source"
+import type { ContentSource } from "./types"
 
-export type { ContentEntry, ContentSource } from "./content-source";
+export type { ContentSource, PageContent, ProjectContent, ProjectImageContent, SiteContent } from "./types"
 
 /**
- * Resolves the active content source.
+ * Resolves the content source. The site has no local content anymore — every
+ * page reads published content from `apps/api` at build/dev time, so
+ * `API_ORIGIN` is required in every environment. A missing or unreachable API
+ * fails the build/dev server immediately with one clear error, rather than as
+ * scattered fetch failures across every page's frontmatter/getStaticPaths.
  *
- * When both `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set (baked in
- * at build time, live in dev), the Supabase source is loaded lazily. Otherwise
- * the mock source keeps builds working with zero configuration — and the
- * Supabase client (and its dependencies) is never imported.
+ * `import.meta.env` covers values Vite bakes in from `.env`; `process.env`
+ * covers values only present at runtime (e.g. set directly in Vercel), so
+ * both are checked.
  */
-let cached: Promise<ContentSource> | null = null;
+function readApiOrigin(): string | undefined {
+  const fromVite = (import.meta.env as Record<string, string | undefined>).API_ORIGIN
+  return fromVite ?? process.env.API_ORIGIN
+}
+
+let cached: Promise<ContentSource> | null = null
 
 async function resolveContentSource(): Promise<ContentSource> {
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const apiOrigin = readApiOrigin()
 
-  if (Boolean(url) !== Boolean(anonKey)) {
+  if (!apiOrigin) {
     throw new Error(
-      "VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must both be set to use the Supabase content source — only one was provided."
-    );
+      "API_ORIGIN must be set — apps/web has no local content fallback and reads everything from apps/api. " +
+        "Set it in apps/web/.env for dev/local builds, or as a Vercel env var for deploys."
+    )
   }
 
-  let source: ContentSource;
+  const source = createApiContentSource(apiOrigin)
 
-  if (url && anonKey) {
-    const { createSupabaseContentSource } = await import("./supabase-source");
-    source = createSupabaseContentSource(url, anonKey);
-  } else {
-    source = mockContentSource;
+  // Probe up front so a misconfigured/unreachable API surfaces as one clear
+  // error at build/dev start, in every environment — no fallback. Both calls
+  // are memoised on the source (see api-source.ts), so the real pages that
+  // call them again don't cost extra requests.
+  try {
+    await Promise.all([source.getSite(), source.listProjects()])
+  } catch (error) {
+    throw new Error(
+      `Content API at ${apiOrigin} is unreachable: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error instanceof Error ? error : undefined }
+    )
   }
 
-  console.info(`[content] source: ${source.name}`);
-
-  if (source.name === "mock" && process.env.VERCEL_ENV === "production") {
-    console.warn(
-      "[content] Production Vercel build is using the mock content source — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to publish real content."
-    );
-  }
-
-  return source;
+  console.info(`[content] source: ${source.name}`)
+  return source
 }
 
 export function getContentSource(): Promise<ContentSource> {
   if (!cached) {
-    cached = resolveContentSource();
+    // A rejected probe (e.g. the API not up yet — `npm run dev` at the repo
+    // root starts web and api concurrently) must not permanently poison the
+    // module for the rest of the dev session: reset `cached` so the NEXT call
+    // re-probes from scratch, while this call still rejects with the same
+    // clear error.
+    cached = resolveContentSource().catch((error: unknown) => {
+      cached = null
+      throw error
+    })
   }
-  return cached;
+  return cached
 }

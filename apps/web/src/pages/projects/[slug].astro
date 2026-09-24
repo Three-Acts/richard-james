@@ -1,0 +1,77 @@
+---
+import Base from '@/layouts/Base.astro'
+import Hero from '@/components/project/Hero.astro'
+import ProjectMeta from '@/components/project/ProjectMeta.astro'
+import Gallery from '@/components/project/Gallery.astro'
+import ProjectPager from '@/components/project/ProjectPager.astro'
+import { getContentSource } from '@/content'
+import { withNavigation } from '@/content/projects'
+import { site as staticSite } from '@/data/site'
+import { artworkJsonLd, breadcrumbJsonLd } from '@/lib/structuredData'
+
+/**
+ * Project detail — cinematic, dark, normal Lenis scroll.
+ * Hero → ProjectMeta → Gallery → ProjectPager (previous / next work).
+ *
+ * One static page per slug, exactly as before; the route table that
+ * vite-react-ssg needed is now just this file plus getStaticPaths.
+ */
+export async function getStaticPaths() {
+  const source = await getContentSource()
+  const raw = await source.listProjects()
+  const { projects, nextSlugOf, prevSlugOf } = withNavigation(raw)
+  const bySlug = new Map(projects.map((p) => [p.slug, p]))
+
+  return projects.map((project, i) => ({
+    params: { slug: project.slug },
+    props: {
+      project,
+      index: i + 1,
+      total: projects.length,
+      next: bySlug.get(nextSlugOf[project.slug])!,
+      prev: bySlug.get(prevSlugOf[project.slug])!,
+    },
+  }))
+}
+
+const { project, index, total, next, prev } = Astro.props
+
+const source = await getContentSource()
+const siteContent = await source.getSite()
+const site = { ...siteContent, url: staticSite.url }
+---
+
+<Base
+  title={project.title}
+  description={project.metaDescription}
+  image={project.hero}
+  path={`/projects/${project.slug}`}
+  type="article"
+  jsonLd={[
+    artworkJsonLd(
+      {
+        title: project.title,
+        description: project.description,
+        image: project.hero,
+        medium: project.medium,
+        year: project.year,
+        slug: project.slug,
+      },
+      site,
+    ),
+    breadcrumbJsonLd(
+      [
+        { name: 'Home', path: '/' },
+        { name: project.title, path: `/projects/${project.slug}` },
+      ],
+      site,
+    ),
+  ]}
+>
+  <article>
+    <Hero project={project} index={index} total={total} />
+    <ProjectMeta project={project} />
+    <Gallery project={project} />
+    <ProjectPager prev={prev} next={next} />
+  </article>
+</Base>

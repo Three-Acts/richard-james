@@ -1,0 +1,129 @@
+---
+import type { ProjectContent } from '@/content/types'
+import Image from '@/components/ui/Image.astro'
+import Reveal from '@/components/ui/Reveal.astro'
+
+export interface Props {
+  project: ProjectContent
+}
+
+/**
+ * The gallery of a project's images: a two-column grid on desktop, one column on
+ * mobile, filled in reading order — row by row, left then right. It is a real
+ * CSS grid rather than CSS multi-column so that order is row-major; multi-column
+ * fills the entire left column before starting the right, which makes the eye
+ * jump down and back up again.
+ *
+ * Each image keeps its natural aspect ratio and rises in on scroll, the
+ * right-hand image of each row a beat behind the left.
+ *
+ * A project may set `gridStride` to show only every Nth image here (works
+ * documented as near-identical runs of frames). The fullscreen viewer always
+ * receives the COMPLETE list, so the frames omitted from the grid are still
+ * reachable by swiping — which is why each button carries its index into the
+ * full list, not into the visible subset.
+ *
+ * Clicking an image opens that viewer, the one genuinely interactive piece here.
+ * It shares the gesture engine with the home stage, so it stays React and is
+ * pulled in by a dynamic import on the first click (see mountLightbox.tsx) —
+ * a visitor who only reads the page never downloads the framework.
+ */
+const { project } = Astro.props
+
+const images = project.images
+const total = images.length
+
+const stride = Math.max(1, project.gridStride ?? 1)
+// Keep each image's position in the full list — that index is what the viewer opens on.
+const visible = images
+  .map((image, index) => ({ image, index }))
+  .filter(({ index }) => index % stride === 0)
+---
+
+<section
+  data-gallery
+  aria-label={`${project.title} — gallery`}
+  class="u-container pb-[clamp(5rem,14vh,11rem)]"
+>
+  <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-2 md:gap-8">
+    {
+      visible.map(({ image, index }, position) => (
+        <figure>
+          {/* Stagger by column, so each row cascades left → right. */}
+          <Reveal y={32} delay={(position % 2) * 0.08}>
+            <button
+              type="button"
+              data-lightbox-open={index}
+              aria-label={
+                total > 1
+                  ? `View ${project.title} — image ${index + 1} of ${total} full screen`
+                  : `View ${project.title} full screen`
+              }
+              class="group block w-full cursor-zoom-in overflow-hidden focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold"
+            >
+              <Image
+                src={image.src}
+                alt={
+                  total > 1
+                    ? `${project.title} — view ${index + 1} of ${total}`
+                    : project.title
+                }
+                sizes="(min-width: 768px) 50vw, 100vw"
+                class="w-full transition-transform duration-[900ms] ease-[var(--ease-out-expo)] group-hover:scale-[1.02]"
+              />
+            </button>
+
+            {image.caption && (
+              <figcaption class="mt-3 max-w-[42rem] font-body text-sm leading-relaxed text-bone-dim">
+                {image.caption}
+              </figcaption>
+            )}
+          </Reveal>
+        </figure>
+      ))
+    }
+  </div>
+
+  {/* The viewer's data, handed to the on-demand React chunk. Kept out of the
+      click handler's bundle so the payload scales with the project, not the JS. */}
+  <script
+    is:inline
+    type="application/json"
+    data-gallery-payload
+    set:html={JSON.stringify({ images, title: project.title })}
+  />
+</section>
+
+<script>
+  import { onEachPage } from '@/lib/pageScript'
+
+  onEachPage(() => {
+    const gallery = document.querySelector<HTMLElement>('[data-gallery]')
+    if (!gallery) return
+
+    // Cached so the framework is fetched once per session, not once per click.
+    let viewer: Promise<typeof import('./mountLightbox')> | null = null
+
+    // One delegated listener rather than one per image, so a 20-image project
+    // costs exactly the same as a single-image one.
+    const onClick = async (event: Event) => {
+      const trigger = (event.target as HTMLElement).closest<HTMLElement>('[data-lightbox-open]')
+      if (!trigger) return
+
+      const payloadEl = gallery.querySelector<HTMLScriptElement>('[data-gallery-payload]')
+      if (!payloadEl?.textContent) return
+
+      const index = Number(trigger.getAttribute('data-lightbox-open'))
+      const { images, title } = JSON.parse(payloadEl.textContent)
+
+      // First click pulls in React + the gesture engine; later ones hit the cache.
+      viewer ??= import('./mountLightbox')
+      const { openLightbox } = await viewer
+
+      openLightbox({ images, title, index: Number.isNaN(index) ? 0 : index })
+    }
+
+    gallery.addEventListener('click', onClick)
+    return () => gallery.removeEventListener('click', onClick)
+  })
+</script>

@@ -1,9 +1,28 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
-import { notFoundMeta } from "../page-meta";
-import { NotFoundPage } from "../views/NotFoundPage";
+import Base from '@/layouts/Base.astro'
+import Reveal from '@/components/ui/Reveal.astro'
+
+/**
+ * Emitted as dist/404.html, which Vercel serves (with a 404 status) for any
+ * unknown path. Astro has no client-side wildcard to pair with it — every real
+ * route is a file — so this is the whole not-found story now.
+ */
 ---
 
-<BaseLayout seo={notFoundMeta.seo}>
-  <NotFoundPage />
-</BaseLayout>
+<Base title="Not found" noIndex>
+  <section
+    class="u-container grid min-h-[calc(100vh-var(--nav-h))] place-content-center py-32 text-center"
+  >
+    <Reveal>
+      <p class="u-eyebrow text-gold">Lost the thread</p>
+      <h1 class="u-display mt-6 text-[clamp(4rem,18vw,11rem)] leading-none text-bone">404</h1>
+      <span aria-hidden class="mx-auto mt-10 block h-px w-16 bg-gold/50"></span>
+      <p
+        class="mx-auto mt-10 max-w-sm text-[0.98rem] leading-relaxed text-bone-dim [text-wrap:balance]"
+      >
+        This page has returned to the unborn. The work, however, remains.
+      </p>
+      <a href="/" class="btn-line mx-auto mt-12">Return home</a>
+    </Reveal>
+  </section>
+</Base>

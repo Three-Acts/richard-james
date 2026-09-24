@@ -1,0 +1,56 @@
+---
+import type { ProjectContent } from "@/content/types";
+import Reveal from "@/components/ui/Reveal.astro";
+
+export interface Props {
+  project: ProjectContent;
+}
+
+/**
+ * Refined meta block: a quiet two-column "Year / Medium" header rule, then the
+ * work's "slide text" set in a centred reading column with generous space, and
+ * an outlined link through to the long-form essay. Description may be empty for
+ * some works — in that case the prose + essay link are simply omitted.
+ *
+ * Ships no JavaScript.
+ */
+const { project } = Astro.props;
+
+const hasText = project.description.trim().length > 0;
+const paragraphs = project.description
+  .split(/\n{2,}/)
+  .map((paragraph) => paragraph.trim())
+  .filter(Boolean);
+---
+
+<section class="u-container py-[clamp(4rem,12vh,9rem)]">
+  {/* Meta rule */}
+  <Reveal>
+    <dl class="grid gap-6 md:gap-8 lg:gap-10 max-w-3xl">
+      <dd class="text-bone">
+        {project.year}
+      </dd>
+      <dd class="whitespace-pre-line text-bone">
+        {project.medium}
+      </dd>
+
+      {/* Slide text + essay link */}
+      {
+        hasText && (
+          <dd class="space-y-4 text-bone">
+            {paragraphs.map((paragraph) => (
+              <p>{paragraph}</p>
+            ))}
+            <a
+              href="/essay"
+              class="block underline underline-offset-8 hover:text-gold-bright"
+              aria-label="Read the essay"
+            >
+              Read Essay
+            </a>
+          </dd>
+        )
+      }
+    </dl>
+  </Reveal>
+</section>

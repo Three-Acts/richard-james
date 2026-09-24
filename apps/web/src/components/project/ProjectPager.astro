@@ -1,0 +1,128 @@
+---
+import type { ProjectContent } from '@/content/types'
+import Image from '@/components/ui/Image.astro'
+
+export interface Props {
+  prev: ProjectContent
+  next: ProjectContent
+}
+
+/**
+ * Full-width closing section linking to the previous AND next work in the
+ * browsing order. Two mirrored panels — side by side on desktop, stacked on
+ * mobile — each a peek of that project's hero behind a scrim, with the title
+ * in large Cinzel as the link and a strong gold/scale hover. Each whole panel
+ * is one anchor for a generous target. Content is present without JS; motion
+ * only enhances and respects reduced motion.
+ */
+const { prev, next } = Astro.props
+
+const panels = [
+  { label: 'Previous Work', project: prev },
+  { label: 'Next Work', project: next },
+]
+---
+
+<section data-pager class="relative w-full border-t border-line-soft md:grid md:grid-cols-2">
+  {
+    panels.map(({ label, project }, i) => (
+      <a
+        href={`/projects/${project.slug}`}
+        aria-label={`${label} — ${project.title}`}
+        class:list={[
+          'group relative isolate flex min-h-[42svh] items-center overflow-hidden bg-ink-soft py-[clamp(3.5rem,10vh,7rem)] md:min-h-[60svh]',
+          i === 1 && 'border-t border-line-soft md:border-l md:border-t-0',
+        ]}
+      >
+        {/* Hero peek */}
+        <div
+          data-pager-image
+          class="u-fill scale-[1.12] opacity-40 transition-[opacity,transform] duration-[1.2s] ease-out-expo will-change-transform group-hover:scale-[1.18] group-hover:opacity-60"
+        >
+          <Image
+            src={project.hero}
+            alt=""
+            sizes="(min-width: 768px) 50vw, 100vw"
+            class="h-full w-full"
+            draggable={false}
+          />
+        </div>
+
+        {/* Scrims for legibility */}
+        <div aria-hidden class="u-fill bg-gradient-to-r from-ink via-ink/70 to-ink/30" />
+        <div aria-hidden class="u-fill bg-gradient-to-t from-ink via-transparent to-ink/40" />
+
+        <div class="relative z-10 w-full px-[var(--gutter)]">
+          <p class="u-eyebrow text-gold">{label}</p>
+
+          <h2
+            data-pager-title
+            class="u-display mt-5 max-w-[20ch] text-balance text-[clamp(1.8rem,4vw,3.6rem)] leading-[0.98] text-bone transition-colors duration-500 ease-out-expo group-hover:text-gold-bright"
+          >
+            {project.title}
+          </h2>
+
+          <span class="mt-8 inline-flex items-center gap-3 font-body text-xs uppercase tracking-[0.24em] text-bone-dim transition-colors duration-500 ease-out-expo group-hover:text-bone">
+            <span>{project.year}</span>
+            <span
+              aria-hidden
+              class="inline-block h-px w-10 origin-left bg-line transition-[width,background-color] duration-500 ease-out-expo group-hover:w-16 group-hover:bg-gold"
+            />
+            <span>View</span>
+          </span>
+        </div>
+      </a>
+    ))
+  }
+</section>
+
+<script>
+  import { gsap, ScrollTrigger } from '@/lib/gsap'
+  import { initScrollSync } from '@/lib/scrollSync'
+  import { onEachPage } from '@/lib/pageScript'
+
+  // This page animates on scroll, so hand Lenis's frame over to the GSAP ticker.
+  initScrollSync()
+
+  onEachPage(() => {
+    const root = document.querySelector<HTMLElement>('[data-pager]')
+    if (!root) return
+    const titles = Array.from(root.querySelectorAll<HTMLElement>('[data-pager-title]'))
+    const images = Array.from(root.querySelectorAll<HTMLElement>('[data-pager-image]'))
+    if (!titles.length) return
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const ctx = gsap.context(() => {
+      if (reduce) {
+        gsap.set(titles, { opacity: 1, y: 0 })
+        return
+      }
+
+      gsap.from(titles, {
+        opacity: 0,
+        y: 48,
+        duration: 1.2,
+        ease: 'expo.out',
+        stagger: 0.12,
+        scrollTrigger: { trigger: root, start: 'top 78%' },
+      })
+
+      // Slow parallax drift on each background peek as the section enters.
+      for (const image of images) {
+        gsap.fromTo(
+          image,
+          { yPercent: -10 },
+          {
+            yPercent: 10,
+            ease: 'none',
+            scrollTrigger: { trigger: root, start: 'top bottom', end: 'bottom top', scrub: true },
+          },
+        )
+      }
+    }, root)
+
+    ScrollTrigger.refresh()
+    return () => ctx.revert()
+  })
+</script>

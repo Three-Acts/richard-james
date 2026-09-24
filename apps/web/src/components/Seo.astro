@@ -1,0 +1,87 @@
+---
+import type { SiteWithUrl } from '@/content/types'
+import { abs } from '@/lib/structuredData'
+
+export interface Props {
+  /** Page title (the site name is appended automatically). */
+  title?: string
+  description?: string
+  /** Absolute-from-root image path, e.g. "/images/foo/01.avif". */
+  image?: string
+  /** Route path for canonical + og:url, e.g. "/projects/loss". */
+  path?: string
+  /** og:type — "website" | "article" | "profile". */
+  type?: 'website' | 'article' | 'profile'
+  /** Optional JSON-LD structured data object(s). */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[]
+  noIndex?: boolean
+  /** Resolved site content, supplied by Base.astro (not part of the page-level Props spread). */
+  site: SiteWithUrl
+}
+
+/**
+ * Per-page SEO. Astro renders this straight into <head> at build time, so every
+ * pre-rendered HTML file ships unique, crawlable metadata — the same job the old
+ * <Seo> React component did through react-helmet, with no runtime cost.
+ */
+const {
+  title,
+  description,
+  image,
+  path = '',
+  type = 'website',
+  jsonLd,
+  noIndex,
+  site,
+} = Astro.props
+
+const fullTitle = title ? `${title} — ${site.name}` : `${site.name} | ${site.tagline}`
+// Fall back to the site description when a page passes an empty/undefined one
+// (some works have no blurb) so no page ships a blank meta description.
+const desc = description?.trim() ? description : site.description
+const url = `${site.url}${path}`
+// Social scrapers (WhatsApp, Facebook, LinkedIn) don't decode AVIF, so the
+// shared card should stay a JPEG/PNG/WebP. Pages may override with `image`
+// (e.g. a project's hero); otherwise fall back to the site record's own
+// social image, then the bundled default. `abs()` passes an already-absolute
+// URL (e.g. a bucket URL from the API content source) through unchanged.
+const usingDefaultImage = !image
+const img = abs(site, image || site.ogImage || '/og-default.jpg')
+const imgAlt = `${site.name} — ${site.tagline}`
+const blocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={desc} />
+<meta name="author" content={site.name} />
+{noIndex ? <meta name="robots" content="noindex, nofollow" /> : <link rel="canonical" href={url} />}
+
+<meta property="og:site_name" content={site.name} />
+<meta property="og:type" content={type} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={desc} />
+<meta property="og:url" content={url} />
+<meta property="og:locale" content="en_GB" />
+<meta property="og:image" content={img} />
+<meta property="og:image:alt" content={imgAlt} />
+{
+  usingDefaultImage && (
+    <>
+      <meta property="og:image:type" content="image/jpeg" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+    </>
+  )
+}
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={desc} />
+<meta name="twitter:image" content={img} />
+<meta name="twitter:image:alt" content={imgAlt} />
+
+{
+  blocks.map((block) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(block)} />
+  ))
+}

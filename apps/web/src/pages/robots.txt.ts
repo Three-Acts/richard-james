@@ -1,16 +1,16 @@
-import type { APIRoute } from "astro";
-import { site } from "../site";
+import type { APIRoute } from 'astro'
 
-/** Static-file endpoint: written to `dist/robots.txt` at build time. */
+/**
+ * /robots.txt — replaces the static public/robots.txt (which baked in a
+ * hardcoded domain) so the sitemap line follows the resolved site origin
+ * (astro.config.mjs `site`, exposed as import.meta.env.SITE) instead.
+ */
 export const GET: APIRoute = () => {
-  const robots = [
-    "# All crawlers, including AI answer engines (GPTBot, ClaudeBot, PerplexityBot, Google-Extended), are welcome.",
-    "User-agent: *",
-    "Allow: /",
-    "",
-    `Sitemap: ${new URL("/sitemap.xml", site.url).toString()}`,
-    ""
-  ].join("\n");
+  const body = ['User-agent: *', 'Allow: /', '', `Sitemap: ${import.meta.env.SITE}/sitemap.xml`, ''].join(
+    '\n',
+  )
 
-  return new Response(robots, { headers: { "Content-Type": "text/plain" } });
-};
+  return new Response(body, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
+}

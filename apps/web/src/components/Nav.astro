@@ -1,0 +1,192 @@
+---
+import { nav } from '@/data/site'
+import type { SiteWithUrl } from '@/content/types'
+import Menu from './Menu.astro'
+
+export interface Props {
+  /** Sit transparent on the art until scrolled (home only). */
+  transparent?: boolean
+  site: SiteWithUrl
+}
+
+/**
+ * Fixed top navigation. Over the home hero it sits transparent on the art;
+ * elsewhere — and on home once you scroll past the first viewport — a subtle ink
+ * wash + backdrop blur with a hairline base appears. Hides on scroll-down,
+ * reveals on scroll-up.
+ *
+ * The active page is resolved at build time from the route, so no router is
+ * involved; the scroll behaviour is a small attribute-toggling script.
+ */
+const { transparent = false, site } = Astro.props
+
+const pathname = Astro.url.pathname.replace(/\/+$/, '') || '/'
+const isActive = (href: string) =>
+  href === '/' ? pathname === '/' : pathname.startsWith(href)
+---
+
+<header
+  data-nav
+  data-nav-transparent={transparent ? '' : undefined}
+  data-solid={transparent ? undefined : ''}
+  class="fixed inset-x-0 top-0 z-[70]"
+>
+  {/* Background wash — fades in independently so type never flickers. */}
+  <div
+    aria-hidden="true"
+    class="nav-wash absolute inset-0 border-b border-line-soft bg-ink/70 backdrop-blur-md"
+  >
+  </div>
+
+  <nav
+    aria-label="Main"
+    class="u-container relative flex items-center justify-between"
+    style="height: var(--nav-h)"
+  >
+    <a
+      href="/"
+      class="u-display text-sm tracking-[0.22em] text-bone transition-colors duration-500 hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold"
+    >
+      {site.name}
+    </a>
+
+    {/* Desktop links. The full-screen Menu overlay would just repeat these same
+        items, so on desktop we show the inline list only — the overlay is
+        reserved for the mobile hamburger below. */}
+    <div class="hidden items-center md:flex">
+      <ul class="flex items-center gap-7">
+        {
+          nav.map((item) => {
+            const active = isActive(item.href)
+            return (
+              <li>
+                <a
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  class:list={[
+                    'link-underline u-eyebrow transition-colors duration-500 hover:text-bone focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold',
+                    active && 'text-gold',
+                  ]}
+                >
+                  {item.label}
+                </a>
+              </li>
+            )
+          })
+        }
+      </ul>
+    </div>
+
+    {/* Mobile hamburger */}
+    <button
+      type="button"
+      data-menu-toggle
+      aria-haspopup="dialog"
+      aria-expanded="false"
+      aria-label="Open menu"
+      class="flex h-10 w-10 -mr-2 items-center justify-end text-bone transition-colors duration-500 hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gold md:hidden"
+    >
+      <span aria-hidden="true" class="flex flex-col items-end gap-[6px]">
+        <span class="block h-px w-6 bg-current"></span>
+        <span class="block h-px w-4 bg-current"></span>
+      </span>
+    </button>
+  </nav>
+</header>
+
+{/* Mobile-only: the overlay is hidden outright at md+ so it can never appear on
+    desktop (e.g. if a phone-width window is widened). */}
+<div class="md:hidden">
+  <Menu site={site} />
+</div>
+
+<style>
+  [data-nav] {
+    transform: translateY(0);
+    transition: transform 0.6s var(--ease-out-expo);
+  }
+
+  [data-nav][data-hidden] {
+    transform: translateY(-100%);
+  }
+
+  /* Never hide the bar out from under an open overlay. The descendant `html`
+     type selector outweighs the two attributes in the rule above. */
+  :global(html[data-menu-open]) [data-nav] {
+    transform: translateY(0);
+  }
+
+  .nav-wash {
+    opacity: 0;
+    transition: opacity 0.6s var(--ease-out-expo);
+  }
+
+  [data-nav][data-solid] .nav-wash {
+    opacity: 1;
+  }
+
+  /* The overlay supplies its own curtain; the bar's wash would double it up.
+     Matches [data-nav] too, so it outranks the [data-solid] rule above. */
+  :global(html[data-menu-open]) [data-nav] .nav-wash {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-nav],
+    .nav-wash {
+      transition-duration: 0.01ms;
+    }
+  }
+</style>
+
+<script>
+  import { onEachPage } from '@/lib/pageScript'
+
+  onEachPage(() => {
+    const header = document.querySelector<HTMLElement>('[data-nav]')
+    if (!header) return
+
+    const transparent = header.hasAttribute('data-nav-transparent')
+    const root = document.documentElement
+
+    let lastY = window.scrollY
+    let ticking = false
+
+    const update = () => {
+      ticking = false
+      const y = window.scrollY
+
+      // The bar gets a background when scrolled, or always on opaque pages.
+      header.toggleAttribute('data-solid', !transparent || y > 24)
+
+      // Don't hide while the menu is open or near the very top.
+      if (!root.hasAttribute('data-menu-open')) {
+        const delta = y - lastY
+        if (y > 160 && delta > 6) header.setAttribute('data-hidden', '')
+        else if (delta < -6 || y < 160) header.removeAttribute('data-hidden')
+      }
+
+      lastY = y
+    }
+
+    const onScroll = () => {
+      if (ticking) return
+      ticking = true
+      window.requestAnimationFrame(update)
+    }
+
+    const onToggleClick = () =>
+      document.dispatchEvent(new CustomEvent('rj:menu-open'))
+
+    const toggle = header.querySelector<HTMLButtonElement>('[data-menu-toggle]')
+    toggle?.addEventListener('click', onToggleClick)
+
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      toggle?.removeEventListener('click', onToggleClick)
+    }
+  })
+</script>

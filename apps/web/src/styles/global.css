@@ -1,0 +1,290 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------ *
+ * Richard James — design tokens
+ * Elevated, cinematic gallery: near-black ground, warm bone type,
+ * a single gold accent that echoes the artist's gold-leaf works.
+ * Type: Cinzel (display, set in caps) + Quattrocento (body serif).
+ * ------------------------------------------------------------------ */
+@theme {
+  --font-display: 'Cinzel', ui-serif, Georgia, serif;
+  --font-body: 'Quattrocento', ui-serif, Georgia, serif;
+
+  /* Ground + surfaces */
+  --color-ink: #0b0b0c;
+  --color-ink-soft: #121214;
+  --color-ink-raise: #17171a;
+  --color-paper: #ece7dd; /* light reading surface */
+
+  /* Type */
+  --color-bone: #ece7dd;
+  --color-bone-dim: #b7b1a5;
+  --color-muted: #7c766b;
+  --color-faint: #4a463f;
+
+  /* Accent — antique gold leaf */
+  --color-gold: #b89668;
+  --color-gold-bright: #d8b984;
+
+  /* Lines */
+  --color-line: rgba(236, 231, 221, 0.14);
+  --color-line-soft: rgba(236, 231, 221, 0.08);
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+
+  /* Layout rails */
+  --gutter: clamp(1.25rem, 4vw, 4rem);
+  --nav-h: 5rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Base
+ * ------------------------------------------------------------------ */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    background: var(--color-ink);
+    /* Lenis drives scrolling; keep native smooth off to avoid double-easing. */
+    scroll-behavior: auto;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-ink);
+    color: var(--color-bone);
+    font-family: var(--font-body);
+    font-weight: 400;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    line-height: 1.04;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  ::selection {
+    background: var(--color-gold);
+    color: var(--color-ink);
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Respect reduced motion everywhere. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Lenis smooth scroll (official recommended styles)
+ * ------------------------------------------------------------------ */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ *
+ * Reusable component classes (shared vocabulary for all pages)
+ * ------------------------------------------------------------------ */
+@layer components {
+  /* Eyebrow / kicker label */
+  .u-eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Display heading set in Cinzel caps */
+  .u-display {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* Outlined pill link (matches the original "View Details" treatment) */
+  .btn-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    padding: 0.7rem 1.6rem;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-bone);
+    transition: border-color 0.5s var(--ease-out-expo),
+      color 0.5s var(--ease-out-expo), background-color 0.5s var(--ease-out-expo);
+  }
+  .btn-line:hover {
+    border-color: var(--color-gold);
+    color: var(--color-gold-bright);
+  }
+
+  /* Animated underline link */
+  .link-underline {
+    position: relative;
+  }
+  .link-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.5s var(--ease-out-expo);
+  }
+  .link-underline:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  /* Page horizontal rails */
+  .u-container {
+    width: 100%;
+    padding-inline: var(--gutter);
+    margin-inline: auto;
+    max-width: 96rem;
+  }
+
+  /* Reading column for long-form text */
+  .u-prose {
+    max-width: 42rem;
+  }
+  .u-prose p {
+    margin-block: 1.15em;
+    color: var(--color-bone-dim);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Utilities
+ * ------------------------------------------------------------------ */
+@layer utilities {
+  /* Hide scrollbars on the thumbnail track while keeping it scrollable. */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Reveal start-state (GSAP/Framer animate these to 0). */
+  .will-reveal {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+
+  .u-fill {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Progressive enhancement
+ *
+ * Both effects below are gated on [data-js], which the base layout sets on
+ * <html> before first paint. Without JavaScript the rules never apply, so the
+ * page ships fully visible — content stays readable and crawlable, and nothing
+ * can get stranded at opacity 0 if a script fails to load.
+ *
+ * See src/lib/reveal.ts and src/lib/imageFade.ts for the observers that flip
+ * the corresponding attributes.
+ * ------------------------------------------------------------------ */
+
+/* Scroll reveal — replaces the old <Reveal> component. Per-element tuning
+   comes from --reveal-delay / --reveal-y, set inline by Reveal.astro. */
+[data-js] [data-reveal] {
+  opacity: 0;
+  transform: translateY(var(--reveal-y, 24px));
+  transition:
+    opacity 0.9s var(--ease-out-expo) var(--reveal-delay, 0s),
+    transform 0.9s var(--ease-out-expo) var(--reveal-delay, 0s);
+  will-change: opacity, transform;
+}
+
+[data-js] [data-reveal][data-reveal-visible] {
+  opacity: 1;
+  transform: translateY(0);
+  will-change: auto;
+}
+
+/* Decode-in fade for static images — replaces the old <Image> component. */
+[data-js] img[data-img-fade] {
+  opacity: 0;
+  transform: scale(1.04);
+  filter: blur(12px);
+  transition:
+    opacity 0.8s var(--ease-out-expo),
+    transform 0.9s var(--ease-out-expo),
+    filter 0.8s var(--ease-out-expo);
+  will-change: opacity, transform, filter;
+}
+
+[data-js] img[data-img-fade][data-loaded] {
+  opacity: 1;
+  transform: scale(1);
+  filter: blur(0);
+  will-change: auto;
+}
+
+/* Motion is an enhancement, never a gate on seeing the work. */
+@media (prefers-reduced-motion: reduce) {
+  [data-js] [data-reveal],
+  [data-js] img[data-img-fade] {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+}

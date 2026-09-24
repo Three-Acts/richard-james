@@ -1,0 +1,125 @@
+---
+import Base from '@/layouts/Base.astro'
+import Reveal from '@/components/ui/Reveal.astro'
+import { getContentSource } from '@/content'
+import { site as staticSite } from '@/data/site'
+import { personJsonLd } from '@/lib/structuredData'
+
+/**
+ * Contact — an editorial two-column spread rather than a centred stack: the
+ * heading sits on the left, and the ways to reach Richard read as a ruled index
+ * on the right (label / value / copy per line).
+ *
+ * The copy affordance is the only interactive element on the page, so it is a
+ * dozen lines of DOM wiring rather than a reason to ship React here.
+ */
+const source = await getContentSource()
+const siteContent = await source.getSite()
+const site = { ...siteContent, url: staticSite.url }
+
+const rows = [
+  { label: 'Email', href: `mailto:${site.email}`, value: site.email, copyLabel: 'email address' },
+  { label: 'Phone', href: site.phoneHref, value: site.phone, copyLabel: 'phone number' },
+]
+---
+
+<Base
+  title="Contact"
+  description={`Contact ${site.name} — exhibition enquiries. Based in ${site.location}.`}
+  path="/contact"
+  jsonLd={personJsonLd(site)}
+>
+  <section class="u-container flex min-h-[calc(100vh-var(--nav-h))] items-center py-32">
+    <div
+      class="grid w-full grid-cols-1 gap-x-[clamp(4rem,8vw,8rem)] gap-y-16 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]"
+    >
+      {/* Heading column */}
+      <Reveal as="header">
+        <p class="u-eyebrow text-gold">Get in Touch</p>
+        <h1 class="u-display mt-6 text-[clamp(2.75rem,8vw,5.5rem)] leading-[0.95] text-bone">
+          Contact
+        </h1>
+        <p class="mt-7 max-w-sm text-[0.98rem] leading-relaxed text-bone-dim [text-wrap:pretty]">
+          Contact Richard directly by email or phone.
+        </p>
+      </Reveal>
+
+      {/* Ruled contact index */}
+      <Reveal delay={0.12} class="self-center">
+        <dl class="divide-y divide-line-soft border-y border-line-soft">
+          {
+            rows.map((row) => (
+              // Label + copy affordance share the top line; the value gets the
+              // full row width beneath (Cinzel runs wide — the email address
+              // needs all of it).
+              <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-y-5 py-10 md:py-12">
+                <dt class="u-eyebrow text-muted">{row.label}</dt>
+                <dd class="col-span-2 row-start-2 min-w-0">
+                  <a
+                    href={row.href}
+                    class="link-underline font-display text-[clamp(1.05rem,4.8vw,2.2rem)] leading-tight tracking-[0.01em] text-bone wrap-anywhere transition-colors duration-500 ease-out-expo hover:text-gold-bright focus-visible:text-gold-bright focus-visible:outline-none"
+                  >
+                    {row.value}
+                  </a>
+                </dd>
+                <dd class="col-start-2 row-start-1 justify-self-end">
+                  <button
+                    type="button"
+                    data-copy={row.value}
+                    data-copy-label={row.copyLabel}
+                    class="u-eyebrow inline-flex items-center gap-2 rounded-full border border-line-soft px-3 py-1.5 text-[0.62rem] text-muted transition-colors duration-500 ease-out-expo hover:border-gold/50 hover:text-gold-bright focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold/60"
+                  >
+                    <span aria-live="polite">Copy {row.copyLabel}</span>
+                  </button>
+                </dd>
+              </div>
+            ))
+          }
+        </dl>
+      </Reveal>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { onEachPage } from '@/lib/pageScript'
+
+  onEachPage(() => {
+    const buttons = document.querySelectorAll<HTMLButtonElement>('[data-copy]')
+    if (buttons.length === 0) return
+
+    const timers = new Map<HTMLButtonElement, number>()
+
+    const onClick = async (event: Event) => {
+      const button = event.currentTarget as HTMLButtonElement
+      const value = button.dataset.copy ?? ''
+      const label = button.dataset.copyLabel ?? ''
+      const output = button.querySelector('span')
+
+      // navigator.clipboard is unavailable on insecure origins / older browsers.
+      if (!navigator.clipboard || !output) return
+
+      try {
+        await navigator.clipboard.writeText(value)
+      } catch {
+        return /* clipboard denied — silently ignore */
+      }
+
+      output.textContent = `${label} copied`
+      window.clearTimeout(timers.get(button))
+      timers.set(
+        button,
+        window.setTimeout(() => {
+          output.textContent = `Copy ${label}`
+        }, 1800),
+      )
+    }
+
+    for (const button of buttons) button.addEventListener('click', onClick)
+
+    return () => {
+      for (const button of buttons) button.removeEventListener('click', onClick)
+      for (const timer of timers.values()) window.clearTimeout(timer)
+    }
+  })
+</script>

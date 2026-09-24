@@ -1,0 +1,200 @@
+---
+import type { SiteWithUrl } from '@/content/types'
+
+export interface Props {
+  site: SiteWithUrl
+}
+
+const { site } = Astro.props
+
+/**
+ * Once-per-session cinematic intro: the wordmark settles in over near-black, a
+ * hairline progress line draws to 100, then the whole curtain lifts away to
+ * reveal the site. Locks scroll while active; releases and goes
+ * pointer-events:none when finished. Reduced motion => brief fade.
+ *
+ * `transition:persist` is what keeps it once-per-*session* rather than
+ * once-per-page: ClientRouter carries this exact node across navigations, so the
+ * already-lifted curtain stays lifted instead of the incoming page rendering a
+ * fresh one and replaying the intro.
+ */
+---
+
+<div
+  data-preloader
+  transition:persist
+  aria-hidden="true"
+  class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink"
+>
+  <div data-preloader-body class="preloader-body flex flex-col items-center gap-7 px-[var(--gutter)] text-center">
+    <span class="preloader-in u-eyebrow" style="--d:0.1s">{site.location}</span>
+
+    <div
+      class="preloader-in u-display text-bone text-[clamp(2rem,7vw,4.5rem)] leading-none"
+      style="--d:0.15s"
+    >
+      {site.name}
+    </div>
+
+    {/* Progress line + counter */}
+    <div class="mt-2 flex w-[min(18rem,60vw)] flex-col items-center gap-3">
+      <div class="relative h-px w-full overflow-hidden bg-line-soft">
+        <span data-preloader-bar class="absolute inset-y-0 left-0 block bg-gold" style="width:0%"></span>
+      </div>
+      <span
+        data-preloader-count
+        class="preloader-in u-eyebrow tabular-nums text-faint"
+        style="--d:0.2s">000</span
+      >
+    </div>
+  </div>
+</div>
+
+<style>
+  [data-preloader] {
+    transform: translateY(0);
+    transition: transform 1s var(--ease-in-out-quint);
+  }
+
+  /* Lifted away — the curtain is gone but the node stays, so `transition:persist`
+     has something to carry into the next page. */
+  [data-preloader][data-done] {
+    transform: translateY(-100%);
+    pointer-events: none;
+  }
+
+  /* Skipped outright (already seen this session, or persisted from the previous
+     page): no transition, no repaint cost. */
+  [data-preloader][hidden] {
+    display: none;
+  }
+
+  .preloader-body {
+    opacity: 1;
+    transition: opacity 0.5s var(--ease-out-expo);
+  }
+
+  [data-preloader][data-done] .preloader-body {
+    opacity: 0;
+  }
+
+  .preloader-in {
+    opacity: 0;
+    transform: translateY(0.6rem);
+    transition:
+      opacity 1s var(--ease-out-expo) var(--d, 0s),
+      transform 1.1s var(--ease-out-expo) var(--d, 0s);
+  }
+
+  [data-preloader][data-enter] .preloader-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  [data-preloader-bar] {
+    transition: width 0.15s linear;
+  }
+</style>
+
+<script>
+  import { getLenis } from '@/lib/lenis'
+
+  const SESSION_KEY = 'rj-preloaded'
+
+  // Deliberately NOT wrapped in onEachPage: the intro belongs to the session,
+  // not the page. This module body runs once per full load, and the node itself
+  // is carried across client-side navigations by transition:persist.
+  function runPreloader() {
+    const el = document.querySelector<HTMLElement>('[data-preloader]')
+    if (!el) return
+
+    const bar = el.querySelector<HTMLElement>('[data-preloader-bar]')
+    const count = el.querySelector<HTMLElement>('[data-preloader-count]')
+
+    let alreadyShown = false
+    try {
+      alreadyShown = sessionStorage.getItem(SESSION_KEY) === '1'
+    } catch {
+      /* sessionStorage may be unavailable (private mode) — non-fatal. */
+    }
+
+    if (alreadyShown) {
+      el.hidden = true
+      return
+    }
+
+    const setProgress = (value: number) => {
+      if (bar) bar.style.width = `${value}%`
+      if (count) count.textContent = String(value).padStart(3, '0')
+    }
+
+    // Lock scroll for the duration of the intro.
+    getLenis()?.stop()
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const finish = () => {
+      try {
+        sessionStorage.setItem(SESSION_KEY, '1')
+      } catch {
+        /* non-fatal, see above */
+      }
+      document.body.style.overflow = previousOverflow
+      getLenis()?.start()
+      el.setAttribute('data-done', '')
+      // Drop it from the layer entirely once the lift has played out.
+      window.setTimeout(() => {
+        el.hidden = true
+      }, 1100)
+    }
+
+    // Trigger the entrance on the next frame so the transitions run.
+    window.setTimeout(() => el.setAttribute('data-enter', ''), 30)
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setProgress(100)
+      window.setTimeout(finish, 450)
+      return
+    }
+
+    // Content-aware intro. The progress line eases over a guaranteed
+    // MIN_DURATION so the animation always plays in full (even when the page is
+    // already cached and loads instantly), but it holds just shy of 100 until
+    // the page has actually finished loading. It completes only once BOTH are
+    // true. A MAX_DURATION cap guarantees it never hangs if `load` is slow or
+    // never fires.
+    const MIN_DURATION = 1800
+    const MAX_DURATION = 7000
+
+    let loaded = document.readyState === 'complete'
+    if (!loaded) {
+      window.addEventListener('load', () => {
+        loaded = true
+      }, { once: true })
+    }
+
+    const start = performance.now()
+
+    const tick = (now: number) => {
+      const elapsed = now - start
+      const t = Math.min(1, elapsed / MIN_DURATION)
+      // ease-out-expo
+      const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
+      // Creep up but never reach 100 until the content is in — that final jump
+      // to 100 is what signals "ready", so it has to mean something.
+      const target = loaded ? eased : Math.min(eased, 0.9)
+      setProgress(Math.round(target * 100))
+
+      if ((loaded && elapsed >= MIN_DURATION) || elapsed >= MAX_DURATION) {
+        setProgress(100)
+        window.setTimeout(finish, 320)
+      } else {
+        window.requestAnimationFrame(tick)
+      }
+    }
+
+    window.requestAnimationFrame(tick)
+  }
+
+  runPreloader()
+</script>

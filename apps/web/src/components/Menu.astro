@@ -1,0 +1,281 @@
+---
+import { nav } from '@/data/site'
+import type { SiteWithUrl } from '@/content/types'
+
+export interface Props {
+  site: SiteWithUrl
+}
+
+const { site } = Astro.props
+
+/**
+ * Full-screen overlay menu. Big Cinzel nav links stagger in over a near-black
+ * curtain, with contact + location anchored to the foot. Locks scroll while open
+ * (Lenis + body), traps focus loosely, closes on Esc / link click / navigation.
+ *
+ * Open state is an attribute (`data-open`) rather than component state, and the
+ * transitions are plain CSS — so this ships a few lines of DOM wiring instead of
+ * React. It also flags `data-menu-open` on <html> so the nav can react to the
+ * overlay without the two components being coupled.
+ */
+---
+
+<div
+  data-menu
+  role="dialog"
+  aria-modal="true"
+  aria-label="Site menu"
+  aria-hidden="true"
+  class="fixed inset-0 z-[80]"
+>
+  {/* Curtain */}
+  <div data-menu-curtain class="menu-curtain absolute inset-0 bg-ink"></div>
+
+  <div
+    data-menu-panel
+    class="u-container relative flex h-full flex-col justify-between py-[var(--nav-h)]"
+  >
+    {/* Top row: eyebrow + close */}
+    <div class="flex items-center justify-between" style="min-height: var(--nav-h)">
+      <span class="u-eyebrow menu-fade">Menu</span>
+      <button
+        type="button"
+        data-menu-close
+        aria-label="Close menu"
+        class="u-eyebrow menu-fade text-bone-dim transition-colors duration-500 hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold"
+      >
+        Close
+      </button>
+    </div>
+
+    {/* Primary navigation */}
+    <nav aria-label="Primary" class="flex-1">
+      <ul class="flex h-full flex-col justify-center gap-2 sm:gap-3">
+        {
+          nav.map((item, i) => (
+            <li class="overflow-hidden">
+              <a
+                href={item.href}
+                class="menu-link group inline-flex items-baseline gap-4 text-bone hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-8 focus-visible:outline-gold"
+                style={`--i:${i}`}
+              >
+                <span class="u-eyebrow text-faint transition-colors duration-500 group-hover:text-gold" aria-hidden="true">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span class="u-display text-[clamp(2.4rem,9vw,6rem)] leading-[0.95]">
+                  {item.label}
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    {/* Footer: contact + location */}
+    <div
+      class="menu-foot flex flex-col gap-6 border-t border-line-soft pt-8 md:flex-row md:items-end md:justify-between"
+    >
+      <div class="flex flex-col gap-1">
+        <span class="u-eyebrow">Contact</span>
+        <a
+          href={`mailto:${site.email}`}
+          class="link-underline font-body text-bone-dim transition-colors duration-500 hover:text-bone"
+        >
+          {site.email}
+        </a>
+        <a
+          href={site.phoneHref}
+          class="link-underline font-body text-bone-dim transition-colors duration-500 hover:text-bone"
+        >
+          {site.phone}
+        </a>
+      </div>
+      <div class="flex flex-col gap-1 md:text-right">
+        <span class="u-eyebrow">Based in</span>
+        <span class="font-body text-bone-dim">{site.location}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  [data-menu] {
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear 0.7s;
+  }
+
+  [data-menu][data-open] {
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  .menu-curtain {
+    opacity: 0;
+    transform: translateY(-2%);
+    transition:
+      opacity 0.7s var(--ease-in-out-quint),
+      transform 0.8s var(--ease-in-out-quint);
+  }
+
+  [data-menu][data-open] .menu-curtain {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .menu-fade {
+    opacity: 0;
+    transition: opacity 0.6s var(--ease-out-expo);
+  }
+
+  [data-menu][data-open] .menu-fade {
+    opacity: 1;
+    transition-delay: 0.2s;
+  }
+
+  /* Links rise out of their clipped row, staggered by --i. */
+  .menu-link {
+    opacity: 0;
+    transform: translateY(110%);
+    transition:
+      transform 0.9s var(--ease-out-expo),
+      opacity 0.9s var(--ease-out-expo),
+      color 0.5s var(--ease-out-expo);
+  }
+
+  [data-menu][data-open] .menu-link {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay:
+      calc(0.18s + var(--i) * 0.07s),
+      calc(0.18s + var(--i) * 0.07s),
+      0s;
+  }
+
+  .menu-foot {
+    opacity: 0;
+    transform: translateY(1rem);
+    transition:
+      opacity 0.7s var(--ease-out-expo),
+      transform 0.7s var(--ease-out-expo);
+  }
+
+  [data-menu][data-open] .menu-foot {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0.55s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu-curtain,
+    .menu-fade,
+    .menu-link,
+    .menu-foot {
+      transition-duration: 0.01ms;
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  import { getLenis } from '@/lib/lenis'
+  import { onEachPage } from '@/lib/pageScript'
+
+  onEachPage(() => {
+    const menu = document.querySelector<HTMLElement>('[data-menu]')
+    if (!menu) return
+
+    const panel = menu.querySelector<HTMLElement>('[data-menu-panel]')
+    const curtain = menu.querySelector<HTMLElement>('[data-menu-curtain]')
+    const closeButton = menu.querySelector<HTMLButtonElement>('[data-menu-close]')
+    const root = document.documentElement
+
+    let open = false
+    let lastFocused: HTMLElement | null = null
+    let focusTimer = 0
+    let previousOverflow = ''
+
+    function setOpen(next: boolean) {
+      if (next === open) return
+      open = next
+
+      menu!.toggleAttribute('data-open', open)
+      menu!.setAttribute('aria-hidden', String(!open))
+      root.toggleAttribute('data-menu-open', open)
+
+      // Keep the nav's hamburger in sync without the two components sharing state.
+      for (const toggle of document.querySelectorAll('[data-menu-toggle]')) {
+        toggle.setAttribute('aria-expanded', String(open))
+      }
+
+      if (open) {
+        lastFocused = document.activeElement as HTMLElement | null
+        getLenis()?.stop()
+        previousOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        focusTimer = window.setTimeout(() => closeButton?.focus(), 60)
+      } else {
+        window.clearTimeout(focusTimer)
+        getLenis()?.start()
+        document.body.style.overflow = previousOverflow
+        lastFocused?.focus?.()
+      }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (!open) return
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setOpen(false)
+        return
+      }
+      if (event.key !== 'Tab' || !panel) return
+
+      // Loose focus trap: keep focus within the panel.
+      const focusables = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )
+      if (focusables.length === 0) return
+
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    const onRequestOpen = () => setOpen(true)
+    const onClose = () => setOpen(false)
+    // Links navigate; close so the overlay is not left open mid-transition.
+    const onPanelClick = (event: Event) => {
+      if ((event.target as HTMLElement).closest('a[href]')) setOpen(false)
+    }
+
+    document.addEventListener('rj:menu-open', onRequestOpen)
+    document.addEventListener('keydown', onKeyDown)
+    closeButton?.addEventListener('click', onClose)
+    curtain?.addEventListener('click', onClose)
+    panel?.addEventListener('click', onPanelClick)
+
+    return () => {
+      document.removeEventListener('rj:menu-open', onRequestOpen)
+      document.removeEventListener('keydown', onKeyDown)
+      // Release the scroll lock before the swap — the incoming page renders a
+      // fresh, closed menu and would otherwise inherit a frozen body.
+      window.clearTimeout(focusTimer)
+      if (open) {
+        getLenis()?.start()
+        document.body.style.overflow = previousOverflow
+      }
+      root.removeAttribute('data-menu-open')
+    }
+  })
+</script>

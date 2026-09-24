@@ -1,0 +1,45 @@
+---
+export interface Props {
+  /** Element type to render (default 'div'). */
+  as?: string
+  class?: string
+  /** Delay before the reveal transition, in seconds. */
+  delay?: number
+  /** Distance (px) the content lifts from. */
+  y?: number
+  /** Re-hide when scrolled back out of view (default: reveal once). */
+  repeat?: boolean
+  [key: string]: unknown
+}
+
+/**
+ * Fades + lifts its children when scrolled into view.
+ *
+ * Zero JavaScript of its own: this renders plain markup with the attributes
+ * src/lib/reveal.ts looks for, and one shared IntersectionObserver drives every
+ * instance on the page. The hidden start-state is CSS gated on [data-js], so
+ * server markup ships fully visible — no FOUC, and nothing is hidden from
+ * crawlers or visitors without JS.
+ */
+const { as = 'div', class: className, delay = 0, y = 24, repeat, ...rest } = Astro.props
+
+const Tag = as as any
+
+// Only emit the custom properties that differ from the CSS defaults.
+const style = [
+  delay ? `--reveal-delay:${delay}s` : '',
+  y !== 24 ? `--reveal-y:${y}px` : '',
+]
+  .filter(Boolean)
+  .join(';')
+---
+
+<Tag
+  class={className}
+  data-reveal
+  data-reveal-repeat={repeat ? '' : undefined}
+  style={style || undefined}
+  {...rest}
+>
+  <slot />
+</Tag>

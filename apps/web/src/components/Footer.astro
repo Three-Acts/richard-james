@@ -1,0 +1,74 @@
+---
+import { nav } from '@/data/site'
+import type { SiteWithUrl } from '@/content/types'
+
+export interface Props {
+  site: SiteWithUrl
+}
+
+/**
+ * Refined site footer: wordmark + tagline/location, navigation, contact (email +
+ * phone) and a quiet copyright / credit line. Dark, with a hairline top border
+ * to seat it under the page content. Pure markup — no client JavaScript.
+ */
+const { site } = Astro.props
+const year = new Date().getFullYear()
+
+const linkClass =
+  'link-underline font-body text-bone-dim transition-colors duration-500 hover:text-bone focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold'
+---
+
+<footer class="border-t border-line bg-ink">
+  <div class="u-container py-16 md:py-24">
+    <div class="flex flex-col gap-14 lg:flex-row lg:justify-between">
+      {/* Identity */}
+      <div class="max-w-sm">
+        <a
+          href="/"
+          class="u-display text-xl tracking-[0.18em] text-bone transition-colors duration-500 hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold"
+        >
+          {site.name}
+        </a>
+        <p class="mt-4 font-body text-bone-dim">{site.tagline}</p>
+        <p class="u-eyebrow mt-5">{site.location}</p>
+      </div>
+
+      {/* Navigation + contact */}
+      <div class="flex flex-col gap-12 sm:flex-row sm:gap-20">
+        <nav aria-label="Footer">
+          <h2 class="u-eyebrow mb-5 text-faint">Index</h2>
+          <ul class="flex flex-col gap-3">
+            {
+              nav.map((item) => (
+                <li>
+                  <a href={item.href} class={linkClass}>
+                    {item.label}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+
+        <div>
+          <h2 class="u-eyebrow mb-5 text-faint">Contact</h2>
+          <ul class="flex flex-col gap-3">
+            <li>
+              <a href={`mailto:${site.email}`} class={linkClass}>{site.email}</a>
+            </li>
+            <li>
+              <a href={site.phoneHref} class={linkClass}>{site.phone}</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    {/* Baseline credit */}
+    <div class="mt-16 border-t border-line-soft pt-8 text-xs text-muted">
+      <p class="font-body">
+        &copy; {year} {site.name}. All rights reserved.
+      </p>
+    </div>
+  </div>
+</footer>

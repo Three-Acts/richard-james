@@ -1,0 +1,106 @@
+---
+import { ClientRouter } from 'astro:transitions'
+import Seo, { type Props as SeoProps } from '@/components/Seo.astro'
+import Nav from '@/components/Nav.astro'
+import Footer from '@/components/Footer.astro'
+import Preloader from '@/components/Preloader.astro'
+import { site as staticSite } from '@/data/site'
+import { getContentSource } from '@/content'
+import '@/styles/global.css'
+
+export interface Props extends Omit<SeoProps, 'site'> {
+  /** Let the nav sit transparent on the art until scrolled (home only). */
+  transparentNav?: boolean
+  /** Home ends on its own stage, so it omits the footer. */
+  showFooter?: boolean
+}
+
+/**
+ * App shell: smooth scroll, fixed navigation, the once-per-session preloader,
+ * page content and the footer. Rendered for every route.
+ *
+ * ClientRouter keeps navigation feeling like the single-page app this replaced —
+ * no white flash, and the Lenis instance created in scripts/shell.ts survives
+ * across pages because <html> is never torn down.
+ *
+ * Site content (name, tagline, location, contact details, description) is
+ * fetched once here through the content source and threaded down to
+ * Seo/Nav/Menu/Footer/Preloader as a `site` prop — `@/data/site` is still the
+ * source of `nav`, `fonts` and the synchronous `url` (astro.config.mjs), none
+ * of which are part of the published content contract.
+ */
+const { transparentNav = false, showFooter = true, ...seo } = Astro.props
+
+const source = await getContentSource()
+const siteContent = await source.getSite()
+const site = { ...siteContent, url: staticSite.url }
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Google Tag Manager -->
+    <script is:inline>
+      (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+      new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+      'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+      })(window,document,'script','dataLayer','GTM-5KHFFF3L');
+    </script>
+    <!-- End Google Tag Manager -->
+
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0b0c" />
+    <meta name="generator" content={Astro.generator} />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Quattrocento:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Flags that JavaScript is available, before first paint. The scroll-reveal
+         and image-fade start-states in global.css are gated on it, so a visitor
+         without JS (or with a failed bundle) gets the page fully visible rather
+         than a screen of content stuck at opacity 0. -->
+    <script is:inline>
+      document.documentElement.dataset.js = ''
+    </script>
+
+    <Seo {...seo} site={site} />
+    <ClientRouter />
+  </head>
+
+  <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-5KHFFF3L"
+        height="0"
+        width="0"
+        style="display:none;visibility:hidden"></iframe></noscript
+    >
+    <!-- End Google Tag Manager (noscript) -->
+
+    <Preloader site={site} />
+    <Nav transparent={transparentNav} site={site} />
+
+    <!-- `isolate` keeps the page's own stacking context (the home stage stacks
+         its heroes / vignette / title plate as high as z-130) contained, so it
+         can never paint over the fixed Nav (z-70), Menu (z-80) or Preloader
+         (z-100). Without it those internal z-indices escape to the root and the
+         art covers the open menu / hides the intro. -->
+    <main id="main" class="isolate">
+      <slot />
+    </main>
+
+    {showFooter && <Footer site={site} />}
+
+    <script>
+      import '@/scripts/shell'
+    </script>
+  </body>
+</html>

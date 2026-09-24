@@ -11,12 +11,28 @@ if (process.env.VERCEL_ENV === "production" && !apiOrigin) {
   );
 }
 
+const immutableCache = { key: "Cache-Control", value: "public, max-age=31536000, immutable" };
+
 export const config: VercelConfig = {
   framework: "astro",
   buildCommand: "npm run build",
   outputDirectory: "dist",
   cleanUrls: true,
+  trailingSlash: false,
   rewrites: apiOrigin
     ? [routes.rewrite("/api/(.*)", `${apiOrigin}/api/$1`)]
-    : []
+    : [],
+  // Ported from the source portfolio's vercel.json: the old /projetcs typo and
+  // the bare /projects index (folded into the home page) both send visitors
+  // home instead of 404ing.
+  redirects: [
+    { source: "/projetcs", destination: "/", permanent: true },
+    { source: "/projects", destination: "/", permanent: true }
+  ],
+  // The portfolio's artwork and build assets are content-hashed / never
+  // change in place, so cache them for a year.
+  headers: [
+    { source: "/images/(.*)", headers: [immutableCache] },
+    { source: "/assets/(.*)", headers: [immutableCache] }
+  ]
 };

@@ -1,23 +1,50 @@
 ---
-import ContactFormIsland from "../components/islands/contact-form-island";
-import {
-  HomeContactSection,
-  HomeConversionPathSection,
-  HomeHeroSection,
-  HomeServicesSection,
-  HomeTechnicalFoundationSection
-} from "../components/sections";
-import BaseLayout from "../layouts/BaseLayout.astro";
-import { homeMeta } from "../page-meta";
+import Base from '@/layouts/Base.astro'
+import HomeExperience from '@/components/home/HomeExperience'
+import { site as staticSite } from '@/data/site'
+import { getContentSource } from '@/content'
+import { yearsOf } from '@/content/projects'
+import { collectionJsonLd, personJsonLd, websiteJsonLd } from '@/lib/structuredData'
+
+/**
+ * Home — the signature, scroll-synced cinematic experience.
+ *
+ * The interactive stage is the one island on the site that has to hydrate
+ * eagerly: it *is* the page. Around it this route also ships a content-complete,
+ * crawlable fallback — a visually-hidden heading plus a full list of every
+ * project link — so search engines and no-JS visitors get all the works even
+ * though the mechanic never runs for them.
+ */
+const source = await getContentSource()
+const [projects, siteContent] = await Promise.all([source.listProjects(), source.getSite()])
+const site = { ...siteContent, url: staticSite.url }
+const years = yearsOf(projects)
 ---
 
-<BaseLayout seo={homeMeta.seo}>
-  <HomeHeroSection />
-  <HomeServicesSection />
-  <HomeConversionPathSection />
-  <HomeTechnicalFoundationSection />
-  <HomeContactSection>
-    {/* Interactive island: hydrates on its own; the rest of the page ships zero JS. */}
-    <ContactFormIsland client:visible />
-  </HomeContactSection>
-</BaseLayout>
+<Base
+  path="/"
+  description={site.description}
+  type="website"
+  jsonLd={[websiteJsonLd(site), personJsonLd(site), collectionJsonLd(projects, site)]}
+  transparentNav
+  showFooter={false}
+>
+  {/* Visually-hidden, crawlable index of the whole portfolio. Present in the
+      pre-rendered HTML regardless of JavaScript. */}
+  <h1 class="sr-only">{site.name} — {site.tagline}</h1>
+  <nav aria-label="All projects" class="sr-only">
+    <ul>
+      {
+        projects.map((p) => (
+          <li>
+            <a href={`/projects/${p.slug}`}>
+              {p.title} — {p.year}, {p.medium}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+
+  <HomeExperience client:load projects={projects} years={years} />
+</Base>

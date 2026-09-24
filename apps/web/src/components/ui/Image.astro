@@ -1,0 +1,55 @@
+---
+export interface Props {
+  src: string
+  alt: string
+  class?: string
+  /** Load eagerly + high priority (e.g. hero / above-the-fold). */
+  priority?: boolean
+  /**
+   * Optional wrapper aspect ratio. Accepts a CSS string ("3/4") or a number
+   * (0.75). Omit for natural / "free form" sizing — the image keeps its own
+   * intrinsic ratio.
+   */
+  aspectRatio?: string | number
+  /** Passed to the underlying <img> for responsive selection. */
+  sizes?: string
+  draggable?: boolean
+}
+
+/**
+ * A quietly elegant image: object-cover, fades + lifts a hair from a soft blur
+ * as it decodes.
+ *
+ * The static counterpart of components/ui/Image.tsx (which stays for the React
+ * islands, where the carousel drives loading imperatively). This version ships
+ * no JavaScript — the fade is CSS keyed off `data-loaded`, which the shared
+ * src/lib/imageFade.ts observer sets. Cached images resolve instantly, so
+ * nothing is ever left hidden.
+ */
+const {
+  src,
+  alt,
+  class: className,
+  priority = false,
+  aspectRatio,
+  sizes,
+  draggable = false,
+} = Astro.props
+
+const wrapperStyle =
+  aspectRatio !== undefined ? `aspect-ratio:${aspectRatio}` : undefined
+---
+
+<span class:list={['relative block overflow-hidden', className]} style={wrapperStyle}>
+  <img
+    src={src}
+    alt={alt}
+    sizes={sizes}
+    loading={priority ? 'eager' : 'lazy'}
+    decoding="async"
+    fetchpriority={priority ? 'high' : 'auto'}
+    draggable={draggable}
+    data-img-fade
+    class="h-full w-full object-cover"
+  />
+</span>
