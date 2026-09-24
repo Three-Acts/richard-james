@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, Copy, Lock, Trash2 } from "lucide-react";
-import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, GalleryField, PublishStatus } from "../../cms/types";
+import type { AssetField, CmsCollectionSummary, CmsField, CmsRecord, CmsRecordValue, GalleryField, PublishStatus } from "../../cms/types";
 import { formatDateTime } from "../../lib/format";
 import { getRecordTitle, hasPublishWorkflow, isEditable } from "../../lib/records";
 import { BareIconButton, Button, ConfirmDialog, PanelHeader, ScrollArea, SplitButton, StatusPill, Tooltip } from "../atoms";
@@ -9,6 +9,15 @@ import { DetailRow } from "./detail-row";
 import { FieldControl, type GalleryUploadProgress } from "./field-control";
 
 const READ_ONLY_HINT = "Records in this collection are created by the site and cannot be edited.";
+
+/** "basic" for an unlabelled title/slug field (defensive default), else "custom". */
+function sectionOf(field: CmsField): "basic" | "custom" | "seo" {
+  if (field.section) {
+    return field.section;
+  }
+
+  return field.key === "title" || field.key === "slug" ? "basic" : "custom";
+}
 
 type RecordEditorProps = {
   collection: CmsCollectionSummary;
@@ -49,6 +58,28 @@ export function RecordEditor({
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const editable = isEditable(collection);
   const publishable = hasPublishWorkflow(collection);
+  const allowCreate = collection.allowCreate ?? true;
+  const allowDelete = collection.allowDelete ?? true;
+
+  function renderField(field: CmsField) {
+    return (
+      <FieldControl
+        field={field}
+        galleryUpload={galleryUpload}
+        key={field.key}
+        onAssetUpload={onAssetUpload}
+        onGalleryUpload={onGalleryUpload}
+        onUpdateValue={onUpdateValue}
+        readOnly={!editable}
+        record={draftRecord}
+        uploadingField={uploadingField}
+      />
+    );
+  }
+
+  const basicFields = collection.fields.filter((field) => sectionOf(field) === "basic");
+  const customFields = collection.fields.filter((field) => sectionOf(field) === "custom");
+  const seoFields = collection.fields.filter((field) => sectionOf(field) === "seo");
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-cms-bg" aria-label={`${getRecordTitle(collection, draftRecord)} editor`}>
@@ -113,37 +144,13 @@ export function RecordEditor({
       </PanelHeader>
 
       <ScrollArea className="min-h-0 flex-1">
-        <EditorSection title="Basic info">
-          {collection.fields.slice(0, 3).map((field) => (
-            <FieldControl
-              field={field}
-              galleryUpload={galleryUpload}
-              key={field.key}
-              onAssetUpload={onAssetUpload}
-              onGalleryUpload={onGalleryUpload}
-              onUpdateValue={onUpdateValue}
-              readOnly={!editable}
-              record={draftRecord}
-              uploadingField={uploadingField}
-            />
-          ))}
-        </EditorSection>
+        {basicFields.length > 0 ? <EditorSection title="Basic info">{basicFields.map(renderField)}</EditorSection> : null}
 
-        <EditorSection title={editable ? "Custom fields" : "Details"}>
-          {collection.fields.slice(3).map((field) => (
-            <FieldControl
-              field={field}
-              galleryUpload={galleryUpload}
-              key={field.key}
-              onAssetUpload={onAssetUpload}
-              onGalleryUpload={onGalleryUpload}
-              onUpdateValue={onUpdateValue}
-              readOnly={!editable}
-              record={draftRecord}
-              uploadingField={uploadingField}
-            />
-          ))}
-        </EditorSection>
+        {customFields.length > 0 ? (
+          <EditorSection title={editable ? "Custom fields" : "Details"}>{customFields.map(renderField)}</EditorSection>
+        ) : null}
+
+        {seoFields.length > 0 ? <EditorSection title="SEO settings">{seoFields.map(renderField)}</EditorSection> : null}
 
         <EditorSection title="Item details">
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -166,16 +173,18 @@ export function RecordEditor({
       </ScrollArea>
 
       <footer className="flex shrink-0 gap-1.5 border-t border-cms-line px-3 py-2.5">
-        {editable ? (
+        {editable && allowCreate ? (
           <Button onClick={onDuplicate}>
             <Copy size={13} />
             Duplicate
           </Button>
         ) : null}
-        <Button className="text-cms-muted hover:text-cms-danger" onClick={() => setIsConfirmingDelete(true)}>
-          <Trash2 size={13} />
-          Delete
-        </Button>
+        {allowDelete ? (
+          <Button className="text-cms-muted hover:text-cms-danger" onClick={() => setIsConfirmingDelete(true)}>
+            <Trash2 size={13} />
+            Delete
+          </Button>
+        ) : null}
       </footer>
 
       <ConfirmDialog

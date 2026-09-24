@@ -21,7 +21,13 @@ export function CollectionSidebar({ activeCollectionId, groups, isLoading, onSel
         <span className="text-ui-lg font-semibold text-cms-text">Collections</span>
       </PanelHeader>
       <ScrollArea className="min-h-0 flex-1" viewportClassName="px-2 pb-2">
-        {isLoading ? <p className="px-2 py-3 text-ui text-cms-subtle">Loading collections…</p> : null}
+        {isLoading ? (
+          <div className="grid gap-1 p-2" aria-hidden="true">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div className="h-7 animate-pulse rounded-cms bg-cms-raised" key={index} />
+            ))}
+          </div>
+        ) : null}
 
         {groups.map((group) => (
           // Each category after the first is separated by a hairline so the
@@ -46,7 +52,8 @@ export function CollectionSidebar({ activeCollectionId, groups, isLoading, onSel
                   type="button"
                 >
                   <span className="truncate">{collection.label}</span>
-                  <span className="tabular-nums text-cms-subtle">{collection.count}</span>
+                  {/* A singleton is always exactly one record — the count adds nothing. */}
+                  {collection.singleton ? null : <span className="tabular-nums text-cms-subtle">{collection.count}</span>}
                 </button>
               );
             })}

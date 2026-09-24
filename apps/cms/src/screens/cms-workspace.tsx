@@ -4,11 +4,25 @@ import { cn } from "@three-acts/utils";
 import type { AuthUser } from "../auth/auth-context";
 import { singularize } from "../lib/format";
 import { hasPublishWorkflow, isEditable } from "../lib/records";
-import { BareIconButton, ConfirmDialog, PanelHeader, Tooltip, useToast } from "../components/atoms";
+import { BareIconButton, Button, ConfirmDialog, PanelHeader, Tooltip, useToast } from "../components/atoms";
 import { useCmsWorkspace } from "../hooks/use-cms-workspace";
 import { CollectionSidebar, RecordListPane, RecordsToolbar, RecordTable, TopBar } from "../components/workspace";
 import { RecordEditor } from "../components/editor";
 import { ImportDialog } from "../components/import";
+
+/** Stand-in for a record's fields while its data is still loading. */
+function EditorSkeleton() {
+  return (
+    <div aria-busy="true" className="grid gap-4 p-3">
+      {Array.from({ length: 5 }, (_, index) => (
+        <div className="grid gap-1.5" key={index}>
+          <div className="h-3 w-24 animate-pulse rounded-cms-sm bg-cms-raised" />
+          <div className="h-7 animate-pulse rounded-cms bg-cms-raised" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<void>; user: AuthUser }) {
   const {
@@ -127,6 +141,8 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
   }
 
   const deleteCount = pendingDeleteIds?.length ?? 0;
+  const allowCreate = activeCollection?.allowCreate ?? true;
+  const allowDelete = activeCollection?.allowDelete ?? true;
 
   return (
     <div className="flex h-screen flex-col bg-cms-bg text-ui text-cms-text">
@@ -139,7 +155,46 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
           onSelectCollection={handleSelectCollectionGuarded}
         />
 
-        {activeCollection ? (
+        {activeCollection?.singleton ? (
+          <main className="relative flex min-h-0 min-w-0 flex-1 bg-cms-bg">
+            {isLoadingRecords || (selectedRecordId !== null && !draftRecord) ? (
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <PanelHeader>
+                  <span className="text-ui-lg font-semibold text-cms-text">{activeCollection.label}</span>
+                </PanelHeader>
+                <EditorSkeleton />
+              </div>
+            ) : draftRecord ? (
+              <RecordEditor
+                collection={activeCollection}
+                draftRecord={draftRecord}
+                galleryUpload={galleryUpload}
+                isDirty={isDirty}
+                isSaving={isSaving}
+                onAssetUpload={handleAssetUpload}
+                // A singleton has no table to go back to.
+                onBack={() => {}}
+                onChangeStatus={(status) => handleSaveRecord(status)}
+                onDelete={() => handleDeleteRecords([draftRecord.id])}
+                onDiscard={reloadRecord}
+                onDuplicate={handleDuplicateRecord}
+                onGalleryUpload={handleGalleryUpload}
+                onSave={() => handleSaveRecord()}
+                onUpdateValue={updateDraftValue}
+                uploadingField={uploadingField}
+              />
+            ) : (
+              <div className="grid flex-1 place-items-center p-8 text-center">
+                <div className="grid justify-items-center gap-3">
+                  <p className="m-0 text-ui text-cms-subtle">{activeCollection.label} doesn&rsquo;t have a record yet.</p>
+                  <Button onClick={handleCreateRecord} variant="primary">
+                    Create the {activeCollection.label.toLowerCase()} record
+                  </Button>
+                </div>
+              </div>
+            )}
+          </main>
+        ) : activeCollection ? (
           <main className="relative flex min-h-0 min-w-0 flex-1">
             <section
               className={cn(
@@ -159,6 +214,8 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
               ) : (
                 <>
                   <RecordsToolbar
+                    allowCreate={allowCreate}
+                    allowDelete={allowDelete}
                     canQueueSelected={canQueueSelected}
                     canUnpublishSelected={canUnpublishSelected}
                     hasPublishWorkflow={showUpdateItems}
@@ -224,9 +281,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                       </BareIconButton>
                     </Tooltip>
                   </PanelHeader>
-                  <div className="grid flex-1 place-items-center p-8 text-center">
-                    <p className="m-0 text-ui text-cms-subtle">Loading record…</p>
-                  </div>
+                  <EditorSkeleton />
                 </div>
               )
             ) : null}

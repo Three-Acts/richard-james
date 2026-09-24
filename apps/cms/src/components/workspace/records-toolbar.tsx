@@ -4,6 +4,10 @@ import type { PublishStatus } from "../../cms/types";
 import { Button, MenuButton, PanelHeader, SearchInput } from "../atoms";
 
 type RecordsToolbarProps = {
+  /** Collections with `allowCreate: false` hide New/Import (default true). */
+  allowCreate?: boolean;
+  /** Collections with `allowDelete: false` hide the bulk Delete action (default true). */
+  allowDelete?: boolean;
   /** At least one selected record isn't already queued — enables "Queue to publish". */
   canQueueSelected: boolean;
   /** At least one selected record is published — enables "Unpublish". */
@@ -29,6 +33,8 @@ type RecordsToolbarProps = {
 // Base UI Toolbar: one tab stop for the whole strip, with arrow keys moving
 // between the search field and the record actions.
 export function RecordsToolbar({
+  allowCreate = true,
+  allowDelete = true,
   canQueueSelected,
   canUnpublishSelected,
   hasPublishWorkflow,
@@ -60,10 +66,12 @@ export function RecordsToolbar({
                   <Download size={13} />
                   Export
                 </Button>
-                <Button onClick={onDeleteSelected} render={<Toolbar.Button />}>
-                  <Trash2 size={13} />
-                  Delete
-                </Button>
+                {allowDelete ? (
+                  <Button onClick={onDeleteSelected} render={<Toolbar.Button />}>
+                    <Trash2 size={13} />
+                    Delete
+                  </Button>
+                ) : null}
                 {hasPublishWorkflow ? (
                   <MenuButton
                     label="Update items"
@@ -107,7 +115,7 @@ export function RecordsToolbar({
               <CheckSquare size={13} />
               Select
             </Button>
-            {readOnly ? null : (
+            {readOnly || !allowCreate ? null : (
               <>
                 <Button onClick={onImport} render={<Toolbar.Button />}>
                   <Upload size={13} />

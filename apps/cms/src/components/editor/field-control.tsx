@@ -11,7 +11,7 @@ import type {
   SlugField
 } from "../../cms/types";
 import { parseGalleryValue, serializeGalleryValue } from "../../cms/types";
-import { AssetControl, FormField, GalleryControl, Input, inputVariants, NumberInput, Select, Textarea, Toggle } from "../atoms";
+import { AssetControl, FormField, GalleryControl, Input, inputVariants, NumberInput, RichTextControl, Select, Textarea, Toggle } from "../atoms";
 import { formatDateTime, fromDateTimeLocal, toDateTimeLocal } from "../../lib/format";
 import { useReferenceOptions } from "../../hooks/use-reference-options";
 
@@ -177,6 +177,14 @@ export function FieldControl({
     );
   }
 
+  if (field.type === "richtext") {
+    return (
+      <FormField description={field.helpText} label={field.label} required={field.required}>
+        <RichTextControl onChange={(markdown) => onUpdateValue(field.key, markdown)} readOnly={readOnly} value={String(value)} />
+      </FormField>
+    );
+  }
+
   if (readOnly) {
     // A required marker is meaningless when nothing can be edited.
     return (
@@ -255,14 +263,19 @@ export function FieldControl({
       <FormField description={field.helpText} label={field.label} required={field.required}>
         <Input mono onChange={(event) => onUpdateValue(field.key, event.target.value)} required={field.required} value={String(value)} />
         {slugField.urlPrefix ? (
-          <div className="flex min-h-6 items-center gap-1.5 overflow-hidden rounded-cms bg-cms-surface px-2 font-mono text-ui text-cms-subtle">
+          <a
+            className="flex min-h-6 items-center gap-1.5 overflow-hidden rounded-cms bg-cms-surface px-2 font-mono text-ui text-cms-subtle transition-colors hover:text-cms-text"
+            href={`${slugField.urlPrefix}${value}`}
+            rel="noreferrer"
+            target="_blank"
+          >
             <ExternalLink size={12} aria-hidden="true" />
             {/* Prefix and slug are one URL, so they must not be split by a gap. */}
             <span className="truncate">
               {slugField.urlPrefix}
               <span className="text-cms-muted">{String(value)}</span>
             </span>
-          </div>
+          </a>
         ) : null}
       </FormField>
     );

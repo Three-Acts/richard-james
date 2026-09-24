@@ -84,7 +84,7 @@ function ensureLoaded(backend: CmsBackend, collectionId: string) {
   });
 
   backend.data
-    .listRecords(collectionId, { limit: 500, sort: { key: titleField, direction: "asc" } })
+    .listRecords(collectionId, { limit: 500, sort: { key: titleField, direction: "asc" }, fields: "list" })
     .then(({ records }) => {
       const options = records.map((record) => ({
         label: String(record.values[titleField] || record.id),

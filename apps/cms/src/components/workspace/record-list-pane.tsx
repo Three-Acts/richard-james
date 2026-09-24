@@ -25,7 +25,7 @@ export function RecordListPane({ collection, onCreate, onSelectRecord, records, 
     <div className="flex min-h-0 flex-1 flex-col">
       <PanelHeader className="justify-between">
         <h1 className="min-w-0 flex-1 truncate text-ui-lg font-semibold text-cms-text">{collection.label}</h1>
-        {isEditable(collection) ? (
+        {isEditable(collection) && (collection.allowCreate ?? true) ? (
           <Tooltip content={newLabel}>
             <BareIconButton aria-label={newLabel} onClick={onCreate}>
               <Plus size={15} />

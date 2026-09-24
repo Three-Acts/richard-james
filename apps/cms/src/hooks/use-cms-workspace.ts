@@ -1,12 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCmsBackend } from "../cms/backend-context";
 import { describeCmsError } from "../cms/errors";
-import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, GalleryField, PublishStatus } from "../cms/types";
+import { collectionRegistry } from "../cms/registry";
+import type {
+  AssetField,
+  CmsCollectionSummary,
+  CmsRecord,
+  CmsRecordValue,
+  GalleryField,
+  ListRecordsResult,
+  PublishStatus
+} from "../cms/types";
 import { parseGalleryValue, serializeGalleryValue } from "../cms/types";
 import { rememberAssetMeta, useToast } from "../components/atoms";
 import type { GalleryUploadProgress } from "../components/editor/field-control";
 import type { CollectionGroup } from "../components/workspace";
-import { getRecordTitle } from "../lib/records";
+import { areValuesEqual, getRecordTitle } from "../lib/records";
 import { exportRecords } from "../lib/export-records";
 import { bumpReferenceCache } from "./use-reference-options";
 
@@ -24,24 +33,15 @@ function pushActionErrorToast(toast: ReturnType<typeof useToast>, title: string,
   toast.push({ tone: "error", title, description: describeCmsError(error), duration: 8000 });
 }
 
-/** Shallow-compares two records' editable surface: field values plus publish status. */
-function areValuesEqual(a: Record<string, CmsRecordValue>, b: Record<string, CmsRecordValue>): boolean {
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-
-  for (const key of keys) {
-    if ((a[key] ?? null) !== (b[key] ?? null)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 export function useCmsWorkspace() {
   const { data, storage } = useCmsBackend();
   const toast = useToast();
   const [collections, setCollections] = useState<CmsCollectionSummary[]>([]);
-  const [activeCollectionId, setActiveCollectionId] = useState("");
+  // The static registry (bundled at build time, no network round trip) already
+  // knows the first collection's id, so the records fetch below can start
+  // immediately instead of waiting on `listCollections` to resolve first —
+  // that wait was a real, avoidable waterfall (collections, *then* records).
+  const [activeCollectionId, setActiveCollectionId] = useState(() => collectionRegistry[0]?.id ?? "");
   const [records, setRecords] = useState<CmsRecord[]>([]);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   // Raw, async-driven state: whatever was last fetched/created/saved, whether
@@ -53,7 +53,7 @@ export function useCmsWorkspace() {
   const [lastSavedRecordState, setLastSavedRecordState] = useState<CmsRecord | null>(null);
   const [search, setSearch] = useState("");
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
-  const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+  const [isLoadingRecords, setIsLoadingRecords] = useState(() => collectionRegistry.length > 0);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
@@ -62,26 +62,42 @@ export function useCmsWorkspace() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isImportOpen, setIsImportOpen] = useState(false);
 
+  // In-flight request caches for the two mount-time fetches below. A
+  // StrictMode dev double-invoke runs the same effect twice back to back,
+  // before either's async work has settled, so an `isMounted` flag alone
+  // (which only discards the first invocation's *result*) doesn't stop the
+  // second invocation from firing its own duplicate network request. Reusing
+  // the still-pending promise here does: the second invocation awaits the
+  // exact same request instead of starting a new one.
+  const collectionsRequestRef = useRef<Promise<CmsCollectionSummary[]> | null>(null);
+  const recordsRequestRef = useRef<{ collectionId: string; promise: Promise<ListRecordsResult> } | null>(null);
+
+  // Collections and the active collection's records are fetched in parallel
+  // (both effects run after the same initial commit): the active collection
+  // id comes from the static registry above, not from this response, so
+  // there's no need to wait for it before starting the records fetch.
   useEffect(() => {
     let isMounted = true;
 
-    data
-      .listCollections()
+    if (!collectionsRequestRef.current) {
+      collectionsRequestRef.current = data.listCollections();
+    }
+
+    collectionsRequestRef.current
       .then((nextCollections) => {
         if (!isMounted) {
           return;
         }
 
         setCollections(nextCollections);
+        // Only overridden if the live registry's first entry genuinely
+        // differs from the static one assumed at mount.
         setActiveCollectionId((current) => current || nextCollections[0]?.id || "");
-
-        // Only flip on the records spinner when a collection is actually about
-        // to be fetched — otherwise it never gets cleared when the registry is empty.
-        if (nextCollections.length > 0) {
-          setIsLoadingRecords(true);
-        }
       })
       .catch((nextError) => {
+        // Let a genuine retry (e.g. the user reloading) issue a fresh request.
+        collectionsRequestRef.current = null;
+
         if (isMounted) {
           setError(describeCmsError(nextError));
         }
@@ -104,14 +120,37 @@ export function useCmsWorkspace() {
 
     let isMounted = true;
 
-    data
-      .listRecords(activeCollectionId)
+    if (recordsRequestRef.current?.collectionId !== activeCollectionId) {
+      recordsRequestRef.current = {
+        collectionId: activeCollectionId,
+        promise: data.listRecords(activeCollectionId, { fields: "list" })
+      };
+    }
+
+    const { promise } = recordsRequestRef.current;
+
+    promise
       .then(({ records: nextRecords }) => {
-        if (isMounted) {
-          setRecords(nextRecords);
+        if (!isMounted) {
+          return;
+        }
+
+        setRecords(nextRecords);
+
+        // A singleton collection has exactly one record to work with —
+        // open it directly instead of making the editor wait for a table
+        // click that has nothing else to select anyway.
+        const isSingleton = collectionRegistry.find((collection) => collection.id === activeCollectionId)?.singleton;
+
+        if (isSingleton && nextRecords.length > 0) {
+          setSelectedRecordId((current) => current ?? nextRecords[0].id);
         }
       })
       .catch((nextError) => {
+        if (recordsRequestRef.current?.collectionId === activeCollectionId) {
+          recordsRequestRef.current = null;
+        }
+
         if (isMounted) {
           setError(describeCmsError(nextError));
         }
@@ -127,29 +166,52 @@ export function useCmsWorkspace() {
     };
   }, [activeCollectionId, data]);
 
+  // `records` only ever holds list-trimmed `values` now (every list fetch
+  // passes `fields: "list"`), so it can never stand in for a full draft —
+  // every selection (a table click, a singleton's auto-open, or landing on a
+  // freshly created/duplicated record) always loads the authoritative record
+  // through `getRecord` below. `draftRecord`'s derivation further down stays
+  // `null` until this resolves, which is what shows the editor skeleton
+  // instead of ever flashing trimmed/stale values.
+  const recordRequestRef = useRef<{ key: string; promise: Promise<CmsRecord> } | null>(null);
+
   useEffect(() => {
     if (!selectedRecordId || !activeCollectionId) {
       return;
     }
 
-    if (draftRecordState?.id === selectedRecordId) {
-      // Already holding this record in memory (just created or duplicated) —
-      // nothing to refetch. (The derived `draftRecord` below is what makes
-      // sure nothing stale renders while a *different* id is being fetched.)
-      return;
-    }
-
+    // Keyed by collection+record so a StrictMode dev double-invoke (both
+    // firing synchronously, before either has settled) reuses the same
+    // in-flight promise instead of issuing a duplicate GET. Cleared as soon
+    // as it settles — unlike the collections/records refs above, this one
+    // must NOT keep serving a resolved promise for later reselections of the
+    // same id (e.g. close a just-saved record, reopen it): that would replay
+    // stale pre-edit values instead of fetching fresh ones.
+    const key = `${activeCollectionId}:${selectedRecordId}`;
     let isMounted = true;
 
-    data
-      .getRecord(activeCollectionId, selectedRecordId)
+    if (recordRequestRef.current?.key !== key) {
+      recordRequestRef.current = { key, promise: data.getRecord(activeCollectionId, selectedRecordId) };
+    }
+
+    const { promise } = recordRequestRef.current;
+
+    promise
       .then((record) => {
+        if (recordRequestRef.current?.key === key) {
+          recordRequestRef.current = null;
+        }
+
         if (isMounted) {
           setDraftRecordState(record);
           setLastSavedRecordState(record);
         }
       })
       .catch((nextError) => {
+        if (recordRequestRef.current?.key === key) {
+          recordRequestRef.current = null;
+        }
+
         if (isMounted) {
           setError(describeCmsError(nextError));
         }
@@ -158,7 +220,7 @@ export function useCmsWorkspace() {
     return () => {
       isMounted = false;
     };
-  }, [activeCollectionId, selectedRecordId, draftRecordState?.id, data]);
+  }, [activeCollectionId, selectedRecordId, data]);
 
   const activeCollection = collections.find((collection) => collection.id === activeCollectionId) ?? collections[0];
 
@@ -229,7 +291,7 @@ export function useCmsWorkspace() {
   const lastSavedRecord = lastSavedRecordState && lastSavedRecordState.id === selectedRecordId ? lastSavedRecordState : null;
 
   const isDirty = useMemo(() => {
-    if (!draftRecord || !lastSavedRecord || draftRecord.id !== lastSavedRecord.id) {
+    if (!draftRecord || !lastSavedRecord || draftRecord.id !== lastSavedRecord.id || !activeCollection) {
       return false;
     }
 
@@ -237,8 +299,8 @@ export function useCmsWorkspace() {
       return true;
     }
 
-    return !areValuesEqual(draftRecord.values, lastSavedRecord.values);
-  }, [draftRecord, lastSavedRecord]);
+    return !areValuesEqual(activeCollection, draftRecord.values, lastSavedRecord.values);
+  }, [activeCollection, draftRecord, lastSavedRecord]);
 
   // Discourage navigating away (closing the tab, reloading) with unsaved edits.
   useEffect(() => {
@@ -333,7 +395,7 @@ export function useCmsWorkspace() {
     const failedCount = results.filter((result) => result.status === "rejected").length;
 
     try {
-      const { records: nextRecords } = await data.listRecords(activeCollection.id);
+      const { records: nextRecords } = await data.listRecords(activeCollection.id, { fields: "list" });
       setRecords(nextRecords);
       await refreshCollections();
       // A deleted record may be referenced elsewhere by id — drop it from the
@@ -377,7 +439,7 @@ export function useCmsWorkspace() {
 
     try {
       await data.importRecords(activeCollection.id, rows);
-      const { records: nextRecords } = await data.listRecords(activeCollection.id);
+      const { records: nextRecords } = await data.listRecords(activeCollection.id, { fields: "list" });
       setRecords(nextRecords);
       await refreshCollections();
       bumpReferenceCache(activeCollection.id);
@@ -387,12 +449,26 @@ export function useCmsWorkspace() {
     }
   }
 
-  function handleExport(recordsToExport: CmsRecord[]) {
-    if (!activeCollection) {
+  /**
+   * `recordsToExport` comes from `records`/`filteredRecords`, which only ever
+   * carry list-trimmed `values` now — a CSV needs every field, so this always
+   * re-fetches with `fields: "all"` rather than exporting what's on screen.
+   */
+  async function handleExport(recordsToExport: CmsRecord[]) {
+    if (!activeCollection || recordsToExport.length === 0) {
       return;
     }
 
-    exportRecords(activeCollection, recordsToExport);
+    setError(null);
+
+    try {
+      const ids = new Set(recordsToExport.map((record) => record.id));
+      const { records: fullRecords } = await data.listRecords(activeCollection.id, { fields: "all" });
+      const selected = fullRecords.filter((record) => ids.has(record.id));
+      exportRecords(activeCollection, selected);
+    } catch (nextError) {
+      pushActionErrorToast(toast, "Export failed", nextError);
+    }
   }
 
   async function handleCreateRecord() {
@@ -404,13 +480,13 @@ export function useCmsWorkspace() {
 
     try {
       const record = await data.createRecord(activeCollection.id);
-      const { records: nextRecords } = await data.listRecords(activeCollection.id);
+      const { records: nextRecords } = await data.listRecords(activeCollection.id, { fields: "list" });
       setRecords(nextRecords);
       await refreshCollections();
       bumpReferenceCache(activeCollection.id);
+      // Select it and let the getRecord effect load it — same path as any
+      // other selection, rather than trusting this response as the draft.
       setSelectedRecordId(record.id);
-      setDraftRecordState(record);
-      setLastSavedRecordState(record);
     } catch (nextError) {
       pushActionErrorToast(toast, "Create failed", nextError);
     }
@@ -439,15 +515,14 @@ export function useCmsWorkspace() {
       }
 
       const [copy] = await data.importRecords(activeCollection.id, [values]);
-      const { records: nextRecords } = await data.listRecords(activeCollection.id);
+      const { records: nextRecords } = await data.listRecords(activeCollection.id, { fields: "list" });
       setRecords(nextRecords);
       await refreshCollections();
       bumpReferenceCache(activeCollection.id);
 
       if (copy) {
+        // Same rule as create: select it and let the getRecord effect load it.
         setSelectedRecordId(copy.id);
-        setDraftRecordState(copy);
-        setLastSavedRecordState(copy);
       }
     } catch (nextError) {
       pushActionErrorToast(toast, "Duplicate failed", nextError);
@@ -525,7 +600,7 @@ export function useCmsWorkspace() {
     }
 
     try {
-      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
+      const { records: nextRecords, total } = await data.listRecords(activeCollection.id, { fields: "list" });
       setRecords(nextRecords);
       setCollections((currentCollections) =>
         currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))

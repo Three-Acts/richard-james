@@ -4,6 +4,7 @@ export { BareIconButton } from "./bare-icon-button";
 export { AssetControl } from "./asset-field";
 export { getAssetMeta, rememberAssetMeta } from "./asset-utils";
 export { GalleryControl } from "./gallery-field";
+export { RichTextControl } from "./rich-text-field";
 export { Checkbox } from "./checkbox";
 export { ConfirmDialog } from "./confirm-dialog";
 export { FormField } from "./form-field";

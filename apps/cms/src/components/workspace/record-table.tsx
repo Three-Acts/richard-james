@@ -63,7 +63,22 @@ export function RecordTable({
   const { resolveLabel } = useReferenceLookup(referenceCollectionIds);
 
   if (isLoading) {
-    return <div className="flex-1 p-4 text-ui text-cms-subtle">Loading records…</div>;
+    return (
+      <div className="min-h-0 flex-1 overflow-hidden" aria-busy="true">
+        <div className={cn(columnHeaderClass, "grid bg-cms-bg")} role="row" style={{ gridTemplateColumns }}>
+          {columns.map((column) => (
+            <div className="min-w-0 truncate px-3" key={column.key} role="columnheader">
+              {column.label}
+            </div>
+          ))}
+        </div>
+        {Array.from({ length: 10 }, (_, index) => (
+          <div className="grid h-8 w-full items-center border-b border-cms-line px-3" key={index} style={{ gridTemplateColumns }}>
+            <div className="h-3 w-2/3 max-w-50 animate-pulse rounded-cms-sm bg-cms-raised" />
+          </div>
+        ))}
+      </div>
+    );
   }
 
   if (records.length === 0) {
