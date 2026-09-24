@@ -6,7 +6,7 @@ import type { CmsRecord, CmsRecordValue, ListRecordsOptions, PublishStatus } fro
  * `{ ok: true, data } | { ok: false, error: { code: CmsErrorCode, message } }`.
  *
  *   GET    /api/cms/collections                                   -> CmsCollectionSummary[]
- *   GET    /api/cms/collections/:collectionId/records?search&sortKey&sortDirection&limit&offset -> ListRecordsResult
+ *   GET    /api/cms/collections/:collectionId/records?search&sortKey&sortDirection&limit&offset&fields -> ListRecordsResult
  *   POST   /api/cms/collections/:collectionId/records             body CreateRecordBody   -> CmsRecord
  *   GET    /api/cms/collections/:collectionId/records/:recordId   -> CmsRecord
  *   PUT    /api/cms/collections/:collectionId/records/:recordId   body SaveRecordBody     -> CmsRecord (409 on conflict)
@@ -49,6 +49,7 @@ export function listRecordsQuery(options?: ListRecordsOptions): string {
   }
   if (options?.limit !== undefined) params.set("limit", String(options.limit));
   if (options?.offset !== undefined) params.set("offset", String(options.offset));
+  if (options?.fields) params.set("fields", options.fields);
   const query = params.toString();
   return query ? `?${query}` : "";
 }

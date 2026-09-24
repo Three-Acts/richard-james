@@ -9,7 +9,7 @@ export type PublishStatus = "published" | "not_published" | "queued_to_publish";
  */
 export type CollectionMode = "editorial" | "data" | "readonly";
 
-export type FieldType = "text" | "slug" | "textarea" | "number" | "boolean" | "select" | "datetime" | "asset" | "reference" | "gallery" | "readonly";
+export type FieldType = "text" | "slug" | "textarea" | "number" | "boolean" | "select" | "datetime" | "asset" | "reference" | "gallery" | "richtext" | "readonly";
 
 export type CmsRecordValue = string | number | boolean | null | undefined;
 
@@ -37,15 +37,21 @@ type FieldBase<TType extends FieldType> = {
    * collection's `columnNaming` strategy (default: snake_case of `key`).
    */
   column?: string;
+  /** Editor section. "basic" = title/slug, "seo" = search & social metadata, default "custom". */
+  section?: "basic" | "custom" | "seo";
 };
 
-export type PrimitiveField = FieldBase<Exclude<FieldType, "select" | "slug" | "asset" | "reference" | "gallery">>;
+export type PrimitiveField = FieldBase<Exclude<FieldType, "select" | "slug" | "asset" | "reference" | "gallery" | "richtext">>;
 
 export type SelectField = FieldBase<"select"> & {
   type: "select";
   options: SelectOption[];
 };
 
+/**
+ * `urlPrefix` is a full https URL prefix (e.g. "https://www.example.com/projects/");
+ * the editor appends the slug and renders the resulting URL as a link to the live page.
+ */
 export type SlugField = FieldBase<"slug"> & {
   type: "slug";
   urlPrefix?: string;
@@ -86,7 +92,10 @@ export type GalleryField = FieldBase<"gallery"> & {
 
 export type GalleryItem = { src: string; caption?: string };
 
-export type CmsField = PrimitiveField | SelectField | SlugField | AssetField | ReferenceField | GalleryField;
+/** Markdown (GitHub-flavoured plus <u> for underline). */
+export type RichTextField = FieldBase<"richtext"> & { type: "richtext" };
+
+export type CmsField = PrimitiveField | SelectField | SlugField | AssetField | ReferenceField | GalleryField | RichTextField;
 
 export type ListColumn = {
   key: string;
@@ -113,6 +122,12 @@ export type CmsCollection = {
   systemColumns?: Partial<Record<"id" | "publishStatus" | "createdAt" | "modifiedAt", string>>;
   /** Column naming used when a field has no explicit `column`. Defaults to "snake_case". */
   columnNaming?: "snake_case" | "as_is";
+  /** Exactly one record, opened directly (no list, no New/Delete). */
+  singleton?: boolean;
+  /** Editors may create/duplicate/import records (default true). */
+  allowCreate?: boolean;
+  /** Editors may delete records (default true). */
+  allowDelete?: boolean;
 };
 
 export type CmsCollectionSummary = CmsCollection & {
@@ -135,6 +150,13 @@ export type ListRecordsOptions = {
   /** Page size. Omit to return every record (scripts only). */
   limit?: number;
   offset?: number;
+  /**
+   * `"list"` returns each record's `values` trimmed to just what a list view
+   * needs (titleField, every `listColumns` key, every `slug`/`reference`
+   * field) — never gallery/richtext/textarea/asset columns unless they're
+   * also a list column. Omit (or `"all"`) for the full `values` shape.
+   */
+  fields?: "list" | "all";
 };
 
 export type ListRecordsResult = {

@@ -2,13 +2,15 @@
  * Public, read-only content contract served by `apps/api` (`/api/content/*`)
  * and consumed at build time by `apps/web`. Only published records are
  * exposed. Every response uses the standard API envelope
- * `{ ok: true, data } | { ok: false, error: { code, message } }`.
+ * `{ ok: true, data } | { ok: false, error: { code, message } }`. Markdown
+ * body fields (`ProjectContent.description`, `PageContent.body`) are
+ * GitHub-flavoured markdown plus `<u>` for underline.
  *
  *   GET /api/content/site             -> SiteContent
  *   GET /api/content/projects         -> ProjectContent[]  (sortOrder asc, images from the project's gallery field, in gallery order)
  *   GET /api/content/projects/:slug   -> ProjectContent
  *   GET /api/content/pages            -> PageContent[]
- *   GET /api/content/pages/:key       -> PageContent
+ *   GET /api/content/pages/:slug      -> PageContent
  */
 
 export type SiteContent = {
@@ -23,6 +25,14 @@ export type SiteContent = {
   description: string;
   /** Absolute URL of the default social image, or "" when unset. */
   ogImage: string;
+};
+
+/** Search and social metadata, resolved server-side with each record's own fallbacks applied. */
+export type SeoContent = {
+  metaTitle?: string;
+  metaDescription?: string;
+  /** Absolute public URL. */
+  ogImage?: string;
 };
 
 export type ProjectImageContent = {
@@ -40,8 +50,8 @@ export type ProjectContent = {
   originalTitleLang?: string;
   year: string;
   medium: string;
+  /** GitHub-flavoured markdown plus `<u>` for underline. */
   description: string;
-  metaDescription: string;
   /** Absolute public URL. */
   hero: string;
   /** Absolute public URL; the API substitutes `hero` when no thumb is set. */
@@ -51,17 +61,17 @@ export type ProjectContent = {
   gridStride?: number;
   /** 1-based position in the browsing order. Next/previous derive from it. */
   sortOrder: number;
+  seo: SeoContent;
 };
 
 export type PageContent = {
-  /** Route key, e.g. "about" or "essay". */
-  key: string;
+  slug: string;
   title: string;
-  /**
-   * Lightweight markdown: "# " h1, "## " h2, "### " h3, "- " list item,
-   * blank-line-separated paragraphs. See `parsePageBody` in apps/web.
-   */
+  /** GitHub-flavoured markdown plus `<u>` for underline. */
   body: string;
+  /** Absolute public URL of the page's portrait/lead image, when set. */
+  image?: string;
+  seo: SeoContent;
 };
 
 export const contentApiPaths = {
@@ -69,5 +79,5 @@ export const contentApiPaths = {
   projects: () => "/content/projects" as const,
   project: (slug: string) => `/content/projects/${encodeURIComponent(slug)}` as const,
   pages: () => "/content/pages" as const,
-  page: (key: string) => `/content/pages/${encodeURIComponent(key)}` as const
+  page: (slug: string) => `/content/pages/${encodeURIComponent(slug)}` as const
 };
