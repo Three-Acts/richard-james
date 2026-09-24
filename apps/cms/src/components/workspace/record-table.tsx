@@ -30,8 +30,8 @@ export function RecordTable({
   selectionMode
 }: RecordTableProps) {
   const columns = collection.listColumns;
-  const columnTemplate = columns.map((column) => column.width ?? "minmax(140px, 1fr)").join(" ");
-  const gridTemplateColumns = selectionMode ? `36px ${columnTemplate}` : columnTemplate;
+  const columnTemplate = columns.map((column) => column.width ?? "minmax(var(--spacing-col-min), 1fr)").join(" ");
+  const gridTemplateColumns = selectionMode ? `var(--spacing-select-col) ${columnTemplate}` : columnTemplate;
   const allSelected = records.length > 0 && records.every((record) => selectedIds.has(record.id));
   const someSelected = records.some((record) => selectedIds.has(record.id));
 
@@ -56,7 +56,7 @@ export function RecordTable({
 
   return (
     <ScrollArea className="min-h-0 flex-1">
-      <div className="min-w-[980px]" role="grid" aria-label={`${collection.label} table`} aria-rowcount={records.length + 1}>
+      <div className="min-w-245" role="grid" aria-label={`${collection.label} table`} aria-rowcount={records.length + 1}>
         <div
           className={cn("sticky top-0 z-10 grid h-8 items-center border-b border-cms-line-strong bg-cms-bg", eyebrowClass)}
           role="row"

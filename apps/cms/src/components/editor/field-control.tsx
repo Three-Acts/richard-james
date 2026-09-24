@@ -67,7 +67,7 @@ export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, re
     // A required marker is meaningless when nothing can be edited.
     return (
       <FormField description={field.helpText} label={field.label}>
-        <div className={cn(inputVariants({ tone: "display" }), "whitespace-pre-wrap", field.type === "textarea" && "min-h-[52px] items-start py-1.5")}>
+        <div className={cn(inputVariants({ tone: "display" }), "whitespace-pre-wrap", field.type === "textarea" && "min-h-13 items-start py-1.5")}>
           {readOnlyDisplay(field, value)}
         </div>
       </FormField>
@@ -78,7 +78,7 @@ export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, re
     return (
       <FormField description={field.helpText} label={field.label} required={field.required}>
         <Textarea
-          className="min-h-[86px] resize-y leading-6"
+          className="min-h-22 resize-y leading-6"
           onChange={(event) => onUpdateValue(field.key, event.target.value)}
           required={field.required}
           value={String(value)}
@@ -123,7 +123,7 @@ export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, re
 
     return (
       <FormField description={field.helpText} htmlFor={uploadId} label={field.label} required={field.required}>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+        <div className="grid grid-cols-fill-auto gap-2">
           <div className={cn(inputVariants({ tone: "display" }), "overflow-hidden border-dashed border-cms-track")}>
             <span className={cn("truncate", fileValue && "font-mono")}>{fileValue || "No file selected"}</span>
           </div>

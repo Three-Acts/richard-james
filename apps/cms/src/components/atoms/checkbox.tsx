@@ -18,8 +18,8 @@ export function Checkbox({ ariaLabel, checked, className, indeterminate, onChang
       checked={checked}
       className={cn(
         "grid size-4 place-items-center rounded-cms-sm border border-cms-track bg-cms-surface text-cms-accent-ink transition-colors",
-        "data-[checked]:border-cms-accent data-[checked]:bg-cms-accent",
-        "data-[indeterminate]:border-cms-accent data-[indeterminate]:bg-cms-accent",
+        "data-checked:border-cms-accent data-checked:bg-cms-accent",
+        "data-indeterminate:border-cms-accent data-indeterminate:bg-cms-accent",
         focusRing,
         className
       )}

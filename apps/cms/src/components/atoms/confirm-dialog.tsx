@@ -28,7 +28,7 @@ export function ConfirmDialog({ confirmLabel = "Delete", description, onConfirm,
         <AlertDialog.Popup
           className={cn(
             popupClass,
-            "fixed left-1/2 top-1/2 z-50 w-[380px] max-w-[calc(100vw-3rem)] -translate-x-1/2 -translate-y-1/2 bg-cms-bg p-4"
+            "fixed left-1/2 top-1/2 z-50 w-95 max-w-viewport -translate-x-1/2 -translate-y-1/2 bg-cms-bg p-4"
           )}
         >
           <AlertDialog.Title className="m-0 text-ui-lg font-semibold">{title}</AlertDialog.Title>

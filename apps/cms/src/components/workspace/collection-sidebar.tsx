@@ -16,7 +16,7 @@ type CollectionSidebarProps = {
 
 export function CollectionSidebar({ activeCollectionId, groups, isLoading, onSelectCollection }: CollectionSidebarProps) {
   return (
-    <aside className="flex w-[248px] shrink-0 flex-col border-r border-cms-line-strong bg-cms-bg" aria-label="CMS collections">
+    <aside className="flex w-pane shrink-0 flex-col border-r border-cms-line-strong bg-cms-bg" aria-label="CMS collections">
       <PanelHeader>
         <span className="text-ui-lg font-semibold text-cms-text">Collections</span>
       </PanelHeader>
@@ -33,7 +33,7 @@ export function CollectionSidebar({ activeCollectionId, groups, isLoading, onSel
                 <button
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "grid h-7 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-cms px-2 text-left text-ui transition-colors",
+                    "grid h-7 w-full grid-cols-fill-auto items-center gap-2 rounded-cms px-2 text-left text-ui transition-colors",
                     // The accent is reserved for actions, so location is carried by
                     // fill and weight instead.
                     active ? "bg-cms-raised font-medium text-cms-text" : "text-cms-muted hover:bg-cms-surface hover:text-cms-text",

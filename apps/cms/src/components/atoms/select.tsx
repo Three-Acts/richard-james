@@ -36,10 +36,10 @@ export function Select({ className, onValueChange, options, value }: SelectProps
       </BaseSelect.Trigger>
       <BaseSelect.Portal>
         <BaseSelect.Positioner className="z-60 outline-none" sideOffset={4}>
-          <BaseSelect.Popup className={cn(popupClass, "max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-auto p-1 text-field")}>
+          <BaseSelect.Popup className={cn(popupClass, "max-h-(--available-height) min-w-(--anchor-width) overflow-auto p-1 text-field")}>
             {options.map((option, index) => (
               <BaseSelect.Item
-                className="flex cursor-default items-center justify-between gap-2 rounded-cms-sm px-2 py-1.5 outline-none data-[highlighted]:bg-cms-raised"
+                className="flex cursor-default items-center justify-between gap-2 rounded-cms-sm px-2 py-1.5 outline-none data-highlighted:bg-cms-raised"
                 // Index-qualified: callers can't always guarantee unique, non-empty
                 // values (an ignore sentinel, a blank header), so `value` alone
                 // can't be trusted as a React key.

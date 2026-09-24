@@ -9,7 +9,7 @@ type ScrollAreaProps = {
 };
 
 const scrollbar =
-  "m-0.5 flex touch-none select-none rounded-cms bg-transparent opacity-0 transition-opacity delay-300 data-[hovering]:opacity-100 data-[hovering]:delay-0 data-[scrolling]:opacity-100 data-[scrolling]:delay-0";
+  "m-0.5 flex touch-none select-none rounded-cms bg-transparent opacity-0 transition-opacity delay-300 data-hovering:opacity-100 data-hovering:delay-0 data-scrolling:opacity-100 data-scrolling:delay-0";
 
 // Base UI ScrollArea wrapper. Place inside a bounded flex/grid cell
 // (e.g. `flex-1 min-h-0`) so the viewport can scroll its overflow.

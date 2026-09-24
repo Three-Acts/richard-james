@@ -32,10 +32,10 @@ export function SplitButton({ disabled, label, onClick, options }: SplitButtonPr
         </Menu.Trigger>
         <Menu.Portal>
           <Menu.Positioner align="end" className="z-60 outline-none" sideOffset={4}>
-            <Menu.Popup className={cn(popupClass, "min-w-[184px] p-1 text-ui")}>
+            <Menu.Popup className={cn(popupClass, "min-w-46 p-1 text-ui")}>
               {options.map((option) => (
                 <Menu.Item
-                  className="flex cursor-default items-center rounded-cms-sm px-2 py-1.5 outline-none data-[highlighted]:bg-cms-raised"
+                  className="flex cursor-default items-center rounded-cms-sm px-2 py-1.5 outline-none data-highlighted:bg-cms-raised"
                   key={option.label}
                   onClick={option.onSelect}
                 >

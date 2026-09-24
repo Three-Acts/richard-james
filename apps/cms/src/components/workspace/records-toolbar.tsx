@@ -40,7 +40,7 @@ export function RecordsToolbar({
     <PanelHeader className="gap-1.5" render={<Toolbar.Root aria-label={`${title} actions`} />}>
       <h1 className="mr-1 shrink-0 truncate text-ui-lg font-semibold text-cms-text">{title}</h1>
       <SearchInput
-        className="w-[220px] max-w-full"
+        className="w-55 max-w-full"
         inputRender={<Toolbar.Input />}
         onChange={onSearchChange}
         placeholder={`Search ${title.toLowerCase()}…`}

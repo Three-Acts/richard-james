@@ -25,7 +25,7 @@ export function Tooltip({ children, content, side = "bottom" }: TooltipProps) {
       <BaseTooltip.Trigger render={children} />
       <BaseTooltip.Portal>
         <BaseTooltip.Positioner className="z-70" side={side} sideOffset={6}>
-          <BaseTooltip.Popup className={cn(popupClass, "max-w-[240px] rounded-cms px-2 py-1 text-ui text-cms-muted")}>{content}</BaseTooltip.Popup>
+          <BaseTooltip.Popup className={cn(popupClass, "max-w-60 rounded-cms px-2 py-1 text-ui text-cms-muted")}>{content}</BaseTooltip.Popup>
         </BaseTooltip.Positioner>
       </BaseTooltip.Portal>
     </BaseTooltip.Root>

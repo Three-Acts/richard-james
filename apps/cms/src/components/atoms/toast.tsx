@@ -56,7 +56,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <Toast.Provider timeout={0} limit={4}>
       {children}
       <Toast.Portal>
-        <Toast.Viewport className="pointer-events-none fixed bottom-3.5 right-3.5 z-100 flex w-80 max-w-[calc(100vw-1.75rem)] flex-col-reverse gap-2">
+        <Toast.Viewport className="pointer-events-none fixed bottom-3.5 right-3.5 z-100 flex w-80 max-w-viewport-tight flex-col-reverse gap-2">
           <ToastList />
         </Toast.Viewport>
       </Toast.Portal>
@@ -77,7 +77,7 @@ function ToastList() {
         className={cn(
           popupClass,
           "pointer-events-auto flex items-start gap-2.5 px-3 py-2.5 text-ui",
-          "transition-all duration-200 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-2 data-[starting-style]:opacity-0"
+          "transition-all duration-200 data-ending-style:opacity-0 data-starting-style:translate-y-2 data-starting-style:opacity-0"
         )}
       >
         <span className={cn("mt-px shrink-0", toneStyles[tone].accent)}>{toneStyles[tone].icon}</span>

@@ -35,7 +35,7 @@ export const panelHeaderClass = "flex h-10 shrink-0 items-center gap-2.5 border-
 export const popupClass = "rounded-cms-lg border border-cms-line-strong bg-cms-surface text-cms-text shadow-cms-popup outline-none";
 
 /** Uppercase eyebrow used for collection groups and table headers. */
-export const eyebrowClass = "text-micro font-medium uppercase tracking-[0.09em] text-cms-subtle";
+export const eyebrowClass = "text-micro font-medium uppercase tracking-label text-cms-subtle";
 
 /** Selectable row: sidebar collections, table rows, record list entries. 32px on the 4px grid. */
 export const rowClass = "h-8 w-full items-center border-b border-cms-line text-left text-ui text-cms-text transition-colors hover:bg-cms-raised";
@@ -85,7 +85,7 @@ export const inputVariants = cv({
     `${wellShadow} transition-colors`,
     // Inputs ring on their own edge rather than outside it, so dense rows stay aligned.
     "outline-hidden focus-visible:border-cms-accent focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-offset-0 focus-visible:outline-cms-accent",
-    "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+    "data-disabled:cursor-not-allowed data-disabled:opacity-50"
   ],
   variants: {
     tone: {

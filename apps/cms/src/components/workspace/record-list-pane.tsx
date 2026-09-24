@@ -34,7 +34,7 @@ export function RecordListPane({ collection, onBack, onSelectRecord, records, se
               aria-current={selected ? "true" : undefined}
               className={cn(
                 "grid h-8 w-full items-center gap-2 border-b border-cms-line px-3 text-left text-ui transition-colors",
-                publishable ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)]",
+                publishable ? "grid-cols-fill-auto" : "grid-cols-1",
                 selected ? "bg-cms-raised font-medium text-cms-text" : "text-cms-muted hover:bg-cms-surface hover:text-cms-text",
                 focusRing
               )}

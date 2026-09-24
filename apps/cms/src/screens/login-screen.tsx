@@ -11,7 +11,7 @@ export function LoginScreen({
 }) {
   return (
     <main className="grid min-h-screen place-items-center bg-cms-bg p-6 text-cms-text">
-      <section className="w-full max-w-[380px]">
+      <section className="w-full max-w-95">
         <div className="mb-6 flex items-center gap-2.5">
           {/* alt="" — the adjacent heading already announces "Three Acts CMS". */}
           <Logo alt="" />

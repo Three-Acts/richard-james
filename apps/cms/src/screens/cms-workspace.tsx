@@ -126,7 +126,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
         {activeCollection ? (
           <main className="relative flex min-h-0 min-w-0 flex-1">
             <section
-              className={cn("flex min-h-0 flex-col border-r border-cms-line-strong", selectedRecordId ? "w-[250px] shrink-0" : "min-w-0 flex-1")}
+              className={cn("flex min-h-0 flex-col border-r border-cms-line-strong", selectedRecordId ? "w-pane shrink-0" : "min-w-0 flex-1")}
               aria-label={`${activeCollection.label} records`}
             >
               {selectedRecordId ? (

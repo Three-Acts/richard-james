@@ -159,7 +159,7 @@ export function ImportDialog({ collection, open, onOpenChange, onImport }: Impor
           <p className="m-0 text-cms-subtle">Match each Collection Field to a column from your file.</p>
           <div className="grid gap-2">
             {collection.fields.map((field) => (
-              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] items-center gap-2" key={field.key}>
+              <div className="grid grid-cols-mapping items-center gap-2" key={field.key}>
                 <span className="truncate text-cms-muted">{field.label}</span>
                 <Select
                   onValueChange={(next) => setMapping((current) => ({ ...current, [field.key]: next }))}
@@ -172,7 +172,7 @@ export function ImportDialog({ collection, open, onOpenChange, onImport }: Impor
         </div>
       ) : (
         <div className="grid place-items-center gap-3 py-10 text-center">
-          <p className="m-0 max-w-[280px] text-cms-subtle">Pick a CSV file, then match its columns to this collection&rsquo;s fields.</p>
+          <p className="m-0 max-w-70 text-cms-subtle">Pick a CSV file, then match its columns to this collection&rsquo;s fields.</p>
           <label className={cn(buttonVariants({ size: "md", variant: "primary" }), "cursor-pointer", fileLabelFocusRing)}>
             <Upload size={14} />
             Choose CSV file
