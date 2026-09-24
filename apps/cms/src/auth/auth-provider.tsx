@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { configureApiClient } from "../lib/api-client";
-import { AuthContext, type AuthClient, type AuthState, type AuthUser } from "./auth-context";
+import { AuthContext, type AuthClient, type AuthState, type AuthUser, type SignInCredentials } from "./auth-context";
 
 export function AuthProvider({ children, client }: { children: ReactNode; client: AuthClient }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -49,11 +49,11 @@ export function AuthProvider({ children, client }: { children: ReactNode; client
       isInitializing,
       isLoading,
       error,
-      signIn: async () => {
+      signIn: async (credentials: SignInCredentials) => {
         setIsLoading(true);
         setError(null);
         try {
-          setUser(await client.signIn());
+          setUser(await client.signIn(credentials));
         } catch (signInError) {
           setError(signInError instanceof Error ? signInError.message : "Sign-in failed.");
         } finally {

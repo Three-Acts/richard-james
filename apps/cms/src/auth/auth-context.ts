@@ -6,11 +6,16 @@ export type AuthUser = {
   email: string;
 };
 
+export type SignInCredentials = {
+  email: string;
+  password: string;
+};
+
 export type AuthClient = {
   getCurrentUser: () => Promise<AuthUser | null>;
   /** Bearer token attached to API requests, or null when there isn't one. */
   getAccessToken: () => Promise<string | null>;
-  signIn: () => Promise<AuthUser>;
+  signIn: (credentials: SignInCredentials) => Promise<AuthUser>;
   signOut: () => Promise<void>;
 };
 
@@ -22,7 +27,7 @@ export type AuthState = {
   isLoading: boolean;
   /** Message from the most recent failed signIn, if any. */
   error: string | null;
-  signIn: () => Promise<void>;
+  signIn: (credentials: SignInCredentials) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
