@@ -1,4 +1,4 @@
-import { cv } from "@three-acts/utils";
+import { cn, cv } from "@three-acts/utils";
 
 // The CMS design system in one file: shared class fragments and cv variants that
 // every atom composes from. Colors, type sizes, radii, and shadows are tokens in
@@ -35,7 +35,15 @@ export const panelHeaderClass = "flex h-10 shrink-0 items-center gap-2.5 border-
 export const popupClass = "rounded-cms-lg border border-cms-line-strong bg-cms-surface text-cms-text shadow-cms-popup outline-none";
 
 /** Uppercase eyebrow used for collection groups and table headers. */
-export const eyebrowClass = "text-micro font-medium uppercase tracking-label text-cms-subtle";
+export const eyebrowClass = "text-ui font-medium uppercase tracking-label text-cms-text";
+
+/**
+ * Column header row: 32px, uppercase eyebrow label. Shared by the record
+ * table's header and the record list pane's single-column header so both
+ * bands align pixel-for-pixel when a record is opened and the table
+ * "collapses" to its first column.
+ */
+export const columnHeaderClass = cn("h-8 items-center border-b border-cms-line-strong", eyebrowClass);
 
 /** Selectable row: sidebar collections, table rows, record list entries. 32px on the 4px grid. */
 export const rowClass = "h-8 w-full items-center border-b border-cms-line text-left text-ui text-cms-text transition-colors hover:bg-cms-raised";
@@ -83,8 +91,9 @@ export const inputVariants = cv({
     "min-h-7 w-full rounded-cms border border-cms-line-strong bg-cms-surface px-2 py-1 text-field text-cms-text",
     "placeholder:text-cms-subtle",
     `${wellShadow} transition-colors`,
+    "outline-cms-accent/20",
     // Inputs ring on their own edge rather than outside it, so dense rows stay aligned.
-    "outline-hidden focus-visible:border-cms-accent focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-offset-0 focus-visible:outline-cms-accent",
+    "outline-hidden focus-visible:border-cms-accent focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-0",
     "data-disabled:cursor-not-allowed data-disabled:opacity-50"
   ],
   variants: {
@@ -99,12 +108,12 @@ export const inputVariants = cv({
 
 /** Publish Status. Shape carries the state as well as hue, so it survives at 8px. */
 export const statusDotVariants = cv({
-  base: ["inline-block size-2 shrink-0 rounded-full"],
+  base: ["inline-block size-2 shrink-0 rounded-full border"],
   variants: {
     status: {
-      published: ["bg-cms-success"],
-      not_published: ["border border-dashed border-cms-track"],
-      queued_to_publish: ["border-2 border-cms-pending"]
+      published: ["border-cms-success bg-cms-success"],
+      not_published: ["border-cms-track"],
+      queued_to_publish: ["border-cms-pending"]
     }
   }
 });

@@ -52,8 +52,8 @@
   --text-ui--line-height: 16px;
   --text-ui-lg: 12px;
   --text-ui-lg--line-height: 16px;
-  --text-field: 13px;
-  --text-field--line-height: 20px;
+  --text-field: 11px;
+  --text-field--line-height: 16px;
   --text-display: 26px;
   --text-display--line-height: 30px;
 
@@ -80,6 +80,6 @@
   --grid-template-columns-mapping: minmax(0, 1fr) minmax(0, 1.4fr);
 
   --shadow-cms-control: inset 0 0.5px 0.5px rgb(255 255 255 / 0.1), 0 0.5px 1px rgb(0 0 0 / 0.8);
-  --shadow-cms-well: inset 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-cms-well: inset 0px 2px 6px rgb(0 0 0 / 0.15);
   --shadow-cms-popup: 0 16px 40px rgb(0 0 0 / 0.55);
 }
