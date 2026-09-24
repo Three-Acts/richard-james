@@ -19,6 +19,7 @@
     "@types/pg": "^8.23.1",
     "@vercel/node": "^5.5.13",
     "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
     "vercel": "^48.10.3"
   },
   "dependencies": {

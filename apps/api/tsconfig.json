@@ -1,0 +1,16 @@
+{
+  // @vercel/node compiles each function with the nearest tsconfig.json, reading
+  // it raw (no `extends` resolution). With `module` unset it falls back to
+  // NodeNext resolution and floods the deploy log with TS2835/TS2305 errors
+  // (missing .js extensions, unresolved workspace-package exports), so the
+  // resolution settings are spelled out here. The full settings live in
+  // tsconfig.app.json, which the build/typecheck scripts target directly.
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node", "@vercel/node"]
+  }
+}
