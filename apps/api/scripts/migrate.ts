@@ -16,10 +16,7 @@ import { generateSchemaSql } from "./schema-sql";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-loadEnvFiles([
-  resolve(__dirname, "../.env.local"), // apps/api/.env.local — live Neon branch vars (neon env pull)
-  resolve(__dirname, "../.env") // apps/api/.env — fallback for anything .env.local doesn't set, if present
-]);
+loadEnvFiles([resolve(__dirname, "../.env.local")]); // live Neon branch vars + app-local keys
 
 async function main() {
   const connectionString = process.env.DATABASE_URL_UNPOOLED;

@@ -34,10 +34,7 @@ import type { GalleryImage, Project, SeedPage } from "../seed/data/types";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-loadEnvFiles([
-  resolve(__dirname, "../.env.local"), // apps/api/.env.local — live Neon branch vars
-  resolve(__dirname, "../.env") // apps/api/.env — fallback for anything .env.local doesn't set, if present
-]);
+loadEnvFiles([resolve(__dirname, "../.env.local")]); // live Neon branch vars + app-local keys
 
 const BUCKET = "public";
 // The one copy of the portfolio's artwork — everything under here (including

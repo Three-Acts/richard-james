@@ -12,10 +12,7 @@ import { signUpWithEmail } from "../api/_lib/neon-auth";
 import { loadEnvFiles } from "./load-env";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-loadEnvFiles([
-  resolve(__dirname, "../.env.local"), // apps/api/.env.local — live Neon branch vars
-  resolve(__dirname, "../.env") // apps/api/.env — fallback for anything .env.local doesn't set, if present
-]);
+loadEnvFiles([resolve(__dirname, "../.env.local")]); // live Neon branch vars + app-local keys
 
 type Args = { email?: string; password?: string; name?: string };
 
