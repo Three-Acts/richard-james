@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent } from "react";
 import { useCmsBackend } from "../cms/backend-context";
 import { describeCmsError } from "../cms/errors";
 import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, PublishStatus } from "../cms/types";
+import { rememberAssetMeta } from "../components/atoms";
 import type { CollectionGroup } from "../components/workspace";
 import { getRecordTitle } from "../lib/records";
 import { exportRecords } from "../lib/export-records";
@@ -239,6 +239,12 @@ export function useCmsWorkspace() {
     };
   }, [isDirty]);
 
+  // Drives the top bar's "Publish site" button: it only appears once some
+  // collection actually has something queued. Lives on the summary rather
+  // than being derived from `records` because the active collection's
+  // records are only a slice of what's queued across the whole registry.
+  const queuedCount = useMemo(() => collections.reduce((sum, collection) => sum + collection.queuedCount, 0), [collections]);
+
   const groups = useMemo<CollectionGroup[]>(() => {
     return collections.reduce<CollectionGroup[]>((acc, collection) => {
       const groupName = collection.group ?? "Collections";
@@ -308,11 +314,9 @@ export function useCmsWorkspace() {
     const failedCount = results.filter((result) => result.status === "rejected").length;
 
     try {
-      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
+      const { records: nextRecords } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
-      setCollections((currentCollections) =>
-        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))
-      );
+      await refreshCollections();
     } catch (nextError) {
       setError(describeCmsError(nextError));
       return;
@@ -346,11 +350,9 @@ export function useCmsWorkspace() {
 
     try {
       await data.importRecords(activeCollection.id, rows);
-      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
+      const { records: nextRecords } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
-      setCollections((currentCollections) =>
-        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))
-      );
+      await refreshCollections();
       setIsImportOpen(false);
     } catch (nextError) {
       setError(describeCmsError(nextError));
@@ -374,11 +376,9 @@ export function useCmsWorkspace() {
 
     try {
       const record = await data.createRecord(activeCollection.id);
-      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
+      const { records: nextRecords } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
-      setCollections((currentCollections) =>
-        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))
-      );
+      await refreshCollections();
       setSelectedRecordId(record.id);
       setDraftRecordState(record);
       setLastSavedRecordState(record);
@@ -410,11 +410,9 @@ export function useCmsWorkspace() {
       }
 
       const [copy] = await data.importRecords(activeCollection.id, [values]);
-      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
+      const { records: nextRecords } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
-      setCollections((currentCollections) =>
-        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))
-      );
+      await refreshCollections();
 
       if (copy) {
         setSelectedRecordId(copy.id);
@@ -464,6 +462,13 @@ export function useCmsWorkspace() {
       });
       setLastSavedRecordState(savedRecord);
       setRecords((currentRecords) => currentRecords.map((record) => (record.id === savedRecord.id ? savedRecord : record)));
+
+      // A plain field-value save never moves a record in or out of
+      // "queued_to_publish", so only a status-changing save needs to refresh
+      // the summaries the Publish button and sidebar counts read from.
+      if (nextStatus) {
+        await refreshCollections();
+      }
     } catch (nextError) {
       setError(describeCmsError(nextError));
     } finally {
@@ -492,6 +497,40 @@ export function useCmsWorkspace() {
         setDraftRecordState(record);
         setLastSavedRecordState(record);
       }
+    } catch (nextError) {
+      setError(describeCmsError(nextError));
+    }
+  }
+
+  /**
+   * Re-fetches the collection registry and replaces `collections` wholesale
+   * (both `count` and `queuedCount`), leaving `activeCollectionId` untouched.
+   * Called after anything that can move a record's publish status or change
+   * how many records a collection holds.
+   */
+  async function refreshCollections() {
+    try {
+      const nextCollections = await data.listCollections();
+      setCollections(nextCollections);
+    } catch (nextError) {
+      setError(describeCmsError(nextError));
+    }
+  }
+
+  /** Bulk status override for the selection toolbar's "Update items" menu. */
+  async function handleUpdateSelectedStatus(status: Exclude<PublishStatus, "published">) {
+    if (!activeCollection || selectedIds.size === 0) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const updated = await data.setPublishStatus(activeCollection.id, Array.from(selectedIds), status);
+      const updatedById = new Map(updated.map((record) => [record.id, record] as const));
+
+      setRecords((currentRecords) => currentRecords.map((record) => updatedById.get(record.id) ?? record));
+      await refreshCollections();
     } catch (nextError) {
       setError(describeCmsError(nextError));
     }
@@ -530,10 +569,8 @@ export function useCmsWorkspace() {
     });
   }
 
-  async function handleAssetUpload(field: AssetField, event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-
-    if (!activeCollection || !file || !draftRecord) {
+  async function handleAssetUpload(field: AssetField, file: File) {
+    if (!activeCollection || !draftRecord) {
       return;
     }
 
@@ -545,6 +582,11 @@ export function useCmsWorkspace() {
 
     try {
       const result = await storage.uploadAsset(activeCollection.id, field.key, file);
+
+      // The record only ever stores the URL, so the real file name/size must
+      // be captured now — nothing about the URL itself carries them, and a
+      // mock-storage URL never will.
+      rememberAssetMeta(result.url, { fileName: result.fileName, size: result.size });
 
       setDraftRecordState((current) => {
         if (!current || current.id !== uploadRecordId) {
@@ -563,7 +605,6 @@ export function useCmsWorkspace() {
       setError(describeCmsError(nextError));
     } finally {
       setUploadingField(null);
-      event.target.value = "";
     }
   }
 
@@ -587,12 +628,15 @@ export function useCmsWorkspace() {
     handleImportRecords,
     handleSaveRecord,
     handleSelectCollection,
+    handleUpdateSelectedStatus,
     isDirty,
     isImportOpen,
     isLoadingCollections,
     isLoadingRecords,
     isSaving,
+    queuedCount,
     records,
+    refreshCollections,
     refreshRecords,
     reloadRecord,
     search,

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { ChangeEvent } from "react";
 import { ArrowLeft, Copy, Lock, Trash2 } from "lucide-react";
 import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, PublishStatus } from "../../cms/types";
 import { formatDateTime } from "../../lib/format";
@@ -16,9 +15,9 @@ type RecordEditorProps = {
   draftRecord: CmsRecord;
   isDirty: boolean;
   isSaving: boolean;
-  onAssetUpload: (field: AssetField, event: ChangeEvent<HTMLInputElement>) => void;
+  onAssetUpload: (field: AssetField, file: File) => void;
   onBack: () => void;
-  onChangeStatus: (status: PublishStatus) => void;
+  onChangeStatus: (status: Exclude<PublishStatus, "published">) => void;
   onDelete: () => void;
   /** Drops local edits and reloads the stored record (also the recovery path after a save conflict). */
   onDiscard: () => void;
@@ -75,16 +74,20 @@ export function RecordEditor({
               <StatusPill status={draftRecord.publishStatus} />
               <SplitButton
                 disabled={isSaving}
-                label={isSaving ? "Saving…" : "Publish now"}
-                onClick={() => onChangeStatus("published")}
+                label={isSaving ? "Saving…" : "Queue to publish"}
+                onClick={() => onChangeStatus("queued_to_publish")}
                 options={[
-                  { label: "Queue to publish", onSelect: () => onChangeStatus("queued_to_publish") },
-                  { label: "Unpublish", onSelect: () => onChangeStatus("not_published") },
                   // Keeping the current status a draft is "not published", not
-                  // whatever status is already on the record — `onSave` would
-                  // silently keep a Published record published.
-                  { label: "Save as draft", onSelect: () => onChangeStatus("not_published") }
+                  // whatever status is already on the record — this would
+                  // silently keep a Published record published otherwise.
+                  { label: "Save as draft", onSelect: () => onChangeStatus("not_published") },
+                  {
+                    disabled: draftRecord.publishStatus !== "published",
+                    label: "Unpublish",
+                    onSelect: () => onChangeStatus("not_published")
+                  }
                 ]}
+                primaryDisabled={draftRecord.publishStatus === "queued_to_publish"}
               />
             </>
           ) : null}

@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@three-acts/utils";
 import type { AuthUser } from "../auth/auth-context";
 import { singularize } from "../lib/format";
-import { isEditable } from "../lib/records";
+import { hasPublishWorkflow, isEditable } from "../lib/records";
 import { BareIconButton, ConfirmDialog, PanelHeader, Tooltip, useToast } from "../components/atoms";
 import { useCmsWorkspace } from "../hooks/use-cms-workspace";
 import { CollectionSidebar, RecordListPane, RecordsToolbar, RecordTable, TopBar } from "../components/workspace";
@@ -27,12 +27,15 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
     handleImportRecords,
     handleSaveRecord,
     handleSelectCollection,
+    handleUpdateSelectedStatus,
     isDirty,
     isImportOpen,
     isLoadingCollections,
     isLoadingRecords,
     isSaving,
+    queuedCount,
     records,
+    refreshCollections,
     refreshRecords,
     reloadRecord,
     search,
@@ -76,6 +79,17 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
   }, [clearError, error, toast]);
 
   const selectedRecords = filteredRecords.filter((record) => selectedIds.has(record.id));
+  const showUpdateItems = Boolean(activeCollection && hasPublishWorkflow(activeCollection));
+  const canQueueSelected = selectedRecords.some((record) => record.publishStatus !== "queued_to_publish");
+  const canUnpublishSelected = selectedRecords.some((record) => record.publishStatus === "published");
+
+  // The publish pipeline flips queued records to published server-side, so
+  // both the record list and the collection summaries (queued counts, the
+  // sidebar's per-collection totals) need a refetch once it settles.
+  function handlePublished() {
+    refreshRecords();
+    refreshCollections();
+  }
 
   function guardNavigation(action: () => void) {
     if (isDirty) {
@@ -114,7 +128,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
 
   return (
     <div className="flex h-screen flex-col bg-cms-bg text-ui text-cms-text">
-      <TopBar onPublished={refreshRecords} onSignOut={handleSignOutRequest} user={user} />
+      <TopBar onPublished={handlePublished} onSignOut={handleSignOutRequest} queuedCount={queuedCount} user={user} />
       <div className="flex min-h-0 flex-1">
         <CollectionSidebar
           activeCollectionId={activeCollectionId}
@@ -126,13 +140,16 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
         {activeCollection ? (
           <main className="relative flex min-h-0 min-w-0 flex-1">
             <section
-              className={cn("flex min-h-0 flex-col border-r border-cms-line-strong", selectedRecordId ? "w-pane shrink-0" : "min-w-0 flex-1")}
+              className={cn(
+                "flex min-h-0 flex-col border-r border-cms-line-strong",
+                selectedRecordId ? "w-pane shrink-0" : "min-w-0 flex-1"
+              )}
               aria-label={`${activeCollection.label} records`}
             >
               {selectedRecordId ? (
                 <RecordListPane
                   collection={activeCollection}
-                  onBack={handleGuardedBack}
+                  onCreate={handleCreateRecord}
                   onSelectRecord={handleSelectRecordFromList}
                   records={filteredRecords}
                   selectedRecordId={selectedRecordId}
@@ -140,14 +157,17 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
               ) : (
                 <>
                   <RecordsToolbar
+                    canQueueSelected={canQueueSelected}
+                    canUnpublishSelected={canUnpublishSelected}
+                    hasPublishWorkflow={showUpdateItems}
                     newLabel={singularize(activeCollection.label)}
                     onCreate={handleCreateRecord}
                     onDeleteSelected={handleDeleteSelectedRequest}
-                    onExportAll={() => handleExport(filteredRecords)}
                     onExportSelected={() => handleExport(selectedRecords)}
                     onImport={() => setIsImportOpen(true)}
                     onSearchChange={setSearch}
                     onToggleSelectionMode={toggleSelectionMode}
+                    onUpdateSelectedStatus={handleUpdateSelectedStatus}
                     readOnly={!isEditable(activeCollection)}
                     search={search}
                     selectedCount={selectedRecords.length}
@@ -209,7 +229,9 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
           </main>
         ) : (
           <main className="grid flex-1 place-items-center p-8 text-center">
-            <p className="m-0 text-ui text-cms-subtle">No collections are registered yet. Add one to the Collection Registry to start editing.</p>
+            <p className="m-0 text-ui text-cms-subtle">
+              No collections are registered yet. Add one to the Collection Registry to start editing.
+            </p>
           </main>
         )}
       </div>

@@ -7,10 +7,12 @@ type TopBarProps = {
   /** Called after queued records have been published so the workspace can refresh its list. */
   onPublished?: () => void;
   onSignOut: () => Promise<void>;
+  /** Records queued across every collection; the Publish button only renders while this is > 0. */
+  queuedCount: number;
   user: AuthUser;
 };
 
-export function TopBar({ onPublished, onSignOut, user }: TopBarProps) {
+export function TopBar({ onPublished, onSignOut, queuedCount, user }: TopBarProps) {
   const { publish, isPublishing } = usePublish({ onPublished });
 
   return (
@@ -19,12 +21,6 @@ export function TopBar({ onPublished, onSignOut, user }: TopBarProps) {
         <Logo />
       </div>
       <div className="flex min-w-0 items-center gap-1.5">
-        <Tooltip content="Build and deploy the live site">
-          <Button disabled={isPublishing} onClick={publish} variant="primary">
-            {isPublishing ? <Loader2 className="animate-spin" size={13} /> : <Rocket size={13} />}
-            {isPublishing ? "Publishing…" : "Publish site"}
-          </Button>
-        </Tooltip>
         <Tooltip content="Sign out">
           {/* The tooltip is visual only, so the action stays in the accessible name. */}
           <Button aria-label={`Sign out ${user.name}`} className="max-w-50" onClick={onSignOut} variant="ghost">
@@ -32,6 +28,14 @@ export function TopBar({ onPublished, onSignOut, user }: TopBarProps) {
             <span className="truncate">{user.name}</span>
           </Button>
         </Tooltip>
+        {queuedCount > 0 ? (
+          <Tooltip content="Build and deploy the live site">
+            <Button disabled={isPublishing} onClick={publish} variant="primary">
+              {isPublishing ? <Loader2 className="animate-spin" size={13} /> : <Rocket size={13} />}
+              {isPublishing ? "Publishing…" : "Publish site"}
+            </Button>
+          </Tooltip>
+        ) : null}
       </div>
     </PanelHeader>
   );
