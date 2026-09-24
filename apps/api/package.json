@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx scripts/dev-server.ts",
+    "dev": "tsx watch --clear-screen=false scripts/dev-server.ts",
     "dev:vercel": "vercel dev --yes --listen 0.0.0.0:5175",
     "build": "tsc -p tsconfig.app.json --noEmit",
     "lint": "eslint .",

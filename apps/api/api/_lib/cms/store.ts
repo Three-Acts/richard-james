@@ -28,6 +28,9 @@ export interface CmsDataStore {
 
   countRecords(collection: CmsCollection, filter?: { publishStatus?: PublishStatus }): Promise<number>;
 
+  /** Every `PublishStatus`'s count in a single query — see service.ts's `listCollections`. */
+  countByStatus(collection: CmsCollection): Promise<Record<PublishStatus, number>>;
+
   getRecord(collection: CmsCollection, recordId: string): Promise<CmsRecord | null>;
 
   /** The store owns ids and timestamps for new rows. */

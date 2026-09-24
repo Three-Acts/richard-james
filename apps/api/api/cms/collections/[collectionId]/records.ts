@@ -22,7 +22,7 @@ const readIntParam = (value: unknown, name: string): number | undefined => {
 };
 
 /**
- * GET  /api/cms/collections/:collectionId/records?search&sortKey&sortDirection&limit&offset -> ListRecordsResult
+ * GET  /api/cms/collections/:collectionId/records?search&sortKey&sortDirection&limit&offset&fields -> ListRecordsResult
  * POST /api/cms/collections/:collectionId/records  body CreateRecordBody -> CmsRecord
  */
 export default withApi(["GET", "POST"], async (request, response) => {
@@ -37,9 +37,13 @@ export default withApi(["GET", "POST"], async (request, response) => {
     const search = readStringParam(request.query.search);
     const sortKey = readStringParam(request.query.sortKey);
     const sortDirectionRaw = readStringParam(request.query.sortDirection);
+    const fieldsRaw = readStringParam(request.query.fields);
 
     if (sortDirectionRaw !== undefined && sortDirectionRaw !== "asc" && sortDirectionRaw !== "desc") {
       throw new ApiError(400, "invalid_query", "sortDirection must be 'asc' or 'desc'.");
+    }
+    if (fieldsRaw !== undefined && fieldsRaw !== "list" && fieldsRaw !== "all") {
+      throw new ApiError(400, "invalid_query", "fields must be 'list' or 'all'.");
     }
 
     const rawLimit = readIntParam(request.query.limit, "limit");
@@ -50,7 +54,9 @@ export default withApi(["GET", "POST"], async (request, response) => {
       search: search || undefined,
       sort: sortKey ? { key: sortKey, direction: sortDirectionRaw === "asc" ? "asc" : "desc" } : undefined,
       limit,
-      offset
+      offset,
+      // Absent stays "all" for backwards compatibility with existing callers.
+      fields: fieldsRaw === "list" ? "list" : "all"
     };
 
     ok(response, await listRecords(collectionId, options));

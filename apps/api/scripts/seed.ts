@@ -5,7 +5,7 @@
  * and reads everything back from this API at build/dev time. Idempotent:
  * - images are uploaded once per object key (skipped when already present);
  * - site-settings/pages/projects are upserted by their natural key
- *   (singleton / `key` / `slug`) — a project's gallery (an ordered JSON list
+ *   (singleton / `slug` / `slug`) — a project's gallery (an ordered JSON list
  *   of `{ src, caption? }` stored directly on the project row, see
  *   `packages/cms-schema/src/gallery.ts`) is written every time as part of
  *   that same upsert, since it's just a field, not a separate collection.
@@ -28,10 +28,9 @@ import { getDataStore } from "../api/_lib/cms/resolve-store";
 import { NeonBlobStore, objectExists, publicUrl } from "../api/_lib/cms/neon-blob-store";
 import { loadEnvFiles } from "./load-env";
 import { galleryImages, projects } from "../seed/data/projects";
-import { aboutBlocks, essayBlocks } from "../seed/data/pages";
-import { blocksToBody } from "../seed/data/body";
+import { pages } from "../seed/data/pages";
 import { site } from "../seed/data/site";
-import type { GalleryImage, Project } from "../seed/data/types";
+import type { GalleryImage, Project, SeedPage } from "../seed/data/types";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -206,24 +205,36 @@ async function upsertSiteSettings(
   }
 }
 
-async function upsertPage(key: string, title: string, body: string, dryRun: boolean): Promise<void> {
+async function upsertPage(page: SeedPage, urlByLocalPath: Map<string, string>, dryRun: boolean): Promise<void> {
+  const values: Record<string, CmsRecordValue> = {
+    title: page.title,
+    slug: page.slug,
+    body: page.body,
+    image: page.image ? urlForLocalPath(urlByLocalPath, page.image) : "",
+    metaTitle: page.metaTitle ?? "",
+    metaDescription: page.metaDescription ?? "",
+    ogImage: page.ogImage ? urlForLocalPath(urlByLocalPath, page.ogImage) : ""
+  };
+
   if (dryRun) {
-    console.log(`[dry-run] page "${key}": "${title}" (${body.length} chars)`);
+    console.log(`[dry-run] page "${page.slug}": "${page.title}" (${page.body.length} chars)`);
     return;
   }
 
+  // pages has allowCreate: false in the registry, but that's a CMS-editor/API
+  // restriction (enforced in service.ts) — the seed script writes through
+  // the store directly, same as the singleton site-settings record below.
   const collection = getCollection("pages");
   const store = getDataStore();
   const { records } = await store.listRecords(collection, {});
-  const existing = records.find((record) => record.values.key === key);
-  const values: Record<string, CmsRecordValue> = { title, key, body };
+  const existing = records.find((record) => record.values.slug === page.slug);
 
   if (existing) {
     await store.updateRecord(collection, { ...existing, publishStatus: "published", values: { ...existing.values, ...values } });
-    console.log(`page "${key}": updated.`);
+    console.log(`page "${page.slug}": updated.`);
   } else {
     await store.insertRecords(collection, [{ publishStatus: "published", values }]);
-    console.log(`page "${key}": inserted.`);
+    console.log(`page "${page.slug}": inserted.`);
   }
 }
 
@@ -261,7 +272,9 @@ async function upsertProjects(
       originalTitleLang: project.originalTitleLang ?? "",
       medium: project.medium,
       description: project.description ?? "",
+      metaTitle: project.metaTitle ?? "",
       metaDescription: project.metaDescription ?? "",
+      ogImage: project.ogImage ? urlForLocalPath(urlByLocalPath, project.ogImage) : "",
       hero: urlForLocalPath(urlByLocalPath, project.hero),
       thumb: urlForLocalPath(urlByLocalPath, project.thumb),
       // Images live directly on the project row as an ordered JSON list —
@@ -321,9 +334,9 @@ async function main(): Promise<void> {
 
   await upsertSiteSettings(site, urlByLocalPath, dryRun);
 
-  const essayTitleBlock = essayBlocks.find((block) => block.tag === "h1");
-  await upsertPage("about", "About", blocksToBody(aboutBlocks), dryRun);
-  await upsertPage("essay", essayTitleBlock?.text ?? "Essay", blocksToBody(essayBlocks), dryRun);
+  for (const page of pages) {
+    await upsertPage(page, urlByLocalPath, dryRun);
+  }
 
   await upsertProjects(projects, galleryImages, urlByLocalPath, dryRun);
 

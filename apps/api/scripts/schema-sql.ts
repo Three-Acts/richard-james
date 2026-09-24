@@ -15,11 +15,13 @@ function sqlColumnType(field: CmsField): string {
       return "boolean";
     case "datetime":
       return "timestamptz";
-    // text/textarea/slug/select/asset/reference/gallery/readonly all store
-    // plain text — a `reference` field is the referenced record's id, and a
-    // `gallery` field is a JSON `GalleryItem[]` string (see gallery.ts).
+    // text/textarea/slug/select/asset/reference/gallery/richtext/readonly all
+    // store plain text — a `reference` field is the referenced record's id, a
+    // `gallery` field is a JSON `GalleryItem[]` string (see gallery.ts), and a
+    // `richtext` field is markdown.
     case "reference":
     case "gallery":
+    case "richtext":
     default:
       return "text";
   }
@@ -135,19 +137,47 @@ function indexSql(collection: CmsCollection): string {
 }
 
 /**
- * `project-images` was briefly its own collection (a `reference` field on it
- * pointing at `projects`); the registry now holds project images as a
- * `gallery` field on `projects` instead, so `project-images` no longer
- * appears in `collectionRegistry` and the generator above never touches it.
- * Drop it explicitly: `drop table` also drops its own indexes/triggers, but
- * the trigger *function* is a separate object that survives a dropped table,
- * so it needs its own explicit drop. Idempotent (`if exists`), safe to leave
- * in permanently.
+ * One-time cleanups for collections/columns the registry no longer defines.
+ * The per-collection generator above only ever adds; it never drops a table
+ * or column that fell out of the registry, so those need an explicit,
+ * idempotent (`if exists`) statement here — safe to leave in permanently.
+ *
+ * - `project-images` was briefly its own collection (a `reference` field on
+ *   it pointing at `projects`); the registry now holds project images as a
+ *   `gallery` field on `projects` instead. `drop table` also drops its own
+ *   indexes/triggers, but the trigger *function* is a separate object that
+ *   survives a dropped table, so it needs its own explicit drop.
+ * - `contact-submissions` (and the public contact form) was removed
+ *   entirely — same cleanup shape.
+ * - `pages` renamed its route-lookup field from `key` to `slug`. The new
+ *   `slug` column (and the SEO/image columns alongside it) is created by the
+ *   generic `add column if not exists` pass above, which runs *before* this
+ *   block, so by the time the backfill below runs `slug` already exists on
+ *   every row (NULL). The `do $$ ... $$` guards the backfill so it's a no-op
+ *   once `key` itself has already been dropped on a later run. The old
+ *   unique index on `key` has to be dropped explicitly before the column
+ *   (an index depending on a column blocks a plain `drop column`); the new
+ *   one on `slug` is created by the generic `indexSql` pass, same as any
+ *   other `slug`-typed field.
  */
 const LEGACY_CLEANUP_SQL = [
   "-- Cleanup: project-images -> projects.gallery (see registry.ts history).",
   "drop table if exists project_images cascade;",
-  "drop function if exists set_project_images_updated_at();"
+  "drop function if exists set_project_images_updated_at();",
+  "",
+  "-- Cleanup: contact-submissions removed (no public contact form any more).",
+  "drop table if exists contact_submissions cascade;",
+  "drop function if exists set_contact_submissions_updated_at();",
+  "",
+  "-- Cleanup: pages.key -> pages.slug (see registry.ts history).",
+  "do $$",
+  "begin",
+  "  if exists (select 1 from information_schema.columns where table_name = 'pages' and column_name = 'key') then",
+  "    update pages set slug = key where slug is null;",
+  "  end if;",
+  "end $$;",
+  "drop index if exists uq_pages_key;",
+  "alter table pages drop column if exists key;"
 ].join("\n");
 
 export function generateSchemaSql(): string {

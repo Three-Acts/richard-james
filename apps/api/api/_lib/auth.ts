@@ -12,8 +12,10 @@ import { getSession } from "./neon-auth";
  * (b) `NEON_AUTH_BASE_URL` is set and `GET {NEON_AUTH_BASE_URL}/get-session`
  *     with `Cookie: <session cookie>=<token>` returns a live session (the
  *     CMS's editor login). Positive results are cached in module memory for
- *     60s, keyed by token, capped at 500 entries, to avoid round-tripping to
- *     Neon Auth on every request.
+ *     5 minutes, keyed by token, capped at 500 entries, to avoid round-tripping
+ *     to Neon Auth on every request. `forgetSessionToken` (called from
+ *     /api/auth/sign-out) evicts a token immediately, so signing out doesn't
+ *     leave it trusted for the rest of the cache window.
  *
  * Auth is required in every environment: when neither `PUBLISH_TOKEN` nor
  * `NEON_AUTH_BASE_URL` is configured, every call is rejected with a 503 —
@@ -23,7 +25,7 @@ import { getSession } from "./neon-auth";
  * into the right HTTP response.
  */
 
-const POSITIVE_CACHE_TTL_MS = 60_000;
+const POSITIVE_CACHE_TTL_MS = 5 * 60_000;
 const POSITIVE_CACHE_MAX_SIZE = 500;
 
 const positiveCache = new Map<string, number>(); // token -> expiry epoch ms
@@ -40,7 +42,7 @@ function cacheHit(token: string): boolean {
   return true;
 }
 
-/** Removes `token` from the positive cache. Call on sign-out so a signed-out token is rejected immediately instead of for up to 60s. */
+/** Removes `token` from the positive cache. Call on sign-out so a signed-out token is rejected immediately instead of for up to 5 minutes. */
 export function forgetSessionToken(token: string): void {
   positiveCache.delete(token);
 }

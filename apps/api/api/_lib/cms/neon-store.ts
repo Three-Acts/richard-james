@@ -9,10 +9,11 @@ import {
   type PublishStatus
 } from "@three-acts/cms-schema";
 import { getPool } from "../db";
+import { timeDb } from "../server-timing";
 import type { CmsDataStore, ListRecordsStoreOptions } from "./store";
 
 /** Field types whose backing column is free text and safe to `ILIKE` search over. */
-const SEARCHABLE_FIELD_TYPES = new Set<CmsField["type"]>(["text", "textarea", "slug"]);
+const SEARCHABLE_FIELD_TYPES = new Set<CmsField["type"]>(["text", "textarea", "slug", "richtext"]);
 
 /**
  * Quotes a Postgres identifier. Safe to use with plain string interpolation
@@ -28,6 +29,29 @@ function searchableColumns(collection: CmsCollection): string[] {
   return collection.fields
     .filter((field) => SEARCHABLE_FIELD_TYPES.has(field.type))
     .map((field) => columnForField(collection, field));
+}
+
+/**
+ * The fields a list view actually renders: the title field, every
+ * `listColumns` key, every `slug` field (the CMS's row link target) and
+ * every `reference` field (the CMS resolves those to a label). Everything
+ * else — gallery/richtext/textarea/asset columns in particular, which can be
+ * large — is left out unless it's also a list column. Used for `fields=list`
+ * on `GET .../records` to shrink both the SQL SELECT and the response body.
+ */
+function listFieldsOf(collection: CmsCollection): CmsField[] {
+  const listColumnKeys = new Set(collection.listColumns.map((column) => column.key));
+  return collection.fields.filter(
+    (field) =>
+      field.key === collection.titleField || listColumnKeys.has(field.key) || field.type === "slug" || field.type === "reference"
+  );
+}
+
+function selectColumnsSql(collection: CmsCollection, fields: CmsField[]): string {
+  const sys = systemColumnsFor(collection);
+  const systemColumns = [sys.id, sys.publishStatus, sys.createdAt, sys.modifiedAt];
+  const fieldColumns = fields.map((field) => columnForField(collection, field));
+  return [...systemColumns, ...fieldColumns].map(quoteIdent).join(", ");
 }
 
 function resolveSortColumn(collection: CmsCollection, key: string): string {
@@ -90,11 +114,17 @@ function toIsoString(raw: unknown): string {
   return new Date().toISOString();
 }
 
-function mapRowToRecord(collection: CmsCollection, row: Record<string, unknown>): CmsRecord {
+/**
+ * `fields` restricts which of `collection.fields` end up in `values` (used
+ * for `fields=list`, where the SELECT itself only fetched those columns —
+ * see `selectColumnsSql`); defaults to every field for the normal, full-record
+ * shape every other caller in this file wants.
+ */
+function mapRowToRecord(collection: CmsCollection, row: Record<string, unknown>, fields: CmsField[] = collection.fields): CmsRecord {
   const sys = systemColumnsFor(collection);
   const values: Record<string, CmsRecordValue> = {};
 
-  for (const field of collection.fields) {
+  for (const field of fields) {
     const column = columnForField(collection, field);
     values[field.key] = toRecordValue(field, row[column]);
   }
@@ -139,10 +169,6 @@ export class NeonDataStore implements CmsDataStore {
 
     const whereSql = whereClauses.length > 0 ? `where ${whereClauses.join(" and ")}` : "";
 
-    const countSql = `select count(*)::text as count from ${table} ${whereSql}`;
-    const countResult = await getPool().query(countSql, whereParams);
-    const total = Number(countResult.rows[0]?.count ?? 0);
-
     const sortColumn = quoteIdent(options.sort ? resolveSortColumn(collection, options.sort.key) : sys.modifiedAt);
     const direction = options.sort?.direction === "asc" ? "asc" : "desc";
 
@@ -153,11 +179,21 @@ export class NeonDataStore implements CmsDataStore {
       limitOffsetSql += ` offset $${dataParams.push(options.offset ?? 0)}`;
     }
 
-    const dataSql = `select * from ${table} ${whereSql} order by ${sortColumn} ${direction}${limitOffsetSql}`;
-    const dataResult = await getPool().query(dataSql, dataParams);
+    const fields = options.fields === "list" ? listFieldsOf(collection) : collection.fields;
+    const selectColumns = options.fields === "list" ? selectColumnsSql(collection, fields) : "*";
+
+    const countSql = `select count(*)::text as count from ${table} ${whereSql}`;
+    const dataSql = `select ${selectColumns} from ${table} ${whereSql} order by ${sortColumn} ${direction}${limitOffsetSql}`;
+
+    // Independent queries (count doesn't depend on the page, or vice versa) — run concurrently rather than round-tripping twice in series.
+    const [countResult, dataResult] = await Promise.all([
+      timeDb(() => getPool().query(countSql, whereParams)),
+      timeDb(() => getPool().query(dataSql, dataParams))
+    ]);
+    const total = Number(countResult.rows[0]?.count ?? 0);
 
     return {
-      records: dataResult.rows.map((row) => mapRowToRecord(collection, row as Record<string, unknown>)),
+      records: dataResult.rows.map((row) => mapRowToRecord(collection, row as Record<string, unknown>, fields)),
       total
     };
   }
@@ -167,14 +203,33 @@ export class NeonDataStore implements CmsDataStore {
     const table = quoteIdent(collection.tableName);
     const params: unknown[] = [];
     const whereSql = filter?.publishStatus ? `where ${quoteIdent(sys.publishStatus)} = $${params.push(filter.publishStatus)}` : "";
-    const result = await getPool().query(`select count(*)::text as count from ${table} ${whereSql}`, params);
+    const result = await timeDb(() => getPool().query(`select count(*)::text as count from ${table} ${whereSql}`, params));
     return Number(result.rows[0]?.count ?? 0);
+  }
+
+  /** Every status's count in one query — see service.ts's `listCollections`, which used to run two `countRecords` calls per collection. */
+  async countByStatus(collection: CmsCollection): Promise<Record<PublishStatus, number>> {
+    const sys = systemColumnsFor(collection);
+    const table = quoteIdent(collection.tableName);
+    const statusColumn = quoteIdent(sys.publishStatus);
+
+    const result = await timeDb(() =>
+      getPool().query(`select ${statusColumn} as status, count(*)::text as count from ${table} group by ${statusColumn}`)
+    );
+
+    const counts: Record<PublishStatus, number> = { published: 0, not_published: 0, queued_to_publish: 0 };
+    for (const row of result.rows as Array<{ status: string; count: string }>) {
+      if (row.status === "published" || row.status === "not_published" || row.status === "queued_to_publish") {
+        counts[row.status] = Number(row.count);
+      }
+    }
+    return counts;
   }
 
   async getRecord(collection: CmsCollection, recordId: string): Promise<CmsRecord | null> {
     const sys = systemColumnsFor(collection);
     const table = quoteIdent(collection.tableName);
-    const result = await getPool().query(`select * from ${table} where ${quoteIdent(sys.id)} = $1`, [recordId]);
+    const result = await timeDb(() => getPool().query(`select * from ${table} where ${quoteIdent(sys.id)} = $1`, [recordId]));
     const row = result.rows[0] as Record<string, unknown> | undefined;
     return row ? mapRowToRecord(collection, row) : null;
   }
@@ -207,7 +262,7 @@ export class NeonDataStore implements CmsDataStore {
     });
 
     const sql = `insert into ${table} (${quotedColumns}) values ${valueRows.join(", ")} returning *`;
-    const result = await getPool().query(sql, params);
+    const result = await timeDb(() => getPool().query(sql, params));
     return result.rows.map((row) => mapRowToRecord(collection, row as Record<string, unknown>));
   }
 
@@ -239,7 +294,7 @@ export class NeonDataStore implements CmsDataStore {
     }
     sql += " returning *";
 
-    const result = await getPool().query(sql, params);
+    const result = await timeDb(() => getPool().query(sql, params));
     if (result.rows.length > 0) {
       return mapRowToRecord(collection, result.rows[0] as Record<string, unknown>);
     }
@@ -253,7 +308,7 @@ export class NeonDataStore implements CmsDataStore {
   async deleteRecord(collection: CmsCollection, recordId: string): Promise<boolean> {
     const sys = systemColumnsFor(collection);
     const table = quoteIdent(collection.tableName);
-    const result = await getPool().query(`delete from ${table} where ${quoteIdent(sys.id)} = $1`, [recordId]);
+    const result = await timeDb(() => getPool().query(`delete from ${table} where ${quoteIdent(sys.id)} = $1`, [recordId]));
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -263,9 +318,11 @@ export class NeonDataStore implements CmsDataStore {
     const publishedStatus: PublishStatus = "published";
     const queuedStatus: PublishStatus = "queued_to_publish";
 
-    const result = await getPool().query(
-      `update ${table} set ${quoteIdent(sys.publishStatus)} = $1 where ${quoteIdent(sys.publishStatus)} = $2`,
-      [publishedStatus, queuedStatus]
+    const result = await timeDb(() =>
+      getPool().query(`update ${table} set ${quoteIdent(sys.publishStatus)} = $1 where ${quoteIdent(sys.publishStatus)} = $2`, [
+        publishedStatus,
+        queuedStatus
+      ])
     );
     return result.rowCount ?? 0;
   }
@@ -276,7 +333,7 @@ export class NeonDataStore implements CmsDataStore {
     const now = new Date().toISOString();
 
     const sql = `update ${table} set ${quoteIdent(sys.publishStatus)} = $1, ${quoteIdent(sys.modifiedAt)} = $2 where ${quoteIdent(sys.id)} = any($3::uuid[]) returning *`;
-    const result = await getPool().query(sql, [status, now, recordIds]);
+    const result = await timeDb(() => getPool().query(sql, [status, now, recordIds]));
 
     const records = result.rows.map((row) => mapRowToRecord(collection, row as Record<string, unknown>));
     const byId = new Map(records.map((record) => [record.id, record]));

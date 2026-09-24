@@ -23,6 +23,11 @@ export function getPool(): Pool {
 
     pool = new Pool({ connectionString, max: 5 });
     attachDatabasePool(pool);
+    // Once per process, not per request/query — confirms the module-level
+    // `pool` singleton above is actually being reused across requests (the
+    // dev server, and a warm Vercel function instance, serve many requests
+    // from one process) rather than a fresh Pool being created each time.
+    console.info("[db] Postgres pool created");
   }
 
   return pool;

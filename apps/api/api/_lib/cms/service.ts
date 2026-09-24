@@ -41,6 +41,34 @@ function assertWritable(collection: CmsCollection): CmsCollection {
   return collection;
 }
 
+/**
+ * Enforces `allowCreate === false` (the collection's set of records is
+ * fixed — e.g. the `pages` collection cannot grow or shrink). `singleton`
+ * collections are a narrow exception: creation is allowed exactly once, when
+ * the collection currently has zero records, so first-time setup (or the
+ * seed script, though that writes through the store directly and never hits
+ * this) can still produce the one record. Shared by createRecord and
+ * importRecords — both are ways of creating new records.
+ */
+async function assertCreateAllowed(collection: CmsCollection): Promise<void> {
+  if (collection.allowCreate === false) {
+    if (collection.singleton) {
+      const count = await getDataStore().countRecords(collection);
+      if (count === 0) {
+        return;
+      }
+    }
+    throw new CmsError("forbidden", `${collection.label} pages are fixed; new records cannot be created.`);
+  }
+}
+
+/** Enforces `allowDelete === false` (the collection's set of records is fixed). */
+function assertDeleteAllowed(collection: CmsCollection): void {
+  if (collection.allowDelete === false) {
+    throw new CmsError("forbidden", `${collection.label} pages are fixed; records cannot be deleted.`);
+  }
+}
+
 function validationError(field: CmsField, message: string): CmsError {
   return new CmsError("validation", message, { details: { field: field.key } });
 }
@@ -66,7 +94,8 @@ function validateFieldValue(field: CmsField, raw: CmsRecordValue, enforceRequire
     case "textarea":
     case "slug":
     case "asset":
-    case "reference": {
+    case "reference":
+    case "richtext": {
       const text = raw === null || raw === undefined ? "" : String(raw);
       if (enforceRequired && field.required && !text.trim()) {
         throw validationError(field, `${field.label} is required.`);
@@ -263,14 +292,17 @@ function sanitizeFileName(fileName: string): string {
 
 export async function listCollections(): Promise<CmsCollectionSummary[]> {
   const store = getDataStore();
+  // One grouped query per collection (see `countByStatus`), all collections
+  // in parallel — was two sequential `countRecords` queries per collection.
   return Promise.all(
-    collectionRegistry.map(async (collection) => ({
-      ...collection,
-      count: await store.countRecords(collection),
-      queuedCount: hasPublishWorkflow(collection)
-        ? await store.countRecords(collection, { publishStatus: "queued_to_publish" })
-        : 0
-    }))
+    collectionRegistry.map(async (collection) => {
+      const counts = await store.countByStatus(collection);
+      return {
+        ...collection,
+        count: counts.published + counts.not_published + counts.queued_to_publish,
+        queuedCount: hasPublishWorkflow(collection) ? counts.queued_to_publish : 0
+      };
+    })
   );
 }
 
@@ -290,6 +322,7 @@ export async function getRecord(collectionId: string, recordId: string): Promise
 
 export async function createRecord(collectionId: string, values?: Partial<Record<string, CmsRecordValue>>): Promise<CmsRecord> {
   const collection = assertWritable(getCollectionOrThrow(collectionId));
+  await assertCreateAllowed(collection);
   const normalizedValues = buildRecordValues(collection, values, undefined);
   await assertReferencesExist(collection, normalizedValues);
   const [record] = await getDataStore().insertRecords(collection, [{ publishStatus: "not_published", values: normalizedValues }]);
@@ -343,6 +376,7 @@ export async function deleteRecord(collectionId: string, recordId: string): Prom
   const collection = getCollectionOrThrow(collectionId);
   // Intentionally not gated by assertWritable: readonly collections still
   // allow delete ("view, export, delete only" — see CollectionMode in types.ts).
+  assertDeleteAllowed(collection);
   const deleted = await getDataStore().deleteRecord(collection, recordId);
   if (!deleted) {
     throw new CmsError("not_found", `Unknown record: ${recordId}`);
@@ -351,6 +385,7 @@ export async function deleteRecord(collectionId: string, recordId: string): Prom
 
 export async function importRecords(collectionId: string, rows: Array<Record<string, CmsRecordValue>>): Promise<CmsRecord[]> {
   const collection = assertWritable(getCollectionOrThrow(collectionId));
+  await assertCreateAllowed(collection);
 
   if (!Array.isArray(rows)) {
     throw new CmsError("validation", "rows must be an array.");

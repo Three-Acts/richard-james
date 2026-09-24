@@ -11,6 +11,7 @@ import {
   type CmsRecord,
   type PageContent,
   type ProjectContent,
+  type SeoContent,
   type SiteContent
 } from "@three-acts/cms-schema";
 import { ApiError } from "./http";
@@ -51,11 +52,28 @@ async function listRecords(collectionId: string, options: ListRecordsStoreOption
   return records;
 }
 
-function toPageContent(record: CmsRecord): PageContent {
+/** SEO fields are shared verbatim across projects/pages: metaTitle/metaDescription/ogImage, each omitted when empty (no hero/description fallback — that's a web-side concern). */
+function buildSeo(record: CmsRecord): SeoContent {
+  const metaTitle = optionalString(record, "metaTitle");
+  const metaDescription = optionalString(record, "metaDescription");
+  const ogImage = optionalString(record, "ogImage");
+
   return {
-    key: stringValue(record, "key"),
+    ...(metaTitle !== undefined ? { metaTitle } : {}),
+    ...(metaDescription !== undefined ? { metaDescription } : {}),
+    ...(ogImage !== undefined ? { ogImage } : {})
+  };
+}
+
+function toPageContent(record: CmsRecord): PageContent {
+  const image = optionalString(record, "image");
+
+  return {
+    slug: stringValue(record, "slug"),
     title: stringValue(record, "title"),
-    body: stringValue(record, "body")
+    body: stringValue(record, "body"),
+    ...(image !== undefined ? { image } : {}),
+    seo: buildSeo(record)
   };
 }
 
@@ -73,7 +91,6 @@ function toProjectContent(record: CmsRecord): ProjectContent {
     year: stringValue(record, "year"),
     medium: stringValue(record, "medium"),
     description: stringValue(record, "description"),
-    metaDescription: stringValue(record, "metaDescription"),
     hero,
     // The API substitutes `hero` when no thumb is set.
     thumb: thumbRaw || hero,
@@ -83,7 +100,8 @@ function toProjectContent(record: CmsRecord): ProjectContent {
     // 0 or empty shows every image (see registry helpText); the contract
     // leaves that as "unset".
     gridStride: gridStrideRaw ? gridStrideRaw : undefined,
-    sortOrder: numberValue(record, "sortOrder")
+    sortOrder: numberValue(record, "sortOrder"),
+    seo: buildSeo(record)
   };
 }
 
@@ -132,11 +150,11 @@ export async function listPagesContent(): Promise<PageContent[]> {
   return records.map(toPageContent);
 }
 
-export async function getPageContentByKey(key: string): Promise<PageContent> {
+export async function getPageContentBySlug(slug: string): Promise<PageContent> {
   const records = await listRecords("pages", { filter: { publishStatus: "published" } });
-  const record = records.find((item) => stringValue(item, "key") === key);
+  const record = records.find((item) => stringValue(item, "slug") === slug);
   if (!record) {
-    throw new ApiError(404, "not_found", `Unknown page: ${key}`);
+    throw new ApiError(404, "not_found", `Unknown page: ${slug}`);
   }
   return toPageContent(record);
 }

@@ -27,12 +27,11 @@ const routes = {
   "/api/meta": () => import("../api/meta"),
   "/api/deploy": () => import("../api/deploy"),
   "/api/deploy-status": () => import("../api/deploy-status"),
-  "/api/contact": () => import("../api/contact"),
   "/api/content/site": () => import("../api/content/site"),
   "/api/content/projects": () => import("../api/content/projects"),
   "/api/content/projects/[slug]": () => import("../api/content/projects/[slug]"),
   "/api/content/pages": () => import("../api/content/pages"),
-  "/api/content/pages/[key]": () => import("../api/content/pages/[key]"),
+  "/api/content/pages/[slug]": () => import("../api/content/pages/[slug]"),
   "/api/auth/sign-in": () => import("../api/auth/sign-in"),
   "/api/auth/session": () => import("../api/auth/session"),
   "/api/auth/sign-out": () => import("../api/auth/sign-out"),
@@ -144,6 +143,9 @@ const createVercelResponse = (response: ServerResponse) => {
     setHeader(name: string, value: number | string | readonly string[]) {
       response.setHeader(name, value);
       return vercelResponse;
+    },
+    getHeader(name: string) {
+      return response.getHeader(name);
     },
     json(body: unknown) {
       if (!response.hasHeader("Content-Type")) {

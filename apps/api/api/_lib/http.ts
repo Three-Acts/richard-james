@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { isCmsError } from "@three-acts/cms-schema";
 import { applyCors, handleOptions } from "./cors";
+import { getDbTimingMs, withDbTiming } from "./server-timing";
 
 export type ApiSuccess<TData> = {
   ok: true;
@@ -46,6 +47,13 @@ export const json = <TData>(
   status: number,
   body: ApiResponse<TData>
 ) => {
+  // Set before the body is written (that ends the response). `getDbTimingMs`
+  // reads the current request's accumulator (see `withApi` below), which is
+  // undefined outside a timed request — i.e. no header on non-/api/cms/* routes.
+  const dbMs = getDbTimingMs();
+  if (dbMs !== undefined) {
+    response.setHeader("Server-Timing", `db;dur=${dbMs.toFixed(1)}`);
+  }
   response.status(status).json(body);
 };
 
@@ -94,23 +102,43 @@ export const withApi = (
       return;
     }
 
-    try {
-      await handler(request, response);
-    } catch (caughtError) {
-      if (response.headersSent) {
+    const runHandler = async () => {
+      try {
+        await handler(request, response);
+      } catch (caughtError) {
+        if (response.headersSent) {
+          console.error(caughtError);
+          return;
+        }
+
+        const normalizedError = caughtError instanceof ApiError ? caughtError : toApiError(caughtError);
+
+        if (normalizedError instanceof ApiError) {
+          error(response, normalizedError.status, normalizedError.code, normalizedError.message);
+          return;
+        }
+
         console.error(caughtError);
-        return;
+        error(response, 500, "internal_server_error", "Unexpected API error.");
       }
+    };
 
-      const normalizedError = caughtError instanceof ApiError ? caughtError : toApiError(caughtError);
-
-      if (normalizedError instanceof ApiError) {
-        error(response, normalizedError.status, normalizedError.code, normalizedError.message);
-        return;
+    // DB timing (surfaced as `Server-Timing: db;dur=…`, see server-timing.ts
+    // and `json` above) is only measured for /api/cms/* — the routes backed
+    // by the CmsDataStore, where "how much of this was Postgres" is the
+    // useful diagnostic. request.url is the path as invoked (with query
+    // string), matching how scripts/dev-server.ts routes requests.
+    const path = (request.url ?? "").split("?")[0];
+    if (path.startsWith("/api/cms")) {
+      // Editor data is per-request and auth-gated — never cache it. No CMS
+      // route sets its own Cache-Control (unlike /api/content/*, which sets
+      // a public s-maxage), so this always applies here.
+      if (!response.getHeader("Cache-Control")) {
+        response.setHeader("Cache-Control", "no-store");
       }
-
-      console.error(caughtError);
-      error(response, 500, "internal_server_error", "Unexpected API error.");
+      await withDbTiming(runHandler);
+    } else {
+      await runHandler();
     }
   };
 };
@@ -118,8 +146,7 @@ export const withApi = (
 /**
  * Parses a request body that may arrive as an already-parsed object (Vercel's
  * default JSON parsing) or as a raw string (the local dev server, or a client
- * that sent a body without a recognized Content-Type). Mirrors `contact.ts`'s
- * `parseBody`, generalized for the CMS routes.
+ * that sent a body without a recognized Content-Type).
  */
 export const readJsonBody = <TBody>(request: VercelRequest): TBody => {
   const body = request.body;
