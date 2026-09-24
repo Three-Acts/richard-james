@@ -3,7 +3,7 @@ import { cn } from "@three-acts/utils";
 import type { CmsCollectionSummary, CmsRecord } from "../../cms/types";
 import { formatDateTime } from "../../lib/format";
 import { getRecordTitle } from "../../lib/records";
-import { Checkbox, eyebrowClass, focusRing, ScrollArea, StatusPill } from "../atoms";
+import { Checkbox, columnHeaderClass, focusRing, ScrollArea, StatusPill } from "../atoms";
 
 type RecordTableProps = {
   collection: CmsCollectionSummary;
@@ -58,7 +58,7 @@ export function RecordTable({
     <ScrollArea className="min-h-0 flex-1">
       <div className="min-w-245" role="grid" aria-label={`${collection.label} table`} aria-rowcount={records.length + 1}>
         <div
-          className={cn("sticky top-0 z-10 grid h-8 items-center border-b border-cms-line-strong bg-cms-bg", eyebrowClass)}
+          className={cn(columnHeaderClass, "sticky top-0 z-10 grid bg-cms-bg")}
           role="row"
           style={{ gridTemplateColumns }}
         >

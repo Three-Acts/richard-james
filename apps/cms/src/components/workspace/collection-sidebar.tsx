@@ -24,7 +24,9 @@ export function CollectionSidebar({ activeCollectionId, groups, isLoading, onSel
         {isLoading ? <p className="px-2 py-3 text-ui text-cms-subtle">Loading collections…</p> : null}
 
         {groups.map((group) => (
-          <div className="pt-4 first:pt-3" key={group.group}>
+          // Each category after the first is separated by a hairline so the
+          // groups read as distinct sections rather than one long list.
+          <div className="mt-3 border-t border-cms-line pt-3 first:mt-0 first:border-t-0" key={group.group}>
             <div className={cn(eyebrowClass, "px-2 pb-1.5")}>{group.group}</div>
             {group.collections.map((collection) => {
               const active = collection.id === activeCollectionId;
