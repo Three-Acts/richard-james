@@ -5,8 +5,9 @@ Astro, React, Tailwind, and Vercel API monorepo with a static public web app, an
 ## Apps
 
 - `apps/web` - public **Astro** website that prerenders to **zero-JS static HTML**, with React **islands** for interactivity, a **build-time content layer** (mock by default, Supabase-ready), route-level SEO + AEO metadata (JSON-LD, `sitemap.xml`, `robots.txt`, `llms.txt`), build-time **AVIF** image compression, and a same-origin `/api/*` convention.
-- `apps/cms` - private CMS shell with `noindex,nofollow`, disallowing `robots.txt`, a provider-shaped auth interface ready for Clerk, Auth0, or Supabase, and the same same-origin `/api/*` convention.
+- `apps/cms` - private CMS shell with `noindex,nofollow`, disallowing `robots.txt`, a provider-shaped auth interface ready for Clerk, Auth0, or Supabase, a pluggable CMS backend (mock or REST) built on the shared `packages/cms-schema` collection registry, and the same same-origin `/api/*` convention.
 - `apps/api` - Vercel serverless API app for server-only template functionality such as CMS writes, payment callbacks, webhook handling, record validation, and integration bridges.
+- `packages/cms-schema` - shared collection registry, field types, typed errors, REST wire contract, and column-mapping helpers for the CMS, exported from `@three-acts/cms-schema`. Consumed by `apps/cms` and `apps/api` so both validate against the same schema. See [ADR 0003](docs/adr/0003-pluggable-cms-backend.md).
 - `packages/utils` - shared utility helpers such as `cn`, `clsx`, and `cv`, exported from `@three-acts/utils`.
 - `packages/config` - shared theme tokens consumed by Tailwind.
 
@@ -55,7 +56,10 @@ Set `VITE_SITE_URL` before `npm run build:web` to control canonical URLs and sit
 - `GET /api/meta` - template metadata endpoint.
 - `POST /api/deploy` - trigger a Vercel deploy hook (used by the CMS Publish flow).
 - `GET /api/deploy-status` - normalized Vercel deployment state for progress feedback.
+- `POST /api/contact` - accepts the public site's contact form (`name`, `email`, `message`, optional `website` honeypot).
 - `API_ALLOWED_ORIGINS` - optional comma-separated browser origins for direct cross-origin calls.
+- `PUBLISH_TOKEN` (API) + `VITE_PUBLISH_TOKEN` (CMS) - shared bearer secret for the Publish flow; the two values must match exactly.
+- `VERCEL_API_BASE` - optional override for the Vercel REST API base URL (self-hosted proxies or local testing); defaults to `https://api.vercel.com`.
 - Server-side Supabase (service-role) client foundation in `api/_lib/supabase.ts` for privileged writes/webhooks/payment callbacks. See `apps/api/.env.example` for all variables.
 
 `apps/web` and `apps/cms` call `/api/*` by default. In local development, their Vite dev servers proxy `/api/*` to `API_ORIGIN`. In Vercel, their `vercel.ts` files rewrite `/api/*` to the deployed API app. This keeps browser requests same-origin and avoids per-app CORS configuration for normal traffic.
@@ -70,7 +74,77 @@ cp apps/cms/.env.example apps/cms/.env
 
 Set `API_ORIGIN` in the web and CMS projects to the API origin, for example `https://your-api.vercel.app`. The browser-facing API client still calls `/api/*`; the dev server or Vercel rewrite performs the bridge.
 
-If a specific deployment needs to call the API directly from the browser, set `VITE_API_URL` to the full API base URL and allow the caller with `API_ALLOWED_ORIGINS`.
+If a specific deployment needs to call the API directly from the browser, set `PUBLIC_API_URL` (web) or `VITE_API_URL` (CMS) to the full API base URL and allow the caller with `API_ALLOWED_ORIGINS`. The web app's client bundle only ever sees `PUBLIC_`-prefixed vars, so it does not use `VITE_API_URL`.
+
+## CMS backend
+
+The CMS reads and writes content through a swappable backend (`@three-acts/cms-schema`'s `CmsBackend`), injected via `CmsBackendProvider`. Two implementations ship today, picked by `VITE_CMS_BACKEND`:
+
+- `mock` (default) - an in-browser Test Collection Set. No env vars, no network calls.
+- `rest` - talks to the REST bridge in `apps/api` (`/api/cms/*`), which reads and writes through a server-side data store and blob store.
+
+### Running mock vs rest locally
+
+Mock needs nothing beyond the normal dev command:
+
+```sh
+npm run dev:cms
+```
+
+Rest needs `apps/api` running too, with matching tokens on both sides. Copy the env files:
+
+```sh
+cp apps/cms/.env.example apps/cms/.env
+cp apps/api/.env.example apps/api/.env
+```
+
+In `apps/cms/.env`, set:
+
+```
+VITE_CMS_BACKEND=rest
+VITE_PUBLISH_TOKEN=some-shared-secret
+```
+
+In `apps/api/.env`, set the matching token:
+
+```
+PUBLISH_TOKEN=some-shared-secret
+```
+
+`PUBLISH_TOKEN` and `VITE_PUBLISH_TOKEN` must match exactly. Leave `CMS_DATA_BACKEND` and `CMS_STORAGE_BACKEND` unset to use the in-process Memory store, which needs no external project. Set them to `supabase`, with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `apps/api/.env`, to use a real Supabase project instead. Then run:
+
+```sh
+npm run dev
+```
+
+### Publishing is two steps
+
+Clicking Publish in the CMS runs:
+
+1. **Publish transition** - the data store flips every record queued to publish over to published.
+2. **Site deploy** - `POST /api/deploy` rebuilds the static site.
+
+The CMS then polls `GET /api/deploy-status`, first with `?after=` and `?since=` to find the new deployment, then by `?id=`, until the rebuild finishes.
+
+### Adding a backend
+
+A new backend means implementing two server-side interfaces in `apps/api/api/_lib/cms/`, one for records and one for asset uploads, and registering them alongside `CMS_DATA_BACKEND` / `CMS_STORAGE_BACKEND`. Nothing in `apps/cms` changes, since it only ever talks to the REST bridge. Plain Postgres (via `pg` or Drizzle) and Cloudflare R2 both fit this shape.
+
+Run `npm run schema:sql -w @three-acts/api` to print `CREATE TABLE` SQL for every collection in the registry, so any Postgres-compatible database can be provisioned from the same schema the CMS renders.
+
+See [ADR 0003](docs/adr/0003-pluggable-cms-backend.md) for the full decision and interface names.
+
+### Env matrix
+
+| Variable | App | Purpose |
+| --- | --- | --- |
+| `PUBLISH_TOKEN` | api | Bearer secret required by `/api/deploy`, `/api/deploy-status`, and `/api/cms/*`. Unset is dev-only and 503s in production. |
+| `VITE_PUBLISH_TOKEN` | cms | Must match `PUBLISH_TOKEN` exactly; sent as `Authorization: Bearer <token>`. |
+| `VITE_CMS_BACKEND` | cms | `mock` (default) or `rest`. Picks the CMS backend implementation. |
+| `CMS_DATA_BACKEND` | api | `supabase` or `memory`. Defaults to `supabase` when the Supabase env vars below are set, otherwise `memory`. |
+| `CMS_STORAGE_BACKEND` | api | `supabase` or `memory`, same default rule as `CMS_DATA_BACKEND`. |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | api | Service-role Supabase project used by the `supabase` data store and blob store. |
+| `VERCEL_DEPLOY_HOOK_URL` / `VERCEL_TOKEN` / `VERCEL_PROJECT_ID` / `VERCEL_TEAM_ID` / `VERCEL_API_BASE` | api | Deploy hook and polling credentials used by the site deploy step. |
 
 ## Web rendering model
 

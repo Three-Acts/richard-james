@@ -1,15 +1,15 @@
 # Three Acts CMS
 
-Three Acts CMS is the private editorial context for managing Supabase-backed website content and related assets.
+Three Acts CMS is the private editorial context for managing website content and related assets, stored in a pluggable Data Store and Blob Store.
 
 ## Language
 
 **CMS Collection**:
-An editable content set represented by a Supabase table.
+An editable content set backed by exactly one table in a Data Store.
 _Avoid_: Hardcoded section, static tab
 
 **Collection Registry**:
-The allowlist of Supabase tables that are exposed as editable CMS Collections.
+The allowlist of backing tables that are exposed as editable CMS Collections.
 _Avoid_: Auto-discovery, table browser
 
 **Collection Field**:
@@ -17,12 +17,32 @@ An editable property of a CMS Collection record as defined by the collection con
 _Avoid_: Raw column, inferred field
 
 **Asset Field**:
-A Collection Field that uploads a file to Supabase Storage and stores the file reference on the record.
+A Collection Field that uploads a file to the Blob Store and stores the file reference on the record.
 _Avoid_: Asset library, media collection
 
 **CMS Data Adapter**:
-The interface the CMS uses to read records, save records, and upload asset field files.
-_Avoid_: Supabase client, mock data
+The interface the CMS uses to list, read, create, save, delete, and import collection records, and to run the Publish Transition. Asset uploads go through the CMS Backend's storage side instead.
+_Avoid_: REST client, direct database access, mock data
+
+**CMS Backend**:
+The composition of a CMS Data Adapter, a storage adapter, and an auth client that the CMS uses at runtime, injected through `CmsBackendProvider`. `VITE_CMS_BACKEND` picks `mock` (an in-browser Test Collection Set) or `rest` (talks to the REST Bridge).
+_Avoid_: Supabase integration, data layer
+
+**Data Store**:
+A server-side implementation of the data store interface behind the REST Bridge, selected by `CMS_DATA_BACKEND`. Supabase and an in-process Memory store ship today; adding plain Postgres means implementing the interface and registering it.
+_Avoid_: The database, Supabase as the only option
+
+**Blob Store**:
+A server-side implementation of the blob store interface behind the REST Bridge for asset uploads, selected by `CMS_STORAGE_BACKEND`. Supabase Storage and an in-process Memory store ship today.
+_Avoid_: Supabase Storage as the only option, file system
+
+**REST Bridge**:
+The `apps/api` HTTP layer (`/api/cms/*`) that lets the `rest` CMS Backend reach a Data Store and Blob Store over HTTP, validated against the Collection Schema Package. Every route requires `Authorization: Bearer <PUBLISH_TOKEN>`.
+_Avoid_: Generic API gateway, database proxy
+
+**Collection Schema Package**:
+The shared `@three-acts/cms-schema` package: the Collection Registry, field types, typed errors, the REST wire contract, and column-mapping helpers. Consumed by the CMS and the REST Bridge so both validate against the same fields.
+_Avoid_: Duplicated types, app-local schema
 
 **Collection Mode**:
 How editors work with a CMS Collection's records: `editorial` (publish workflow), `data` (editable, no publish workflow), or `readonly` (system-generated records like form submissions — view, export, delete only).
@@ -31,6 +51,14 @@ _Avoid_: Per-record permissions, role-based access
 **Publish Status**:
 The editor-facing state that indicates whether a record is published, unpublished, or queued to publish. Only records in `editorial` mode collections carry one.
 _Avoid_: Version history, release workflow
+
+**Publish Transition**:
+The first publish step: the Data Store flips every record queued to publish over to published. It does not rebuild the public site.
+_Avoid_: The full publish flow, deploy
+
+**Site Deploy**:
+The second publish step: rebuilding the static site from the current published records, then confirming the new deployment finished.
+_Avoid_: Publish, save
 
 **Editorial Workspace**:
 The desktop-first CMS interface where editors browse collections, scan records, and edit a selected record.
@@ -50,32 +78,41 @@ _Avoid_: Production content, screenshot copy
 
 ## Relationships
 
-- A **CMS Collection** is backed by exactly one Supabase table.
-- The **Collection Registry** defines which Supabase tables appear as **CMS Collections**.
+- A **CMS Collection** is backed by exactly one table in a **Data Store**.
+- The **Collection Registry** defines which backing tables appear as **CMS Collections**.
 - A **CMS Collection** has one or more **Collection Fields**.
 - An **Asset Field** belongs to exactly one **CMS Collection** field configuration.
-- The **CMS Data Adapter** provides records and asset uploads for each **CMS Collection**.
+- The **CMS Backend**'s data adapter provides records, and its storage adapter provides asset uploads through the **Blob Store**, for each **CMS Collection**.
+- The **REST Bridge** exposes a **Data Store** and a **Blob Store** to the `rest` **CMS Backend** over HTTP, validated against the **Collection Schema Package**.
+- The **Collection Schema Package** defines the **Collection Registry** and field types once, shared by the CMS and the **REST Bridge**.
 - A **CMS Collection** has one **Collection Mode** (`editorial` by default).
 - A CMS Collection record has one **Publish Status** only when its collection's **Collection Mode** is `editorial`.
+- Publishing runs a **Publish Transition** first, then a **Site Deploy**.
 - The **Editorial Workspace** is optimized for desktop editorial work.
 - The **Editorial Workspace** shows the selected record in a **Record Editor Pane**.
 - A **CMS Collection** may define one **Title Field**.
-- The **Test Collection Set** provides mock CMS Collections through the mock CMS Data Adapter.
+- The **Test Collection Set** provides mock CMS Collections through the mock **CMS Backend**.
 
 ## Example dialogue
 
-> **Dev:** "When an editor opens a **CMS Collection**, should the fields come from app code or from Supabase?"
-> **Domain expert:** "From Supabase — each **CMS Collection** maps to a table the CMS can inspect and edit."
+> **Dev:** "When an editor opens a **CMS Collection**, should the fields come from app code or from the **Data Store**?"
+> **Domain expert:** "From configuration. Each **CMS Collection** maps to a table in the **Data Store**, but the fields shown in the editor are configured, not inspected."
 > **Dev:** "Can every table become a **CMS Collection** automatically?"
 > **Domain expert:** "No — a table must be listed in the **Collection Registry** first."
 > **Dev:** "Should the CMS infer every **Collection Field** from the database?"
 > **Domain expert:** "No — **Collection Fields** are configured so the editor shows the right controls."
 > **Dev:** "Is uploaded media managed as its own collection?"
 > **Domain expert:** "No — uploads are edited through an **Asset Field** on the record that needs the file."
-> **Dev:** "Do we need live Supabase credentials before building the CMS?"
-> **Domain expert:** "No — build against the **CMS Data Adapter** first, then replace the mock adapter with Supabase later."
+> **Dev:** "Do we need a live backend before building the CMS?"
+> **Domain expert:** "No, build against the **CMS Data Adapter** first. `VITE_CMS_BACKEND=mock` runs the whole editor with no backend at all, and switching to `rest` later doesn't change the editor code."
+> **Dev:** "Can I use plain Postgres?"
+> **Domain expert:** "Yes. Implement the **Data Store** interface for Postgres and register it in the **REST Bridge**. Nothing in the CMS or the **Collection Schema Package** changes."
+> **Dev:** "Where do uploads go if I use Cloudflare?"
+> **Domain expert:** "Wherever the **Blob Store** implementation puts them. Implement the interface for R2 and register it the same way. The **Asset Field** doesn't change."
 > **Dev:** "Does **Publish Status** mean we need a complete draft/version release system?"
 > **Domain expert:** "No — it is a lightweight status shown in the editor contract for now."
+> **Dev:** "If an editor clicks Publish, is the site live right away?"
+> **Domain expert:** "Not yet. Publish runs a **Publish Transition** in the **Data Store** first, then a **Site Deploy** rebuilds the static site. The CMS shows both steps as one flow."
 > **Dev:** "Should the CMS behave like a mobile-first app?"
 > **Domain expert:** "No — the **Editorial Workspace** follows Webflow-style desktop editorial density, with mobile as a fallback."
 > **Dev:** "Should selecting a record open a modal?"
@@ -87,13 +124,16 @@ _Avoid_: Production content, screenshot copy
 
 ## Flagged ambiguities
 
-- "collection" was used to mean both a UI section and a data source — resolved: a **CMS Collection** is a Supabase-backed editable table.
-- "generic" could mean exposing every Supabase table — resolved: generic editing is constrained by the **Collection Registry**.
+- "collection" was used to mean both a UI section and a data source. Resolved: a **CMS Collection** is an editable table backed by a **Data Store**.
+- "generic" could mean exposing every backing table. Resolved: generic editing is constrained by the **Collection Registry**.
+- "generic backend" could mean rewriting the CMS for every provider. Resolved: a generic backend means swapping the **Data Store** and/or **Blob Store** implementation behind the same server-side interface; the CMS and **REST Bridge** never change.
 - "field" could mean any database column — resolved: a **Collection Field** is an editor-facing field defined in collection config.
 - "asset" could mean a standalone library — resolved: an **Asset Field** is a field-level upload/reference control.
-- "mock data" means a temporary **CMS Data Adapter** implementation, not a different UI or data contract.
+- "mock data" means a temporary **CMS Backend** implementation (`VITE_CMS_BACKEND=mock`), not a different UI or data contract.
+- "publish" could mean just flipping a status or shipping the change live. Resolved: publish means a **Publish Transition** (queued to published, in the **Data Store**) followed by a **Site Deploy** (rebuilding the static site); the CMS runs both when an editor clicks Publish.
 - "publish workflow" means lightweight **Publish Status**, not full version history or scheduled release management.
 - "Figma-like" was used for the visual target — resolved: the intended reference is Webflow CMS, and the **Editorial Workspace** should be compact and desktop-first.
 - "same as screenshot" means a split-pane **Record Editor Pane**, not a modal or drawer.
 - "record title" is resolved by the **Title Field**, with fallback only for incomplete collection config.
 - "mock collections" should form a **Test Collection Set**, not pretend to be final production content.
+</content>
