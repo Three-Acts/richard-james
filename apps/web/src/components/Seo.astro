@@ -1,12 +1,13 @@
 ---
-import type { SiteWithUrl } from '@/content/types'
+import type { SeoContent, SiteWithUrl } from '@/content/types'
 import { abs } from '@/lib/structuredData'
 
 export interface Props {
-  /** Page title (the site name is appended automatically). */
+  /** Page title (the site name is appended automatically). Overridden by `seo.metaTitle`. */
   title?: string
+  /** Overridden by `seo.metaDescription`. */
   description?: string
-  /** Absolute-from-root image path, e.g. "/images/foo/01.avif". */
+  /** Absolute-from-root image path, or an absolute URL. Overridden by `seo.ogImage`. */
   image?: string
   /** Route path for canonical + og:url, e.g. "/projects/loss". */
   path?: string
@@ -17,6 +18,14 @@ export interface Props {
   noIndex?: boolean
   /** Resolved site content, supplied by Base.astro (not part of the page-level Props spread). */
   site: SiteWithUrl
+  /**
+   * Per-record SEO overrides from the content API (already resolved
+   * server-side with that record's own fallbacks — see `SeoContent` in
+   * `packages/cms-schema/src/content-contract.ts`). When set, its fields win
+   * over `title`/`description`/`image`; when a field is unset, the prop (then
+   * the site-level default) is used instead.
+   */
+  seo?: SeoContent
 }
 
 /**
@@ -33,20 +42,27 @@ const {
   jsonLd,
   noIndex,
   site,
+  seo,
 } = Astro.props
 
-const fullTitle = title ? `${title} — ${site.name}` : `${site.name} | ${site.tagline}`
-// Fall back to the site description when a page passes an empty/undefined one
-// (some works have no blurb) so no page ships a blank meta description.
-const desc = description?.trim() ? description : site.description
+const titleSource = seo?.metaTitle?.trim() || title
+const fullTitle = titleSource ? `${titleSource} — ${site.name}` : `${site.name} | ${site.tagline}`
+
+// Fall back through seo.metaDescription -> the page's own description -> the
+// site description, so no page ever ships a blank meta description.
+const descSource = seo?.metaDescription?.trim() || description?.trim()
+const desc = descSource || site.description
+
 const url = `${site.url}${path}`
+
 // Social scrapers (WhatsApp, Facebook, LinkedIn) don't decode AVIF, so the
-// shared card should stay a JPEG/PNG/WebP. Pages may override with `image`
-// (e.g. a project's hero); otherwise fall back to the site record's own
-// social image, then the bundled default. `abs()` passes an already-absolute
-// URL (e.g. a bucket URL from the API content source) through unchanged.
-const usingDefaultImage = !image
-const img = abs(site, image || site.ogImage || '/og-default.jpg')
+// shared card should stay a JPEG/PNG/WebP. seo.ogImage (CMS-set) wins, then
+// `image` (e.g. a project's hero, passed by the page), then the site
+// record's own social image, then the bundled default. `abs()` passes an
+// already-absolute URL (e.g. a bucket URL from the API) through unchanged.
+const ogImageSource = seo?.ogImage?.trim() || image
+const usingDefaultImage = !ogImageSource
+const img = abs(site, ogImageSource || site.ogImage || '/og-default.jpg')
 const imgAlt = `${site.name} — ${site.tagline}`
 const blocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
 ---

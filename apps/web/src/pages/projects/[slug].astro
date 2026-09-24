@@ -5,6 +5,7 @@ import ProjectMeta from '@/components/project/ProjectMeta.astro'
 import Gallery from '@/components/project/Gallery.astro'
 import ProjectPager from '@/components/project/ProjectPager.astro'
 import { getContentSource } from '@/content'
+import { stripMarkdownToText } from '@/content/markdown'
 import { withNavigation } from '@/content/projects'
 import { site as staticSite } from '@/data/site'
 import { artworkJsonLd, breadcrumbJsonLd } from '@/lib/structuredData'
@@ -39,19 +40,24 @@ const { project, index, total, next, prev } = Astro.props
 const source = await getContentSource()
 const siteContent = await source.getSite()
 const site = { ...siteContent, url: staticSite.url }
+
+// A plain-text fallback so every project page still ships a real meta
+// description even when the editor hasn't set one explicitly in project.seo.
+const plainDescription = stripMarkdownToText(project.description)
 ---
 
 <Base
   title={project.title}
-  description={project.metaDescription}
+  description={plainDescription}
   image={project.hero}
   path={`/projects/${project.slug}`}
   type="article"
+  seo={project.seo}
   jsonLd={[
     artworkJsonLd(
       {
         title: project.title,
-        description: project.description,
+        description: project.seo.metaDescription || plainDescription,
         image: project.hero,
         medium: project.medium,
         year: project.year,

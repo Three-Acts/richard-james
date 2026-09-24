@@ -1,6 +1,6 @@
 import type { PageContent, ProjectContent, SiteContent } from "@three-acts/cms-schema"
 
-export type { SiteContent, ProjectContent, ProjectImageContent, PageContent } from "@three-acts/cms-schema"
+export type { SiteContent, ProjectContent, ProjectImageContent, PageContent, SeoContent } from "@three-acts/cms-schema"
 
 /**
  * Read-only content backend for the site. `apps/web` reads through this
@@ -14,7 +14,7 @@ export type ContentSource = {
   getSite(): Promise<SiteContent>
   listProjects(): Promise<ProjectContent[]>
   getProject(slug: string): Promise<ProjectContent | null>
-  getPage(key: string): Promise<PageContent | null>
+  getPage(slug: string): Promise<PageContent | null>
 }
 
 /**

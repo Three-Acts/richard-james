@@ -3,23 +3,27 @@ import Base from '@/layouts/Base.astro'
 import Image from '@/components/ui/Image.astro'
 import Reveal from '@/components/ui/Reveal.astro'
 import { getContentSource } from '@/content'
-import { parsePageBody } from '@/content/body'
+import { renderMarkdown } from '@/content/markdown'
 import { site as staticSite } from '@/data/site'
 import { personJsonLd } from '@/lib/structuredData'
-
-// Portrait of the artist (the original site's About photo).
-const portrait = '/images/about/richard-james.avif'
 
 const source = await getContentSource()
 const [page, siteContent] = await Promise.all([source.getPage('about'), source.getSite()])
 if (!page) {
   throw new Error('Content source has no "about" page — run the API seed script or check API_ORIGIN.')
 }
-const aboutBlocks = parsePageBody(page.body)
+const bodyHtml = renderMarkdown(page.body)
 const site = { ...siteContent, url: staticSite.url }
 ---
 
-<Base title="About" path="/about" type="profile" jsonLd={personJsonLd(site)}>
+<Base
+  title={page.title}
+  path="/about"
+  type="profile"
+  jsonLd={personJsonLd(site)}
+  seo={page.seo}
+  image={page.image}
+>
   <section class="u-container pb-32 pt-[calc(var(--nav-h)+clamp(4rem,12vw,9rem))]">
     {/* Heading */}
     <Reveal as="header" class="max-w-3xl">
@@ -36,37 +40,32 @@ const site = { ...siteContent, url: staticSite.url }
     <div
       class="mt-20 grid grid-cols-1 gap-x-16 gap-y-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]"
     >
-      {/* Prose column */}
-      <div class="max-w-[42rem]">
-        {
-          aboutBlocks.map((block, i) => (
-            <Reveal as="p" class:list={[
-                'mt-6 text-[1.02rem] leading-[1.85] text-bone-dim [text-wrap:pretty] first:mt-0',
-                i === 0 &&
-                  'first-letter:float-left first-letter:mr-3 first-letter:mt-2 first-letter:font-display first-letter:text-[3.4rem] first-letter:leading-[0.72] first-letter:text-gold',
-              ]}
-            >
-              {block.text}
-            </Reveal>
-          ))
-        }
-      </div>
+      {/* Prose column — rendered from the API's markdown body. */}
+      <Reveal
+        as="div"
+        class="prose-body prose-dropcap max-w-[42rem] text-[1.02rem] text-bone-dim"
+        set:html={bodyHtml}
+      />
 
-      {/* Tall accent artwork */}
-      <Reveal delay={0.12} class="lg:sticky lg:top-[calc(var(--nav-h)+2.5rem)] lg:self-start">
-        <figure class="overflow-hidden bg-ink-soft">
-          <Image
-            src={portrait}
-            alt="Portrait of Richard James"
-            aspectRatio="4/5"
-            sizes="(min-width: 1024px) 22rem, 90vw"
-            class="h-full w-full"
-          />
-        </figure>
-        <figcaption class="mt-4 flex items-baseline justify-between gap-4">
-          <span class="u-display text-[0.8rem] text-bone-dim">Richard James</span>
-        </figcaption>
-      </Reveal>
+      {/* Tall accent artwork — hidden entirely when the page has no portrait set. */}
+      {
+        page.image && (
+          <Reveal delay={0.12} class="lg:sticky lg:top-[calc(var(--nav-h)+2.5rem)] lg:self-start">
+            <figure class="overflow-hidden bg-ink-soft">
+              <Image
+                src={page.image}
+                alt="Portrait of Richard James"
+                aspectRatio="4/5"
+                sizes="(min-width: 1024px) 22rem, 90vw"
+                class="h-full w-full"
+              />
+            </figure>
+            <figcaption class="mt-4 flex items-baseline justify-between gap-4">
+              <span class="u-display text-[0.8rem] text-bone-dim">Richard James</span>
+            </figcaption>
+          </Reveal>
+        )
+      }
     </div>
 
     {/* Contact CTA */}

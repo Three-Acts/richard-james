@@ -79,8 +79,8 @@ export function createApiContentSource(apiOrigin: string): ContentSource {
     async getProject(slug) {
       return request<ProjectContent>(apiOrigin, contentApiPaths.project(slug))
     },
-    async getPage(key) {
-      return request<PageContent>(apiOrigin, contentApiPaths.page(key))
+    async getPage(slug) {
+      return request<PageContent>(apiOrigin, contentApiPaths.page(slug))
     }
   }
 }

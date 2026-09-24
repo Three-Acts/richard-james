@@ -197,9 +197,109 @@ html.lenis body {
   .u-prose {
     max-width: 42rem;
   }
-  .u-prose p {
-    margin-block: 1.15em;
+
+  /*
+   * Markdown-rendered body copy (about/essay `page.body`, a project's
+   * `description` — see src/content/markdown.ts `renderMarkdown`, rendered
+   * with `set:html`). Structural rules only — text colour comes from
+   * whatever container this is nested in (e.g. text-bone vs text-bone-dim),
+   * matching how each page used the old per-block renderer.
+   */
+  .prose-body h1,
+  .prose-body h2,
+  .prose-body h3,
+  .prose-body h4 {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-bone);
+    text-wrap: balance;
+  }
+  .prose-body h1 {
+    font-size: clamp(2rem, 6vw, 3.75rem);
+    line-height: 1.06;
+  }
+  .prose-body h2 {
+    margin-top: 2.75rem;
+    font-size: 1.1rem;
+    line-height: 1.35;
+  }
+  .prose-body h3,
+  .prose-body h4 {
+    margin-top: 2rem;
+    font-size: 0.95rem;
+    letter-spacing: 0.06em;
     color: var(--color-bone-dim);
+  }
+  .prose-body p {
+    margin-top: 1.5rem;
+    line-height: 1.85;
+    text-wrap: pretty;
+  }
+  .prose-body > :first-child {
+    margin-top: 0;
+  }
+  .prose-body ul,
+  .prose-body ol {
+    margin-top: 1rem;
+    padding-left: 1.4rem;
+    font-size: 0.9em;
+    line-height: 1.7;
+    color: var(--color-muted);
+  }
+  .prose-body ul {
+    list-style: disc;
+  }
+  .prose-body ol {
+    list-style: decimal;
+  }
+  .prose-body li {
+    margin-top: 0.5rem;
+    padding-left: 0.35rem;
+  }
+  .prose-body li::marker {
+    color: var(--color-gold);
+  }
+  .prose-body blockquote {
+    margin: 1.5rem 0;
+    padding-left: 1.25rem;
+    border-left: 2px solid var(--color-line);
+    font-style: italic;
+    color: var(--color-bone-dim);
+  }
+  .prose-body strong {
+    color: var(--color-bone);
+    font-weight: 700;
+  }
+  .prose-body em {
+    font-style: italic;
+  }
+  .prose-body u {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+  .prose-body s,
+  .prose-body del {
+    text-decoration: line-through;
+  }
+  .prose-body a {
+    color: var(--color-gold-bright);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  .prose-body a:hover {
+    color: var(--color-gold);
+  }
+
+  /* Drop cap on the opening paragraph — about/essay only (combine with `.prose-body`). */
+  .prose-dropcap p:first-of-type::first-letter {
+    float: left;
+    margin-right: 0.75rem;
+    margin-top: 0.5rem;
+    font-family: var(--font-display);
+    font-size: 3.4rem;
+    line-height: 0.72;
+    color: var(--color-gold);
   }
 }
 

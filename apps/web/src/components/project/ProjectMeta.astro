@@ -1,5 +1,6 @@
 ---
 import type { ProjectContent } from "@/content/types";
+import { renderMarkdown } from "@/content/markdown";
 import Reveal from "@/components/ui/Reveal.astro";
 
 export interface Props {
@@ -8,19 +9,17 @@ export interface Props {
 
 /**
  * Refined meta block: a quiet two-column "Year / Medium" header rule, then the
- * work's "slide text" set in a centred reading column with generous space, and
- * an outlined link through to the long-form essay. Description may be empty for
- * some works — in that case the prose + essay link are simply omitted.
+ * work's "slide text" (markdown, rendered via renderMarkdown) set in a
+ * centred reading column with generous space, and an outlined link through to
+ * the long-form essay. Description may be empty for some works — in that case
+ * the prose + essay link are simply omitted.
  *
  * Ships no JavaScript.
  */
 const { project } = Astro.props;
 
 const hasText = project.description.trim().length > 0;
-const paragraphs = project.description
-  .split(/\n{2,}/)
-  .map((paragraph) => paragraph.trim())
-  .filter(Boolean);
+const descriptionHtml = hasText ? renderMarkdown(project.description) : "";
 ---
 
 <section class="u-container py-[clamp(4rem,12vh,9rem)]">
@@ -38,9 +37,7 @@ const paragraphs = project.description
       {
         hasText && (
           <dd class="space-y-4 text-bone">
-            {paragraphs.map((paragraph) => (
-              <p>{paragraph}</p>
-            ))}
+            <div class="prose-body" set:html={descriptionHtml} />
             <a
               href="/essay"
               class="block underline underline-offset-8 hover:text-gold-bright"

@@ -1,7 +1,7 @@
 import { createApiContentSource } from "./api-source"
 import type { ContentSource } from "./types"
 
-export type { ContentSource, PageContent, ProjectContent, ProjectImageContent, SiteContent } from "./types"
+export type { ContentSource, PageContent, ProjectContent, ProjectImageContent, SeoContent, SiteContent } from "./types"
 
 /**
  * Resolves the content source. The site has no local content anymore — every

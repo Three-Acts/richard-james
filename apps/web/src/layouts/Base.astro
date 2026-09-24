@@ -29,7 +29,7 @@ export interface Props extends Omit<SeoProps, 'site'> {
  * source of `nav`, `fonts` and the synchronous `url` (astro.config.mjs), none
  * of which are part of the published content contract.
  */
-const { transparentNav = false, showFooter = true, ...seo } = Astro.props
+const { transparentNav = false, showFooter = true, ...seoProps } = Astro.props
 
 const source = await getContentSource()
 const siteContent = await source.getSite()
@@ -70,7 +70,7 @@ const site = { ...siteContent, url: staticSite.url }
       document.documentElement.dataset.js = ''
     </script>
 
-    <Seo {...seo} site={site} />
+    <Seo {...seoProps} site={site} />
     <ClientRouter />
   </head>
 

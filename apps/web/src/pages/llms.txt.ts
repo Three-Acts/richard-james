@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { getContentSource } from '@/content'
-import { parsePageBody } from '@/content/body'
+import { stripMarkdownToText } from '@/content/markdown'
 import { site as staticSite } from '@/data/site'
 
 /**
@@ -22,11 +22,11 @@ export const GET: APIRoute = async () => {
   const oneLine = (s: string) => s.replace(/\s+/g, ' ').trim()
 
   const works = projects.map((p) => {
-    const detail = p.metaDescription?.trim() || [p.year, p.medium.split('\n')[0]].filter(Boolean).join(', ')
+    const detail = p.seo.metaDescription?.trim() || [p.year, p.medium.split('\n')[0]].filter(Boolean).join(', ')
     return `- [${p.title} (${p.year})](${site.url}/projects/${p.slug})${detail ? `: ${oneLine(detail)}` : ''}`
   })
 
-  const aboutBlocks = aboutPage ? parsePageBody(aboutPage.body) : []
+  const aboutText = aboutPage ? stripMarkdownToText(aboutPage.body) : ''
   const essayTitle = essayPage?.title ?? 'Essay'
 
   const text = [
@@ -49,7 +49,7 @@ export const GET: APIRoute = async () => {
     '',
     '## About',
     '',
-    ...aboutBlocks.map((b) => oneLine(b.text)),
+    aboutText,
     '',
   ].join('\n')
 

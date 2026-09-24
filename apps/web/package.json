@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "typecheck": "astro check",
     "test:gestures": "node scripts/test-carousel.ts",
-    "test:content": "node scripts/test-content-body.ts"
+    "test:content": "node scripts/test-markdown.ts"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.2",
@@ -19,14 +19,17 @@
     "astro": "^7.2.1",
     "gsap": "^3.12.5",
     "lenis": "^1.1.18",
+    "marked": "^16.4.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "sanitize-html": "^2.15.0",
     "tailwindcss": "^4.3.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/sanitize-html": "^2.15.0",
     "@vercel/config": "^0.5.5",
     "sharp": "^0.35.3",
     "vite": "^8.1.0"
