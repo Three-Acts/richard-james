@@ -6,13 +6,21 @@ import { cv } from "@three-acts/utils";
 
 /**
  * One focus treatment for every interactive surface. The offset keeps the ring
- * visible on filled controls, including the gold primary button.
+ * visible on filled controls, including the accent primary button.
  *
  * `outline-solid` is required: Tailwind v4's `outline-hidden`/`outline-none` set
  * `--tw-outline-style: none`, which silently suppresses a later `outline-2`.
  */
 export const focusRing =
   "outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-cms-accent";
+
+/**
+ * Same ring as `focusRing`, for a `<label>` standing in for a button around a
+ * visually hidden file input (`sr-only`): the input is what receives focus,
+ * not the label, so the ring keys off `:has(:focus-visible)` instead.
+ */
+export const fileLabelFocusRing =
+  "outline-hidden has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-cms-accent";
 
 /** Raised bevel for controls that sit above a panel (buttons, steppers). */
 export const controlShadow = "shadow-cms-control";
@@ -44,7 +52,7 @@ export const buttonVariants = cv({
   variants: {
     variant: {
       normal: [`bg-cms-surface text-cms-text hover:bg-cms-raised ${controlShadow}`],
-      // The signature: ink on gold. Gold means "you can act here".
+      // The signature: light text on the accent. The accent means "you can act here".
       primary: [`bg-cms-accent text-cms-accent-ink hover:bg-cms-accent-hover active:bg-cms-accent-press ${controlShadow}`],
       danger: [`bg-cms-danger text-cms-accent-ink hover:brightness-110 ${controlShadow}`],
       ghost: ["bg-transparent text-cms-muted hover:bg-cms-raised hover:text-cms-text"]
@@ -102,7 +110,7 @@ export const statusDotVariants = cv({
 });
 
 export const statusTextVariants = cv({
-  base: ["inline-flex max-w-full items-center gap-2 truncate text-ui"],
+  base: ["inline-flex min-w-0 max-w-full items-center gap-2 text-ui"],
   variants: {
     status: {
       published: ["text-cms-success"],

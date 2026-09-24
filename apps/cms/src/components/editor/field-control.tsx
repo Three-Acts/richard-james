@@ -2,8 +2,8 @@ import type { ChangeEvent } from "react";
 import { ExternalLink, Upload } from "lucide-react";
 import { cn } from "@three-acts/utils";
 import type { AssetField, CmsField, CmsRecord, CmsRecordValue, SelectField, SlugField } from "../../cms/types";
-import { buttonVariants, FormField, Input, inputVariants, NumberInput, Select, Textarea, Toggle } from "../atoms";
-import { formatDateTime, toDateTimeLocal } from "../../lib/format";
+import { buttonVariants, fileLabelFocusRing, FormField, Input, inputVariants, NumberInput, Select, Textarea, Toggle } from "../atoms";
+import { formatDateTime, fromDateTimeLocal, toDateTimeLocal } from "../../lib/format";
 
 type FieldControlProps = {
   field: CmsField;
@@ -48,7 +48,10 @@ export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, re
   const uploadId = `${record.id}-${field.key}`;
 
   if (field.type === "readonly") {
-    const shown = String(value || record.id);
+    // Only an identifier-shaped field (key contains "id") should fall back to
+    // the record id when empty; any other read-only field just reads as empty.
+    const isIdField = /id/i.test(field.key);
+    const shown = value ? String(value) : isIdField ? record.id : "—";
     // Mono is for identifiers, not for every read-only value — a `readonly` field
     // can just as easily hold a person's name.
     const isIdentifier = shown === record.id;
@@ -124,7 +127,7 @@ export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, re
           <div className={cn(inputVariants({ tone: "display" }), "overflow-hidden border-dashed border-cms-track")}>
             <span className={cn("truncate", fileValue && "font-mono")}>{fileValue || "No file selected"}</span>
           </div>
-          <label className={cn(buttonVariants({ variant: "normal" }), "cursor-pointer")}>
+          <label className={cn(buttonVariants({ variant: "normal" }), "cursor-pointer", fileLabelFocusRing)}>
             <Upload size={13} />
             {uploadingField === field.key ? "Uploading…" : "Upload"}
             <input
@@ -164,10 +167,12 @@ export function FieldControl({ field, onAssetUpload, onUpdateValue, readOnly, re
   return (
     <FormField description={field.helpText} label={field.label} required={field.required}>
       <Input
-        onChange={(event) => onUpdateValue(field.key, event.target.value)}
+        onChange={(event) =>
+          onUpdateValue(field.key, field.type === "datetime" ? fromDateTimeLocal(event.target.value) : event.target.value)
+        }
         required={field.required}
         type={field.type === "datetime" ? "datetime-local" : "text"}
-        value={field.type === "datetime" ? toDateTimeLocal(String(value)) : String(value)}
+        value={field.type === "datetime" ? toDateTimeLocal(String(value ?? "")) : String(value)}
       />
     </FormField>
   );

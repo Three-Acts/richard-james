@@ -27,14 +27,17 @@
   --color-cms-muted: #A8A8A7;
   --color-cms-subtle: #858585;
 
-  /* Gold carries every "you can act here" affordance. Text on it is ink, not
-   * white: white-on-gold is 2.2:1, ink-on-gold is 7.6:1. */
+  /* The accent carries every "you can act here" affordance. Text on it is
+   * white, not ink: ink-on-accent was 3.4:1 at rest / 2.3:1 pressed (fails
+   * WCAG AA's 4.5:1 for 11-12px text); white-on-accent is 5.1:1 at rest /
+   * 7.5:1 pressed. Hover is darkened from the original brand blue so white
+   * text still clears 4.5:1 against it. */
   --color-cms-accent: #2064EC;
-  --color-cms-accent-hover: #558FFF;
+  --color-cms-accent-hover: #2B6DF0;
   --color-cms-accent-press: #1E4FAF;
-  --color-cms-accent-ink: #1A1A19;
+  --color-cms-accent-ink: #FFFFFF;
 
-  /* Status hues stay clear of gold so state is never confused with action. */
+  /* Status hues stay clear of the accent so state is never confused with action. */
   --color-cms-success: #7fd3a0;
   --color-cms-pending: #9cc2e8;
   --color-cms-danger: #e4715c;

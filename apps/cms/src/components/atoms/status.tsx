@@ -15,7 +15,7 @@ export function StatusPill({ status }: { status: PublishStatus }) {
   return (
     <span className={statusTextVariants({ status })}>
       <StatusDot status={status} />
-      {statusLabels[status]}
+      <span className="min-w-0 truncate">{statusLabels[status]}</span>
     </span>
   );
 }

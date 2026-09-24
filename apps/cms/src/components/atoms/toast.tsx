@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { ReactNode } from "react";
 import { CheckCircle2, Info, Loader2, X, XCircle } from "lucide-react";
 import { Toast } from "@base-ui-components/react/toast";
@@ -103,13 +103,48 @@ function ToastList() {
 export function useToast(): ToastApi {
   // Base UI keeps add/update/close referentially stable, so the api below is too.
   const { add, close, update } = Toast.useToastManager();
+  // Base UI's `update()` only merges fields onto an existing toast — it never
+  // (re)schedules an auto-dismiss timer (those are only started in `add()`).
+  // Track our own timer per toast id so an updated toast still auto-dismisses.
+  const dismissTimersRef = useRef(new Map<string, number>());
 
-  return useMemo(
-    () => ({
+  useEffect(() => {
+    const dismissTimers = dismissTimersRef.current;
+
+    return () => {
+      dismissTimers.forEach((timer) => window.clearTimeout(timer));
+      dismissTimers.clear();
+    };
+  }, []);
+
+  return useMemo(() => {
+    const clearScheduledDismiss = (id: string) => {
+      const timer = dismissTimersRef.current.get(id);
+
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+        dismissTimersRef.current.delete(id);
+      }
+    };
+
+    return {
       push: (options) => add(toBaseOptions(options)),
-      update: (id, options) => update(id, toBaseOptions(options)),
-      dismiss: (id) => close(id)
-    }),
-    [add, close, update]
-  );
+      update: (id, options) => {
+        clearScheduledDismiss(id);
+        update(id, toBaseOptions(options));
+
+        if (options.duration && options.duration > 0) {
+          const timer = window.setTimeout(() => {
+            dismissTimersRef.current.delete(id);
+            close(id);
+          }, options.duration);
+          dismissTimersRef.current.set(id, timer);
+        }
+      },
+      dismiss: (id) => {
+        clearScheduledDismiss(id);
+        close(id);
+      }
+    };
+  }, [add, close, update]);
 }

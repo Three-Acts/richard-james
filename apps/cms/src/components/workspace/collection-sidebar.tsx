@@ -34,8 +34,8 @@ export function CollectionSidebar({ activeCollectionId, groups, isLoading, onSel
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "grid h-7 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-cms px-2 text-left text-ui transition-colors",
-                    // Gold is reserved for actions, so location is carried by fill
-                    // and weight instead.
+                    // The accent is reserved for actions, so location is carried by
+                    // fill and weight instead.
                     active ? "bg-cms-raised font-medium text-cms-text" : "text-cms-muted hover:bg-cms-surface hover:text-cms-text",
                     focusRing
                   )}

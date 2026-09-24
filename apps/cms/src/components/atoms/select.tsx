@@ -18,7 +18,17 @@ export function Select({ className, onValueChange, options, value }: SelectProps
     <BaseSelect.Root items={options} onValueChange={(next) => onValueChange((next as string) ?? "")} value={value}>
       <BaseSelect.Trigger className={cn(inputVariants(), "flex items-center justify-between gap-2 text-left", className)}>
         <BaseSelect.Value className="truncate">
-          {(selected: string) => options.find((option) => option.value === selected)?.label ?? ""}
+          {(selected: string) => {
+            const match = options.find((option) => option.value === selected);
+
+            if (match) {
+              return match.label;
+            }
+
+            // A value the option list doesn't know about (e.g. imported data)
+            // still needs to be visible, rather than rendering an empty trigger.
+            return selected ? <span className="text-cms-subtle">{selected}</span> : "";
+          }}
         </BaseSelect.Value>
         <BaseSelect.Icon className="shrink-0 text-cms-subtle">
           <ChevronsUpDown size={13} />
@@ -27,10 +37,13 @@ export function Select({ className, onValueChange, options, value }: SelectProps
       <BaseSelect.Portal>
         <BaseSelect.Positioner className="z-60 outline-none" sideOffset={4}>
           <BaseSelect.Popup className={cn(popupClass, "max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-auto p-1 text-field")}>
-            {options.map((option) => (
+            {options.map((option, index) => (
               <BaseSelect.Item
                 className="flex cursor-default items-center justify-between gap-2 rounded-cms-sm px-2 py-1.5 outline-none data-[highlighted]:bg-cms-raised"
-                key={option.value}
+                // Index-qualified: callers can't always guarantee unique, non-empty
+                // values (an ignore sentinel, a blank header), so `value` alone
+                // can't be trusted as a React key.
+                key={`${index}-${option.value}`}
                 value={option.value}
               >
                 <BaseSelect.ItemText className="truncate">{option.label}</BaseSelect.ItemText>

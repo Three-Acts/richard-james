@@ -22,6 +22,7 @@ export {
   buttonVariants,
   controlShadow,
   eyebrowClass,
+  fileLabelFocusRing,
   focusRing,
   iconButtonVariants,
   inputVariants,

@@ -5,6 +5,8 @@ import { cn } from "@three-acts/utils";
 import { wellShadow } from "./styles";
 
 type SearchInputProps = {
+  /** Accessible name for the input; the placeholder alone isn't exposed to AT. */
+  ariaLabel?: string;
   className?: string;
   /** Compose the inner input with a Base UI part, e.g. `<Toolbar.Input />`. */
   inputRender?: ReactElement<Record<string, unknown>>;
@@ -13,7 +15,7 @@ type SearchInputProps = {
   value: string;
 };
 
-export function SearchInput({ className, inputRender, onChange, placeholder, value }: SearchInputProps) {
+export function SearchInput({ ariaLabel = "Search records", className, inputRender, onChange, placeholder, value }: SearchInputProps) {
   return (
     <label
       className={cn(
@@ -26,10 +28,12 @@ export function SearchInput({ className, inputRender, onChange, placeholder, val
     >
       <Search size={14} aria-hidden="true" />
       <BaseInput
+        aria-label={ariaLabel}
         className="min-w-0 flex-1 bg-transparent text-ui text-cms-text outline-none placeholder:text-cms-subtle"
         onValueChange={(next) => onChange(next)}
         placeholder={placeholder}
         render={inputRender}
+        type="search"
         value={value}
       />
     </label>

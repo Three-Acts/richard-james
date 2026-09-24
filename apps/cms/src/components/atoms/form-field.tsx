@@ -24,7 +24,7 @@ export function FormField({ children, className, description, htmlFor, label, re
     <Field.Root className={cn("mb-4 grid gap-1.5 last:mb-0", className)} validationMode="onBlur">
       <Field.Label className="flex items-center gap-1 text-ui font-medium text-cms-muted" htmlFor={htmlFor}>
         {label}
-        {/* Gold is reserved for actions, so "you must fill this in" borrows the danger hue. */}
+        {/* The accent is reserved for actions, so "you must fill this in" borrows the danger hue. */}
         {required ? (
           <span aria-hidden="true" className="text-cms-danger">
             *

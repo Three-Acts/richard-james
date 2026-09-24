@@ -14,9 +14,11 @@ type ConfirmDialogProps = {
 
 /**
  * Base UI AlertDialog for destructive confirmations. Unlike `Modal` (Dialog) it
- * traps focus on the confirm action and cannot be dismissed by clicking away,
- * so a delete is always an explicit choice. This is the only place a solid
- * danger fill appears — the weight belongs at the point of no return.
+ * traps focus inside the popup and cannot be dismissed by clicking away, so a
+ * delete is always an explicit choice. No `initialFocus` override is set, so
+ * Base UI's default lands focus on the first focusable control — Cancel, not
+ * the danger button. This is the only place a solid danger fill appears — the
+ * weight belongs at the point of no return.
  */
 export function ConfirmDialog({ confirmLabel = "Delete", description, onConfirm, onOpenChange, open, title }: ConfirmDialogProps) {
   return (
