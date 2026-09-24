@@ -58,14 +58,15 @@ See **Local dev setup** below for the env files `npm run dev` needs.
 
 There is no mock/offline mode anywhere in this stack — the CMS always talks to the real
 REST + auth bridges, and `apps/web` always reads live content from `apps/api`. Local dev
-needs a repo-root `.env.local` (generated, not hand-written) plus three small per-app
+needs an `apps/api/.env.local` (generated, not hand-written) plus three small per-app
 `.env` files (hand-written once, gitignored):
 
-1. Link the repo to the Neon project (see **Neon setup** below) so `neon link` writes a
-   repo-root `.env.local` with the live `DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
-   `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, and `AWS_*` values. `apps/api`'s dev
-   server, and its `db:migrate`/`db:seed`/`auth:create-editor` scripts, load this file
-   automatically — never create or edit it by hand.
+1. Link the repo to the Neon project and pull its env (see **Neon setup** below) so
+   `neon env pull --file apps/api/.env.local` writes `apps/api/.env.local` with the live
+   `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`,
+   and `AWS_*` values. `apps/api`'s dev server, and its
+   `db:migrate`/`db:seed`/`auth:create-editor` scripts, load this file automatically —
+   never create or edit it by hand.
 2. Create `apps/api/.env`:
 
    ```sh
@@ -88,7 +89,7 @@ needs a repo-root `.env.local` (generated, not hand-written) plus three small pe
 
 5. `npm run dev` (or `dev:web`/`dev:cms`/`dev:api` individually).
 
-All three `.env` files (and the root `.env.local`) are covered by `.gitignore`'s `.env`
+All three `.env` files (and `apps/api/.env.local`) are covered by `.gitignore`'s `.env`
 and `*.local` rules — never commit any of them. Each app also ships an `*.env.example`
 with the same keys and comments for reference.
 
@@ -100,8 +101,9 @@ project and is provisioned by the Neon CLI, not by hand:
 ```sh
 npm install -g neonctl                 # or: brew install neonctl
 neon login
-neon link --project-id winter-tooth-70046024 --branch production -y
-neon deploy                            # applies neon.ts (auth + the "public" bucket)
+neon link --project-id winter-tooth-70046024 --branch production -y --no-env-pull
+neon deploy --no-env-pull              # applies neon.ts (auth + the "public" bucket)
+neon env pull --file apps/api/.env.local
 npm run db:migrate -w @three-acts/api  # creates tables from the collection registry
 npm run db:seed -w @three-acts/api -- --dry-run   # preview: no writes, no uploads
 npm run db:seed -w @three-acts/api                # uploads images + inserts content
@@ -113,10 +115,17 @@ neon neon-auth domain add https://your-cms.vercel.app
 
 Notes:
 
-- `neon link` and `neon deploy` both write the linked branch's live env vars
-  (`DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`,
-  `AWS_*`) to a repo-root `.env.local`. That file is gitignored (`*.local`) — never
-  commit it.
+- `.neon` and `neon.ts` stay at the repo root, and every `neon` command above is run
+  from the repo root (the Neon CLI finds `.neon` by walking up from `cwd`, so this
+  works regardless of which directory a command targets). `neon link` and `neon deploy`
+  would otherwise auto-pull the linked branch's env into a root `.env.local`;
+  `--no-env-pull` on both stops that. `neon env pull --file apps/api/.env.local`
+  instead writes the branch's live env vars (`DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
+  `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `AWS_*`) straight to
+  `apps/api/.env.local`, updating only Neon-managed keys and preserving any other
+  lines already there. That file is gitignored (`*.local`) — never commit it. Re-run
+  `neon env pull --file apps/api/.env.local` whenever the branch's credentials change
+  (e.g. after a credential rotation or connecting a different branch).
 - `db:migrate` runs the generated schema SQL over `DATABASE_URL_UNPOOLED` (a direct
   connection; DDL doesn't work over the pooled/PgBouncer `DATABASE_URL`). It's
   idempotent, so re-running it is safe.
@@ -431,7 +440,7 @@ directory:
 | --- | --- | --- | --- |
 | web | `apps/web` | Astro | `VITE_SITE_URL`, `API_ORIGIN` (required — no local content fallback) |
 | cms | `apps/cms` | Vite | `API_ORIGIN` (optionally `VITE_API_URL`) |
-| api | `apps/api` | Other/Node (Vercel Functions) | `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_ORIGIN`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, optionally `PUBLISH_TOKEN` and `API_ALLOWED_ORIGINS` |
+| api | `apps/api` | Other/Node (Vercel Functions) | `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_ORIGIN`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, optionally `PUBLISH_TOKEN` and `API_ALLOWED_ORIGINS` (`DATABASE_URL_UNPOOLED` is only used by the local `db:migrate` script, so it isn't needed on Vercel) |
 
 `web` and `cms` each set `API_ORIGIN` to the deployed `api` project's URL; their
 `vercel.ts` files then rewrite `/api/(.*)` to `${API_ORIGIN}/api/$1` at the edge (a
