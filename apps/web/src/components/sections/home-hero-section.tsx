@@ -13,10 +13,10 @@ const dashboardSteps = ["Positioning above the fold", "Proof before pricing", "C
 
 export function HomeHeroSection() {
   return (
-    <Section.Container className="grid min-h-[calc(100vh-88px)] items-center gap-10 pb-14 pt-6 tablet:grid-cols-[1.05fr_0.95fr]">
+    <Section.Container className="grid min-h-hero items-center gap-10 pb-14 pt-6 tablet:grid-cols-hero">
       <div>
         <Typography.Eyebrow className="mb-5">Marketing site system</Typography.Eyebrow>
-        <h1 className="max-w-3xl text-5xl font-semibold leading-[0.95] tracking-tight text-black landscape:text-7xl">
+        <h1 className="max-w-3xl text-5xl font-semibold leading-display tracking-tight text-black landscape:text-7xl">
           Static pages built to sell the launch before the demo call.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-700">
@@ -34,16 +34,16 @@ export function HomeHeroSection() {
           ))}
         </dl>
       </div>
-      <div className="relative min-h-[460px] overflow-hidden border border-black bg-black p-6 text-white">
+      <div className="relative min-h-115 overflow-hidden border border-black bg-black p-6 text-white">
         <div className="absolute inset-x-8 top-8 h-2 bg-white" />
         <div className="pt-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-white">Campaign dashboard</p>
+          <p className="text-sm font-semibold uppercase tracking-eyebrow text-white">Campaign dashboard</p>
           <p className="mt-4 text-5xl font-semibold leading-none tracking-tight">42 qualified leads</p>
           <p className="mt-3 text-neutral-300">Projected from three static landing pages and a single conversion path.</p>
         </div>
         <div className="mt-10 grid gap-4">
           {dashboardSteps.map((item, index) => (
-            <div key={item} className="grid grid-cols-[44px_1fr] items-center gap-4 border border-white p-4">
+            <div key={item} className="grid grid-cols-check items-center gap-4 border border-white p-4">
               <span className="grid size-11 place-items-center border border-white bg-white text-xl font-semibold text-black">{index + 1}</span>
               <span className="font-semibold">{item}</span>
             </div>

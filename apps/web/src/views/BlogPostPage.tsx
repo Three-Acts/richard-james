@@ -10,12 +10,12 @@ export function BlogPostPage({ post }: { post: ContentEntry }) {
   return (
     <Section.Root className="py-20">
       <Section.Container className="max-w-3xl">
-        <a className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral-500 hover:text-black" href="/blog">
+        <a className="text-sm font-semibold uppercase tracking-eyebrow text-neutral-500 hover:text-black" href="/blog">
           &larr; Blog
         </a>
         <article className="mt-6">
           <header>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+            <p className="text-xs font-semibold uppercase tracking-eyebrow text-neutral-500">
               {formatDate(post.publishedAt)}
               {post.author ? ` · ${post.author}` : ""}
             </p>
@@ -44,7 +44,7 @@ export function BlogPostPage({ post }: { post: ContentEntry }) {
           {post.tags?.length ? (
             <ul className="mt-10 flex flex-wrap gap-2">
               {post.tags.map((tag) => (
-                <li key={tag} className="border border-black px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
+                <li key={tag} className="border border-black px-3 py-1 text-xs font-semibold uppercase tracking-eyebrow">
                   {tag}
                 </li>
               ))}

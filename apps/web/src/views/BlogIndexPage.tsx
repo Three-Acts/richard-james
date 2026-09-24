@@ -20,7 +20,7 @@ export function BlogIndexPage({ posts }: { posts: ContentEntry[] }) {
           {posts.map((post) => (
             <li key={post.slug} className="bg-white">
               <a className="flex flex-col gap-2 p-6 transition hover:bg-black hover:text-white" href={`/blog/${post.slug}`}>
-                <span className="text-xs font-semibold uppercase tracking-[0.14em]">{formatDate(post.publishedAt)}</span>
+                <span className="text-xs font-semibold uppercase tracking-eyebrow">{formatDate(post.publishedAt)}</span>
                 <span className="text-2xl font-semibold tracking-tight">{post.title}</span>
                 <span className="max-w-2xl text-base leading-7 opacity-80">{post.excerpt}</span>
               </a>

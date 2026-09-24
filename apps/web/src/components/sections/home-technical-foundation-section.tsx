@@ -19,7 +19,7 @@ export function HomeTechnicalFoundationSection() {
   return (
     <Section.Root id="pipeline" className="border-y border-black bg-black text-white">
       <Section.Container>
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-white">Technical foundation</p>
+        <p className="text-sm font-semibold uppercase tracking-eyebrow text-white">Technical foundation</p>
         <h2 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight landscape:text-5xl">Marketing polish without giving up static performance.</h2>
         <div className="mt-10 grid gap-6 landscape:grid-cols-3">
           {foundationItems.map((item, index) => (

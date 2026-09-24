@@ -23,14 +23,14 @@ const conversionSteps = [
 export function HomeConversionPathSection() {
   return (
     <Section.Root>
-      <Section.Container className="grid gap-10 tablet:grid-cols-[0.8fr_1.2fr]">
+      <Section.Container className="grid gap-10 tablet:grid-cols-path">
         <div>
           <Typography.Eyebrow>Conversion path</Typography.Eyebrow>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight landscape:text-5xl">Every section has a job.</h2>
         </div>
         <div className="grid gap-4">
           {conversionSteps.map((step, index) => (
-            <div key={step.title} className="grid grid-cols-[72px_1fr] gap-5 border border-black bg-white p-5">
+            <div key={step.title} className="grid grid-cols-step gap-5 border border-black bg-white p-5">
               <span className="text-4xl font-semibold tracking-tight text-black">0{index + 1}</span>
               <div>
                 <h3 className="text-2xl font-semibold tracking-tight">{step.title}</h3>
