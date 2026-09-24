@@ -32,6 +32,14 @@ _Avoid_: HTML field, raw markdown textarea, a second content format alongside ma
 A Collection Field that uploads a file to the Blob Store and stores the file reference on the record.
 _Avoid_: Asset library, media collection
 
+**Image Optimisation**:
+The browser-side pass every picked/dropped raster image goes through before it's staged as a Pending Upload: downscaled to a maximum long edge, re-encoded to AVIF (falling back to WebP, then the original file), SVGs left untouched. Keeps the Blob Store's images small without any server-side image processing.
+_Avoid_: Server-side resizing, a build step, lossless conversion
+
+**Pending Upload**:
+A file an editor has picked or dropped that is staged as a local `blob:` preview in the draft, not yet sent to the Blob Store. It uploads only when the editor saves the record; discarding the draft instead drops it, so nothing is ever uploaded — and nothing orphaned — for a save that never happens.
+_Avoid_: Upload on drop, a temporary Blob Store object
+
 **CMS Data Adapter**:
 The interface the CMS uses to list, read, create, save, delete, and import collection records, and to run the Publish Transition. Asset uploads go through the CMS Backend's storage side instead.
 _Avoid_: REST client, direct database access
@@ -118,6 +126,7 @@ _Avoid_: Inferred name, display guess
 - The **Collection Registry** defines which backing tables appear as **CMS Collections**.
 - A **CMS Collection** has one or more **Collection Fields**.
 - An **Asset Field** belongs to exactly one **CMS Collection** field configuration.
+- A file for an **Asset Field** or **Gallery Field** goes through **Image Optimisation** and becomes a **Pending Upload** before it reaches the **Blob Store** on save.
 - A **Reference Field** belongs to exactly one **CMS Collection** field configuration and names the **CMS Collection** its value points into.
 - A **Gallery Field** belongs to exactly one **CMS Collection** field configuration; its items are stored on that record, not as records of another **CMS Collection**.
 - The **CMS Backend**'s data adapter provides records, and its storage adapter provides asset uploads through the **Blob Store**, for each **CMS Collection**.
@@ -145,6 +154,8 @@ _Avoid_: Inferred name, display guess
 > **Domain expert:** "No — **Collection Fields** are configured so the editor shows the right controls."
 > **Dev:** "Is uploaded media managed as its own collection?"
 > **Domain expert:** "No — uploads are edited through an **Asset Field** on the record that needs the file."
+> **Dev:** "If I drop a huge photo straight off my phone into a Gallery Field, does that upload immediately?"
+> **Domain expert:** "It's optimised in your browser first — **Image Optimisation** shrinks and re-encodes it — then it sits as a **Pending Upload** until you save. Nothing touches the Blob Store until then, so an abandoned edit never leaves an orphaned file behind."
 > **Dev:** "Can I run the CMS locally with no backend at all, like a mock mode?"
 > **Domain expert:** "No — that was removed. The CMS always talks to the real **REST Bridge** and Neon Auth, in every environment including local dev. What's left of that flexibility is architectural: the **CMS Backend** and **AuthClient** are still named interfaces, so a second implementation is possible, but nothing in the shipped CMS lets you switch to one at runtime."
 > **Dev:** "Can I use plain Postgres?"

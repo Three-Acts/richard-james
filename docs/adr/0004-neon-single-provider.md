@@ -106,6 +106,17 @@ a single Neon project (`winter-tooth-70046024`, branch `production`).
   were removed rather than kept unused; the site's Contact page is a static mailto/tel
   index with nothing to submit. Re-adding a form later means restoring both sides
   together, not just the endpoint.
+- **Images are optimised client-side, not server-side.** `apps/cms/src/lib/optimize-image.ts`
+  downscales and re-encodes to AVIF (via a lazy-loaded WASM encoder, falling back to
+  canvas AVIF/WebP/original; SVGs skipped) in the editor's browser before upload, and
+  the 4MB upload limit is enforced on the optimised result. Chosen over a server-side
+  image pipeline so `apps/api` stays a thin data/auth/storage gateway with no
+  image-processing dependency, cost, or latency of its own.
+- **Uploads happen on Save, not on drop.** A picked file is staged as a local `blob:`
+  preview immediately, but only actually uploaded (concurrency 3) right before the
+  record is saved; Discard uploads nothing. Chosen so an editor who picks a file and
+  then abandons the edit never leaves an orphaned object in the Blob Store with no
+  record pointing at it.
 
 ## Alternatives considered
 

@@ -198,6 +198,26 @@ Run `npm run schema:sql -w @three-acts/api` to print the `CREATE TABLE` SQL gene
 from the collection registry, so any Postgres-compatible database can be provisioned
 from the same schema the CMS renders.
 
+### Image uploads
+
+Two things happen before an Asset/Gallery upload ever reaches the Blob Store:
+
+- **Client-side optimisation** (`apps/cms/src/lib/optimize-image.ts`). Every picked/
+  dropped raster image is decoded in the browser, downscaled so its long edge is at
+  most 1920px, and re-encoded to AVIF with `@jsquash/avif` (a WASM encoder, lazy-loaded
+  so it's not in the CMS's main bundle). If that encoder is unavailable it falls back to
+  a canvas-based AVIF encode, then canvas WebP, then the original file untouched. SVGs
+  are never touched. The optimised file must still fit the 4MB upload limit -
+  optimisation runs first, so what actually gets uploaded (and counted against the
+  limit) is the smaller file, not the original.
+- **Upload on Save, not on drop.** A newly picked file is staged immediately as a local
+  `blob:` object URL in the editor's draft - so the preview appears instantly - without
+  touching the network. Uploads (concurrency 3, same as the optimisation step) only run
+  when the editor clicks Save, right before the record itself is written; each `blob:`
+  URL is then replaced with the real bucket URL the upload returned. Clicking Discard
+  instead just revokes the local `blob:` URLs and reloads the record - nothing was ever
+  uploaded, so there's nothing orphaned in the bucket to clean up.
+
 ### Auth: Neon Auth, not a JWT
 
 Neon Auth is managed Better Auth, reached by `apps/api` over plain REST at
@@ -311,9 +331,12 @@ Content is authored in the CMS across three collections (`packages/cms-schema/sr
   the site. The slug field renders as a link to the page's live URL, same as on
   Projects.
 - **Site Settings** (`data` mode, `singleton: true`) - exactly one record: name,
-  tagline, location, email, phone, description, and an optional social image. No list
-  view - opening the collection opens its one record directly as a form, with no
-  New/Delete controls. The site always reads the most recently modified record.
+  tagline, location, email, phone, description, and an optional social image. There is
+  no separate phone-link field - the content API derives the `tel:` link from the phone
+  number (`derivePhoneHref` in `apps/api/api/_lib/content.ts`), so editors only ever
+  maintain the one phone value. No list view - opening the collection opens its one
+  record directly as a form, with no New/Delete controls. The site always reads the
+  most recently modified record.
 
 Two collections that existed earlier in this migration are gone: **Project Images**
 (folded into the `gallery` field - see [ADR 0004](docs/adr/0004-neon-single-provider.md))
