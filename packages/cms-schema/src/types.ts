@@ -9,7 +9,7 @@ export type PublishStatus = "published" | "not_published" | "queued_to_publish";
  */
 export type CollectionMode = "editorial" | "data" | "readonly";
 
-export type FieldType = "text" | "slug" | "textarea" | "number" | "boolean" | "select" | "datetime" | "asset" | "readonly";
+export type FieldType = "text" | "slug" | "textarea" | "number" | "boolean" | "select" | "datetime" | "asset" | "reference" | "gallery" | "readonly";
 
 export type CmsRecordValue = string | number | boolean | null | undefined;
 
@@ -39,7 +39,7 @@ type FieldBase<TType extends FieldType> = {
   column?: string;
 };
 
-export type PrimitiveField = FieldBase<Exclude<FieldType, "select" | "slug" | "asset">>;
+export type PrimitiveField = FieldBase<Exclude<FieldType, "select" | "slug" | "asset" | "reference" | "gallery">>;
 
 export type SelectField = FieldBase<"select"> & {
   type: "select";
@@ -57,13 +57,42 @@ export type AssetField = FieldBase<"asset"> & {
   accept?: string;
 };
 
-export type CmsField = PrimitiveField | SelectField | SlugField | AssetField;
+/**
+ * A reference to a record in another collection. Stored as text: the
+ * referenced record's id. The CMS editor renders it as a select populated
+ * with the referenced collection's records, labelled by that collection's
+ * `titleField`.
+ */
+export type ReferenceField = FieldBase<"reference"> & {
+  type: "reference";
+  /** id of the collection whose records can be referenced */
+  collection: string;
+};
+
+/**
+ * An ordered list of uploaded images stored on the record itself as a JSON
+ * string: `GalleryItem[]` where `GalleryItem = { src: string; caption?: string }`.
+ * The editor renders a multi-file drop zone with a thumbnail grid (reorder,
+ * remove, optional caption); each file is uploaded through the asset upload
+ * route into `bucket`.
+ */
+export type GalleryField = FieldBase<"gallery"> & {
+  type: "gallery";
+  bucket: string;
+  accept?: string;
+  /** Max items; default 200. */
+  maxItems?: number;
+};
+
+export type GalleryItem = { src: string; caption?: string };
+
+export type CmsField = PrimitiveField | SelectField | SlugField | AssetField | ReferenceField | GalleryField;
 
 export type ListColumn = {
   key: string;
   label: string;
   width?: string;
-  valueType?: "text" | "status" | "datetime" | "boolean" | "asset";
+  valueType?: "text" | "status" | "datetime" | "boolean" | "asset" | "reference" | "gallery";
 };
 
 export type CmsCollection = {
@@ -103,7 +132,7 @@ export type AssetUploadResult = {
 export type ListRecordsOptions = {
   search?: string;
   sort?: { key: string; direction: "asc" | "desc" };
-  /** Page size. Omit to return every record (mock/dev only). */
+  /** Page size. Omit to return every record (scripts only). */
   limit?: number;
   offset?: number;
 };
