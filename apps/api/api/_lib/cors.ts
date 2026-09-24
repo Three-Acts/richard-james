@@ -4,7 +4,10 @@ const defaultAllowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   "http://127.0.0.1:5173",
-  "http://127.0.0.1:5174"
+  "http://127.0.0.1:5174",
+  "http://localhost:4321",
+  "http://127.0.0.1:4321",
+  "http://localhost:4173"
 ];
 
 const getAllowedOrigins = () => {
@@ -25,9 +28,13 @@ export const applyCors = (
     origin &&
     (allowedOrigins.includes("*") || allowedOrigins.includes(origin));
 
+  // Always vary on Origin, even when we don't allow it: the response differs
+  // by origin, so caches must not conflate an allowed origin's response with
+  // a rejected one's.
+  response.setHeader("Vary", "Origin");
+
   if (isAllowedOrigin) {
     response.setHeader("Access-Control-Allow-Origin", origin);
-    response.setHeader("Vary", "Origin");
   }
 
   response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
@@ -41,6 +48,7 @@ export const handleOptions = (
   applyCors(request, response);
 
   if (request.method === "OPTIONS") {
+    response.setHeader("Access-Control-Max-Age", "600");
     response.status(204).end();
     return true;
   }

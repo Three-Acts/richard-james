@@ -1,11 +1,15 @@
 import { ok, withApi } from "./_lib/http";
+import { requireAuth } from "./_lib/auth";
 import { triggerDeploy } from "./_lib/vercel";
 
 /**
  * POST /api/deploy — trigger a Vercel deploy hook to rebuild the static site
- * after content is published. Returns the initial job/state; poll
- * /api/deploy-status for progress.
+ * after content is published. Requires publish auth (see `requireAuth`).
+ * Returns the initial job/state plus a baseline deployment id and trigger
+ * timestamp; poll /api/deploy-status?after=<baselineDeploymentId>&since=<triggeredAt>
+ * for progress on the deployment this call started specifically.
  */
-export default withApi(["POST"], async (_request, response) => {
+export default withApi(["POST"], async (request, response) => {
+  requireAuth(request);
   ok(response, await triggerDeploy());
 });
