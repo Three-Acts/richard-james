@@ -1,9 +1,12 @@
 // Minimal dependency-free CSV parse/serialize. Handles quoted fields,
 // embedded commas/newlines, and escaped double-quotes ("").
 
+const BOM = "﻿";
+
 export type CsvTable = {
   headers: string[];
   rows: Array<Record<string, string>>;
+  warnings: string[];
 };
 
 function parseRows(text: string): string[][] {
@@ -53,33 +56,64 @@ function parseRows(text: string): string[][] {
   return rows;
 }
 
+/** De-dupes and names headers so no two columns collide when built into a row object. */
+function normalizeHeaders(rawHeaders: string[]): string[] {
+  const seen = new Map<string, number>();
+
+  return rawHeaders.map((rawHeader, index) => {
+    const trimmed = rawHeader.trim();
+    const base = trimmed || `Column ${index + 1}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+
+    return count === 0 ? base : `${base} (${count + 1})`;
+  });
+}
+
 export function parseCsv(text: string): CsvTable {
-  const records = parseRows(text);
+  const withoutBom = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  const records = parseRows(withoutBom);
 
   if (records.length === 0) {
-    return { headers: [], rows: [] };
+    return { headers: [], rows: [], warnings: [] };
   }
 
-  const headers = records[0].map((header) => header.trim());
+  const headers = normalizeHeaders(records[0]);
+  const warnings: string[] = [];
   const rows = records
     .slice(1)
     .filter((cells) => cells.some((cell) => cell.trim() !== ""))
-    .map((cells) => {
+    .map((cells, index) => {
+      if (cells.length > headers.length) {
+        warnings.push(`Row ${index + 2} has ${cells.length} cells but there are only ${headers.length} columns; extra cells were ignored.`);
+      }
+
       const row: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        row[header] = cells[index] ?? "";
+      headers.forEach((header, headerIndex) => {
+        row[header] = cells[headerIndex] ?? "";
       });
       return row;
     });
 
-  return { headers, rows };
+  return { headers, rows, warnings };
 }
+
+const RISKY_PREFIX = /^[=+\-@\t\r]/;
 
 export function escapeCsvCell(value: unknown): string {
+  if (typeof value === "number") {
+    return String(value);
+  }
+
   const text = value === null || value === undefined ? "" : String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  // Neutralize formula injection: a leading =, +, -, @, tab, or CR would be
+  // interpreted as a formula by Excel/Sheets when the cell is opened.
+  const safe = RISKY_PREFIX.test(text) ? `'${text}` : text;
+
+  return /["\r\n,]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
-export function toCsv(headers: string[], rows: string[][]): string {
-  return [headers, ...rows].map((cells) => cells.map(escapeCsvCell).join(",")).join("\n");
+export function toCsv(headers: string[], rows: unknown[][]): string {
+  const body = [headers, ...rows].map((cells) => cells.map(escapeCsvCell).join(",")).join("\n");
+  return `${BOM}${body}`;
 }

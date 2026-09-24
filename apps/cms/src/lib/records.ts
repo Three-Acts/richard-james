@@ -2,7 +2,9 @@ import type { CmsCollection, CmsCollectionSummary, CmsRecord, CollectionMode } f
 
 export function getRecordTitle(collection: CmsCollectionSummary, record: CmsRecord) {
   const titleKey = collection.titleField ?? "name";
-  const fallback = record.values.name || record.values.title || record.id;
+  // A brand-new or imported record can have an empty title; show a readable
+  // placeholder rather than a blank cell or a raw UUID.
+  const fallback = record.values.name || record.values.title || "Untitled";
 
   return String(record.values[titleKey] || fallback);
 }
