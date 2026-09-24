@@ -65,12 +65,12 @@ export default function TitlePlate({
   const tot = String(total).padStart(2, '0')
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[130]">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-130">
       <div
         className="u-container flex flex-col gap-4 pb-[clamp(1.5rem,5vh,3rem)] md:flex-row md:items-end md:justify-between md:gap-10"
       >
         {/* Title block — center-left */}
-        <div className="pointer-events-auto max-w-[40rem]">
+        <div className="pointer-events-auto max-w-160">
           <div className="mb-3 flex items-center gap-3">
             <span
               ref={counterRef}

@@ -181,7 +181,7 @@ export default function HomeExperience({
           the view each swap would kill the buttery dissolve. The year rail and
           toggles sit OUTSIDE it, so the years never flicker as you switch. */}
       <div
-        className="transition-opacity duration-[280ms] ease-out"
+        className="transition-opacity duration-280 ease-out"
         style={{
           opacity: fading ? 0 : 1,
           pointerEvents: fading ? 'none' : undefined,
@@ -278,7 +278,7 @@ function MobileViewToggle({
 }) {
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex justify-center md:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-60 flex justify-center md:hidden"
       style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
     >
       <ViewToggle view={view} onViewChange={onViewChange} />
@@ -410,7 +410,7 @@ const StageHome = memo(function StageHome({
           ref={stageRef}
           data-lenis-prevent
           data-gesture-carousel
-          className="relative h-[100svh] w-full cursor-grab touch-none select-none overflow-hidden active:cursor-grabbing"
+          className="relative h-svh w-full cursor-grab touch-none select-none overflow-hidden active:cursor-grabbing"
           style={{ paddingTop: 'var(--nav-h)' }}
           role="group"
           aria-roledescription="carousel"
@@ -469,7 +469,7 @@ function ScrollHint({
       className="pointer-events-none absolute bottom-[clamp(1.5rem,5vh,3rem)] left-1/2 z-30 -translate-x-1/2 flex-col items-center gap-2 hidden lg:flex"
     >
       <span className="u-eyebrow text-[0.6rem] text-faint">Scroll · Drag</span>
-      <span className="block h-10 w-px bg-gradient-to-b from-gold/60 to-transparent" />
+      <span className="block h-10 w-px bg-linear-to-b from-gold/60 to-transparent" />
     </div>
   )
 }
@@ -497,11 +497,11 @@ function MobileHome({
 }) {
   return (
     <section
-      className="flex h-[100svh] flex-col overflow-hidden"
+      className="flex h-svh flex-col overflow-hidden"
       style={{ paddingTop: 'var(--nav-h)' }}
     >
       {/* Hero — fills the space left over, whole artwork visible, tappable. */}
-      <div className="relative min-h-0 flex-1 px-[var(--gutter)] pt-3">
+      <div className="relative min-h-0 flex-1 px-(--gutter) pt-3">
         <a
           href={`/projects/${active.slug}`}
           aria-label={`View ${active.title}`}
@@ -512,13 +512,13 @@ function MobileHome({
             alt={active.title}
             priority
             sizes="100vw"
-            className="h-full w-full [&>img]:!object-contain"
+            className="h-full w-full [&>img]:object-contain!"
           />
         </a>
       </div>
 
       {/* Title + counter (no CTA — the artwork above is the link). */}
-      <div className="shrink-0 px-[var(--gutter)] pt-4">
+      <div className="shrink-0 px-(--gutter) pt-4">
         <div className="mb-2.5 flex items-center gap-3">
           <span className="u-eyebrow text-gold">
             {String(activeIndex + 1).padStart(2, '0')}

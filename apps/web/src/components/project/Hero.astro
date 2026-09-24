@@ -31,11 +31,11 @@ const { project, index, total } = Astro.props
   </div>
 
   {/* Scrim: darken top (under nav) and bottom (under title) for legibility. */}
-  <div aria-hidden class="u-fill bg-gradient-to-b from-ink/70 via-ink/10 to-ink/85"></div>
-  <div aria-hidden class="u-fill bg-gradient-to-t from-ink via-transparent to-transparent"></div>
+  <div aria-hidden class="u-fill bg-linear-to-b from-ink/70 via-ink/10 to-ink/85"></div>
+  <div aria-hidden class="u-fill bg-linear-to-t from-ink via-transparent to-transparent"></div>
 
-  <div class="u-container relative z-10 pb-[clamp(2.5rem,7vh,6rem)] pt-[var(--nav-h)]">
-    <div data-hero-title class="max-w-[60rem]">
+  <div class="u-container relative z-10 pb-[clamp(2.5rem,7vh,6rem)] pt-(--nav-h)">
+    <div data-hero-title class="max-w-240">
       <p class="u-eyebrow text-bone-dim">
         <span class="text-gold">{String(index).padStart(2, '0')}</span>
         <span class="mx-3 text-faint">/</span>

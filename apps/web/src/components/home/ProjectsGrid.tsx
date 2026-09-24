@@ -37,7 +37,7 @@ function ProjectCard({ project, index }: { project: ProjectContent; index: numbe
           <h2 className="u-display text-balance text-base leading-tight text-bone transition-colors duration-500 ease-out-expo group-hover:text-gold-bright sm:text-lg">
             {project.title}
           </h2>
-          <span className="u-eyebrow shrink-0 translate-y-[-1px] text-faint transition-colors duration-500 ease-out-expo group-hover:text-gold">
+          <span className="u-eyebrow shrink-0 -translate-y-px text-faint transition-colors duration-500 ease-out-expo group-hover:text-gold">
             {project.year}
           </span>
         </div>

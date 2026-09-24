@@ -26,14 +26,14 @@ const { site } = Astro.props
   aria-modal="true"
   aria-label="Site menu"
   aria-hidden="true"
-  class="fixed inset-0 z-[80]"
+  class="fixed inset-0 z-80"
 >
   {/* Curtain */}
   <div data-menu-curtain class="menu-curtain absolute inset-0 bg-ink"></div>
 
   <div
     data-menu-panel
-    class="u-container relative flex h-full flex-col justify-between py-[var(--nav-h)]"
+    class="u-container relative flex h-full flex-col justify-between py-(--nav-h)"
   >
     {/* Top row: eyebrow + close */}
     <div class="flex items-center justify-between" style="min-height: var(--nav-h)">
@@ -42,7 +42,7 @@ const { site } = Astro.props
         type="button"
         data-menu-close
         aria-label="Close menu"
-        class="u-eyebrow menu-fade text-bone-dim transition-colors duration-500 hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold"
+        class="u-eyebrow menu-fade text-bone-dim transition-colors duration-500 hover:text-gold-bright focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gold"
       >
         Close
       </button>
@@ -56,7 +56,7 @@ const { site } = Astro.props
             <li class="overflow-hidden">
               <a
                 href={item.href}
-                class="menu-link group inline-flex items-baseline gap-4 text-bone hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-8 focus-visible:outline-gold"
+                class="menu-link group inline-flex items-baseline gap-4 text-bone hover:text-gold-bright focus-visible:outline-1 focus-visible:outline-offset-8 focus-visible:outline-gold"
                 style={`--i:${i}`}
               >
                 <span class="u-eyebrow text-faint transition-colors duration-500 group-hover:text-gold" aria-hidden="true">

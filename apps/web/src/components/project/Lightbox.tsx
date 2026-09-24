@@ -70,7 +70,7 @@ export default function Lightbox({ images, startIndex, title, onClose }: Lightbo
       role="dialog"
       aria-modal="true"
       aria-label={`${title} — image viewer`}
-      className="fixed inset-0 z-[200] bg-ink/95 backdrop-blur-sm"
+      className="fixed inset-0 z-200 bg-ink/95 backdrop-blur-sm"
     >
       {single ? (
         <div className="absolute inset-0 flex items-center justify-center p-[clamp(1.5rem,5vw,4rem)]">
@@ -93,7 +93,7 @@ export default function Lightbox({ images, startIndex, title, onClose }: Lightbo
           onClose()
         }}
         aria-label="Close viewer"
-        className="absolute right-[clamp(1rem,3vw,2.5rem)] top-[clamp(1rem,3vw,2.5rem)] z-[210] flex h-11 w-11 items-center justify-center rounded-full border border-line-soft bg-ink/40 text-bone backdrop-blur-sm transition hover:border-gold/60 hover:text-gold-bright focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gold"
+        className="absolute right-[clamp(1rem,3vw,2.5rem)] top-[clamp(1rem,3vw,2.5rem)] z-210 flex h-11 w-11 items-center justify-center rounded-full border border-line-soft bg-ink/40 text-bone backdrop-blur-sm transition hover:border-gold/60 hover:text-gold-bright focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gold"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
           <path
@@ -225,7 +225,7 @@ function Coverflow({
       ))}
 
       {/* Position counter — decoration, never intercepts the gesture. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-[clamp(1.25rem,4vh,2.5rem)] z-[130] flex justify-center">
+      <div className="pointer-events-none absolute inset-x-0 bottom-[clamp(1.25rem,4vh,2.5rem)] z-130 flex justify-center">
         <span className="u-eyebrow text-[0.65rem] text-faint">
           {String(activeIndex + 1).padStart(2, '0')}
           <span className="mx-2 text-line">·</span>
