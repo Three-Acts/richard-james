@@ -21,14 +21,14 @@ const posts: ContentEntry[] = [
   },
   {
     slug: "islands-without-a-framework",
-    title: "Islands without a meta-framework",
+    title: "Islands, the Astro way",
     excerpt:
-      "Pure Vite and React can deliver Astro-style islands. Here is the small runtime that makes it work.",
-    body: "An island is a self-contained component that is server-rendered into the HTML and then hydrated on its own. A tiny client runtime scans for island markers, imports only the matching chunk, and hydrates each one. The rest of the page stays static HTML.",
+      "Astro renders every route to static HTML by default and hydrates only the components that ask for it, with no bespoke runtime to maintain.",
+    body: "An island is a self-contained React component that server-renders into the page's HTML and hydrates independently, once a `client:*` directive tells Astro it needs to run in the browser. Astro's own tiny hydration runtime finds each island marker and loads only that component's chunk, so a page with one interactive form ships one small script instead of a full app bundle. Everything else on the page stays static HTML.",
     coverImage: "/content/islands.png",
     publishedAt: "2026-06-25T09:00:00.000Z",
     author: "Three Acts",
-    tags: ["react", "vite", "architecture"]
+    tags: ["astro", "react", "architecture"]
   },
   {
     slug: "publishing-from-the-cms",

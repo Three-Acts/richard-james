@@ -36,6 +36,21 @@ export function resolveSeo(seo: SeoMetadata): ResolvedSeo {
   const type = seo.type ?? "website";
   const robots = seo.noindex ? "noindex,nofollow" : "index,follow";
 
+  // Generic per-page node (WebPage, or Article when no more specific entity is
+  // supplied). When `seo.structuredData` provides a primary entity of its own
+  // (e.g. a blog post's BlogPosting), merge these shared fields into it
+  // instead of also emitting this node — otherwise a blog post ends up with
+  // both an `Article` and a `BlogPosting` describing the same URL.
+  const primaryEntity: Record<string, unknown> = {
+    "@type": type === "article" ? "Article" : "WebPage",
+    name: seo.title,
+    headline: seo.title,
+    description: seo.description,
+    url: canonical,
+    inLanguage: site.locale.replace("_", "-"),
+    isPartOf: { "@type": "WebSite", name: site.name, url: site.url }
+  };
+
   const structuredData: Record<string, unknown>[] = [
     {
       "@type": "Organization",
@@ -47,26 +62,15 @@ export function resolveSeo(seo: SeoMetadata): ResolvedSeo {
       "@type": "WebSite",
       name: site.name,
       url: site.url,
-      description: site.description,
-      potentialAction: {
-        "@type": "SearchAction",
-        target: `${site.url}/search?q={search_term_string}`,
-        "query-input": "required name=search_term_string"
-      }
-    },
-    {
-      "@type": type === "article" ? "Article" : "WebPage",
-      name: seo.title,
-      headline: seo.title,
-      description: seo.description,
-      url: canonical,
-      inLanguage: site.locale.replace("_", "-"),
-      isPartOf: { "@type": "WebSite", name: site.name, url: site.url }
+      description: site.description
     }
   ];
 
   if (seo.structuredData) {
-    structuredData.push(...(Array.isArray(seo.structuredData) ? seo.structuredData : [seo.structuredData]));
+    const extra = Array.isArray(seo.structuredData) ? seo.structuredData : [seo.structuredData];
+    structuredData.push(...extra.map((entry, index) => (index === 0 ? { ...primaryEntity, ...entry } : entry)));
+  } else {
+    structuredData.push(primaryEntity);
   }
 
   return {

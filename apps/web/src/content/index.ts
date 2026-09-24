@@ -17,12 +17,30 @@ async function resolveContentSource(): Promise<ContentSource> {
   const url = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  if (url && anonKey) {
-    const { createSupabaseContentSource } = await import("./supabase-source");
-    return createSupabaseContentSource(url, anonKey);
+  if (Boolean(url) !== Boolean(anonKey)) {
+    throw new Error(
+      "VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must both be set to use the Supabase content source — only one was provided."
+    );
   }
 
-  return mockContentSource;
+  let source: ContentSource;
+
+  if (url && anonKey) {
+    const { createSupabaseContentSource } = await import("./supabase-source");
+    source = createSupabaseContentSource(url, anonKey);
+  } else {
+    source = mockContentSource;
+  }
+
+  console.info(`[content] source: ${source.name}`);
+
+  if (source.name === "mock" && process.env.VERCEL_ENV === "production") {
+    console.warn(
+      "[content] Production Vercel build is using the mock content source — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to publish real content."
+    );
+  }
+
+  return source;
 }
 
 export function getContentSource(): Promise<ContentSource> {

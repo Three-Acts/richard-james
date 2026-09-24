@@ -20,7 +20,7 @@ export function HomeHeroSection() {
           Static pages built to sell the launch before the demo call.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-700">
-          A public Vite site scaffolded like a marketing website: clear positioning, conversion sections, SEO metadata, and a private CMS shell ready for real editorial workflows.
+          A public Astro site scaffolded like a marketing website: clear positioning, conversion sections, SEO metadata, and a private CMS shell ready for real editorial workflows.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button.Link href="#contact">Plan a launch</Button.Link>

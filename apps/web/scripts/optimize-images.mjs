@@ -39,6 +39,7 @@ function kb(bytes) {
 }
 
 let count = 0;
+let failed = 0;
 let originalTotal = 0;
 let avifTotal = 0;
 
@@ -54,14 +55,25 @@ for await (const file of walk(clientDist)) {
     count += 1;
     console.log(`  ${path.relative(clientDist, file)}  ${kb(originalSize)} → ${kb(avif.length)}`);
   } catch (error) {
-    console.warn(`  skipped ${path.relative(clientDist, file)}: ${error.message}`);
+    // `<Image>` always renders an AVIF `<source>` for local raster images, and
+    // browsers do not fall back when a type-matched source 404s. A silent
+    // warning here used to let the build ship that broken <picture>.
+    failed += 1;
+    console.error(`  ✗ failed to convert ${path.relative(clientDist, file)} to AVIF: ${error.message}`);
   }
 }
 
-if (count === 0) {
+if (count === 0 && failed === 0) {
   console.log("No local raster images in public/ to compress.");
-} else {
+} else if (count > 0) {
   const saved = originalTotal - avifTotal;
   const pct = originalTotal ? Math.round((saved / originalTotal) * 100) : 0;
   console.log(`Compressed ${count} image(s) to AVIF — ${kb(originalTotal)} → ${kb(avifTotal)} (${pct}% smaller).`);
+}
+
+if (failed > 0) {
+  console.error(
+    `\n${failed} image(s) failed AVIF conversion — refusing to ship a build with a broken <picture> source.`
+  );
+  process.exitCode = 1;
 }
