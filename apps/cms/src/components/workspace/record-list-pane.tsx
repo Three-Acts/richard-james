@@ -1,21 +1,28 @@
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@three-acts/utils";
 import type { CmsCollectionSummary, CmsRecord } from "../../cms/types";
 import { getRecordTitle, hasPublishWorkflow } from "../../lib/records";
-import { eyebrowClass, focusRing, PanelHeader, ScrollArea, StatusDot } from "../atoms";
+import { BareIconButton, eyebrowClass, focusRing, PanelHeader, ScrollArea, StatusDot, Tooltip } from "../atoms";
 
 type RecordListPaneProps = {
   collection: CmsCollectionSummary;
+  onBack: () => void;
   onSelectRecord: (recordId: string) => void;
   records: CmsRecord[];
   selectedRecordId: string;
 };
 
-export function RecordListPane({ collection, onSelectRecord, records, selectedRecordId }: RecordListPaneProps) {
+export function RecordListPane({ collection, onBack, onSelectRecord, records, selectedRecordId }: RecordListPaneProps) {
   const publishable = hasPublishWorkflow(collection);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <PanelHeader>
+        <Tooltip content="Back to table">
+          <BareIconButton aria-label="Back to table" onClick={onBack}>
+            <ArrowLeft size={15} />
+          </BareIconButton>
+        </Tooltip>
         <span className={eyebrowClass}>{collection.label}</span>
       </PanelHeader>
       <ScrollArea className="min-h-0 flex-1">

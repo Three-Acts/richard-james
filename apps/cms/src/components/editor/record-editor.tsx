@@ -14,11 +14,14 @@ const READ_ONLY_HINT = "Records in this collection are created by the site and c
 type RecordEditorProps = {
   collection: CmsCollectionSummary;
   draftRecord: CmsRecord;
+  isDirty: boolean;
   isSaving: boolean;
   onAssetUpload: (field: AssetField, event: ChangeEvent<HTMLInputElement>) => void;
   onBack: () => void;
   onChangeStatus: (status: PublishStatus) => void;
   onDelete: () => void;
+  /** Drops local edits and reloads the stored record (also the recovery path after a save conflict). */
+  onDiscard: () => void;
   onDuplicate: () => void;
   onSave: () => void;
   onUpdateValue: (fieldKey: string, value: CmsRecordValue) => void;
@@ -28,11 +31,13 @@ type RecordEditorProps = {
 export function RecordEditor({
   collection,
   draftRecord,
+  isDirty,
   isSaving,
   onAssetUpload,
   onBack,
   onChangeStatus,
   onDelete,
+  onDiscard,
   onDuplicate,
   onSave,
   onUpdateValue,
@@ -54,6 +59,17 @@ export function RecordEditor({
           <h2 className="truncate text-ui-lg font-semibold text-cms-text">{getRecordTitle(collection, draftRecord)}</h2>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          {isDirty ? (
+            <>
+              <span className="inline-flex items-center gap-1.5 px-1 text-ui text-cms-subtle">
+                <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-cms-pending" />
+                Unsaved
+              </span>
+              <Button disabled={isSaving} onClick={onDiscard} variant="ghost">
+                Discard
+              </Button>
+            </>
+          ) : null}
           {publishable ? (
             <>
               <StatusPill status={draftRecord.publishStatus} />
@@ -64,7 +80,10 @@ export function RecordEditor({
                 options={[
                   { label: "Queue to publish", onSelect: () => onChangeStatus("queued_to_publish") },
                   { label: "Unpublish", onSelect: () => onChangeStatus("not_published") },
-                  { label: "Save as draft", onSelect: onSave }
+                  // Keeping the current status a draft is "not published", not
+                  // whatever status is already on the record — `onSave` would
+                  // silently keep a Published record published.
+                  { label: "Save as draft", onSelect: () => onChangeStatus("not_published") }
                 ]}
               />
             </>

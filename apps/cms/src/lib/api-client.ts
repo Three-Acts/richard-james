@@ -1,51 +1,42 @@
-export type ApiEnvelope<TData> =
-  | {
-      ok: true;
-      data: TData;
-    }
-  | {
-      ok: false;
-      error: {
-        code: string;
-        message: string;
-      };
-    };
+import { createApiClient } from "@three-acts/utils";
+import type { ApiEnvelope } from "@three-acts/utils";
 
-const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
+export type { ApiEnvelope };
 
-export const apiBaseUrl = trimTrailingSlash(
-  import.meta.env.VITE_API_URL ?? "/api"
-);
-
-export const apiUrl = (path: `/${string}`) => `${apiBaseUrl}${path}`;
-
-export const apiFetch = async <TData>(
-  path: `/${string}`,
-  init?: RequestInit
-) => {
-  const response = await fetch(apiUrl(path), {
-    headers: {
-      Accept: "application/json",
-      ...init?.headers
-    },
-    ...init
-  });
-  let payload: ApiEnvelope<TData>;
-
-  try {
-    payload = (await response.json()) as ApiEnvelope<TData>;
-  } catch {
-    // A non-JSON body means nothing handled the request — usually the API is not
-    // running. Report that instead of leaking the JSON parser's own error.
-    throw new Error(`The API returned an unreadable response (${response.status}). Check that the API server is running.`);
-  }
-
-  if (!response.ok || !payload.ok) {
-    const message =
-      payload.ok === false ? payload.error.message : "API request failed.";
-
-    throw new Error(message);
-  }
-
-  return payload.data;
+type ApiClientConfig = {
+  getAuthToken: () => Promise<string | null>;
 };
+
+let getAuthToken: ApiClientConfig["getAuthToken"] = async () => null;
+
+/**
+ * Wires apiFetch up to the active auth client's token getter so every
+ * request carries the current session's bearer token without every call
+ * site having to thread it through. AuthProvider calls this once it knows
+ * which AuthClient is active.
+ *
+ * This indirection (a module-level variable read lazily by the client below)
+ * exists because `createApiClient` captures `getAuthToken` once, at
+ * construction time, but AuthProvider only learns the real token getter after
+ * mount.
+ */
+export function configureApiClient(config: ApiClientConfig) {
+  getAuthToken = config.getAuthToken;
+}
+
+// An empty string is what an unset Vite env var resolves to at build time;
+// `createApiClient` already treats that the same as "unset" and falls back
+// to "/api".
+const client = createApiClient({
+  baseUrl: import.meta.env.VITE_API_URL,
+  getAuthToken: () => getAuthToken()
+});
+
+export const apiBaseUrl = client.apiBaseUrl;
+export const apiUrl = client.apiUrl;
+
+/**
+ * The CMS's bound `apiFetch`. Failures are `ApiRequestError`s from
+ * `@three-acts/utils`, carrying the envelope `code` and HTTP `status`.
+ */
+export const apiFetch: <TData>(path: `/${string}`, init?: RequestInit) => Promise<TData> = client.apiFetch;

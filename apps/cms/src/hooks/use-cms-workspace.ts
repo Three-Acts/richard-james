@@ -1,19 +1,38 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
-import { mockCmsAdapter } from "../cms/mock-adapter";
+import { useCmsBackend } from "../cms/backend-context";
+import { describeCmsError } from "../cms/errors";
 import type { AssetField, CmsCollectionSummary, CmsRecord, CmsRecordValue, PublishStatus } from "../cms/types";
 import type { CollectionGroup } from "../components/workspace";
 import { getRecordTitle } from "../lib/records";
 import { exportRecords } from "../lib/export-records";
 
-const adapter = mockCmsAdapter;
+/** Shallow-compares two records' editable surface: field values plus publish status. */
+function areValuesEqual(a: Record<string, CmsRecordValue>, b: Record<string, CmsRecordValue>): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+
+  for (const key of keys) {
+    if ((a[key] ?? null) !== (b[key] ?? null)) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 export function useCmsWorkspace() {
+  const { data, storage } = useCmsBackend();
   const [collections, setCollections] = useState<CmsCollectionSummary[]>([]);
   const [activeCollectionId, setActiveCollectionId] = useState("");
   const [records, setRecords] = useState<CmsRecord[]>([]);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
-  const [draftRecord, setDraftRecord] = useState<CmsRecord | null>(null);
+  // Raw, async-driven state: whatever was last fetched/created/saved, whether
+  // or not it still matches `selectedRecordId`. The publicly exposed
+  // `draftRecord` (derived below) is what the UI should actually show.
+  const [draftRecordState, setDraftRecordState] = useState<CmsRecord | null>(null);
+  // The last record snapshot known to be saved on the server. Compared
+  // against the draft to derive `isDirty` — never mutated by `updateDraftValue`.
+  const [lastSavedRecordState, setLastSavedRecordState] = useState<CmsRecord | null>(null);
   const [search, setSearch] = useState("");
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
@@ -27,7 +46,7 @@ export function useCmsWorkspace() {
   useEffect(() => {
     let isMounted = true;
 
-    adapter
+    data
       .listCollections()
       .then((nextCollections) => {
         if (!isMounted) {
@@ -35,10 +54,19 @@ export function useCmsWorkspace() {
         }
 
         setCollections(nextCollections);
-        setIsLoadingRecords(true);
         setActiveCollectionId((current) => current || nextCollections[0]?.id || "");
+
+        // Only flip on the records spinner when a collection is actually about
+        // to be fetched — otherwise it never gets cleared when the registry is empty.
+        if (nextCollections.length > 0) {
+          setIsLoadingRecords(true);
+        }
       })
-      .catch((nextError: Error) => setError(nextError.message))
+      .catch((nextError) => {
+        if (isMounted) {
+          setError(describeCmsError(nextError));
+        }
+      })
       .finally(() => {
         if (isMounted) {
           setIsLoadingCollections(false);
@@ -48,7 +76,7 @@ export function useCmsWorkspace() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [data]);
 
   useEffect(() => {
     if (!activeCollectionId) {
@@ -57,14 +85,18 @@ export function useCmsWorkspace() {
 
     let isMounted = true;
 
-    adapter
+    data
       .listRecords(activeCollectionId)
-      .then((nextRecords) => {
+      .then(({ records: nextRecords }) => {
         if (isMounted) {
           setRecords(nextRecords);
         }
       })
-      .catch((nextError: Error) => setError(nextError.message))
+      .catch((nextError) => {
+        if (isMounted) {
+          setError(describeCmsError(nextError));
+        }
+      })
       .finally(() => {
         if (isMounted) {
           setIsLoadingRecords(false);
@@ -74,28 +106,40 @@ export function useCmsWorkspace() {
     return () => {
       isMounted = false;
     };
-  }, [activeCollectionId]);
+  }, [activeCollectionId, data]);
 
   useEffect(() => {
     if (!selectedRecordId || !activeCollectionId) {
       return;
     }
 
+    if (draftRecordState?.id === selectedRecordId) {
+      // Already holding this record in memory (just created or duplicated) —
+      // nothing to refetch. (The derived `draftRecord` below is what makes
+      // sure nothing stale renders while a *different* id is being fetched.)
+      return;
+    }
+
     let isMounted = true;
 
-    adapter
+    data
       .getRecord(activeCollectionId, selectedRecordId)
       .then((record) => {
         if (isMounted) {
-          setDraftRecord(record);
+          setDraftRecordState(record);
+          setLastSavedRecordState(record);
         }
       })
-      .catch((nextError: Error) => setError(nextError.message));
+      .catch((nextError) => {
+        if (isMounted) {
+          setError(describeCmsError(nextError));
+        }
+      });
 
     return () => {
       isMounted = false;
     };
-  }, [activeCollectionId, selectedRecordId]);
+  }, [activeCollectionId, selectedRecordId, draftRecordState?.id, data]);
 
   const activeCollection = collections.find((collection) => collection.id === activeCollectionId) ?? collections[0];
 
@@ -112,13 +156,88 @@ export function useCmsWorkspace() {
 
     return records.filter((record) => {
       const title = getRecordTitle(activeCollection, record).toLowerCase();
-      const values = Object.values(record.values)
-        .map((value) => String(value ?? "").toLowerCase())
-        .join(" ");
 
-      return title.includes(query) || values.includes(query);
+      if (title.includes(query)) {
+        return true;
+      }
+
+      // Match per field rather than joining every value into one string:
+      // joining lets a query span two unrelated fields, and booleans
+      // stringify to "true"/"false", which would match almost every record.
+      return Object.values(record.values).some((value) => {
+        if (typeof value === "boolean" || value === null || value === undefined) {
+          return false;
+        }
+
+        return String(value).toLowerCase().includes(query);
+      });
     });
   }, [activeCollection, records, search]);
+
+  // Hidden selections (records ticked, then filtered out by a search) must not
+  // silently accumulate. Adjusted directly during render — the idiomatic way
+  // to keep one piece of state in sync with another without an extra render
+  // pass (see "Adjusting state when a prop changes" in the React docs).
+  const [prevFilteredRecords, setPrevFilteredRecords] = useState(filteredRecords);
+
+  if (filteredRecords !== prevFilteredRecords) {
+    setPrevFilteredRecords(filteredRecords);
+    setSelectedIds((current) => {
+      if (current.size === 0) {
+        return current;
+      }
+
+      const visibleIds = new Set(filteredRecords.map((record) => record.id));
+      let changed = false;
+      const next = new Set<string>();
+
+      for (const id of current) {
+        if (visibleIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+
+      return changed ? next : current;
+    });
+  }
+
+  // What the UI should actually see: `null` whenever the raw state doesn't
+  // (yet) match the selected id, so switching records can never flash the
+  // previous one's data or accept edits into it while the new one loads.
+  const draftRecord = draftRecordState && draftRecordState.id === selectedRecordId ? draftRecordState : null;
+  const lastSavedRecord = lastSavedRecordState && lastSavedRecordState.id === selectedRecordId ? lastSavedRecordState : null;
+
+  const isDirty = useMemo(() => {
+    if (!draftRecord || !lastSavedRecord || draftRecord.id !== lastSavedRecord.id) {
+      return false;
+    }
+
+    if (draftRecord.publishStatus !== lastSavedRecord.publishStatus) {
+      return true;
+    }
+
+    return !areValuesEqual(draftRecord.values, lastSavedRecord.values);
+  }, [draftRecord, lastSavedRecord]);
+
+  // Discourage navigating away (closing the tab, reloading) with unsaved edits.
+  useEffect(() => {
+    if (!isDirty) {
+      return;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isDirty]);
 
   const groups = useMemo<CollectionGroup[]>(() => {
     return collections.reduce<CollectionGroup[]>((acc, collection) => {
@@ -136,9 +255,16 @@ export function useCmsWorkspace() {
   }, [collections]);
 
   function handleSelectCollection(collectionId: string) {
+    if (collectionId === activeCollectionId) {
+      // Nothing changes, so don't flip the table into a "Loading records…"
+      // state the id-keyed fetch effect will never clear.
+      return;
+    }
+
     setIsLoadingRecords(true);
     setSelectedRecordId(null);
-    setDraftRecord(null);
+    setDraftRecordState(null);
+    setLastSavedRecordState(null);
     setSearch("");
     setError(null);
     setSelectionMode(false);
@@ -176,24 +302,38 @@ export function useCmsWorkspace() {
 
     setError(null);
 
-    try {
-      for (const id of ids) {
-        await adapter.deleteRecord(activeCollection.id, id);
-      }
+    // Settle every delete before touching state: one failed delete must not
+    // stop the rest from running, or leave the list/sidebar count stale.
+    const results = await Promise.allSettled(ids.map((id) => data.deleteRecord(activeCollection.id, id)));
+    const failedCount = results.filter((result) => result.status === "rejected").length;
 
-      const nextRecords = await adapter.listRecords(activeCollection.id);
+    try {
+      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
       setCollections((currentCollections) =>
-        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: nextRecords.length } : collection))
+        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))
       );
-      setSelectedIds(new Set());
-
-      if (selectedRecordId && ids.includes(selectedRecordId)) {
-        setSelectedRecordId(null);
-        setDraftRecord(null);
-      }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unable to delete records.");
+      setError(describeCmsError(nextError));
+      return;
+    }
+
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      for (const id of ids) {
+        next.delete(id);
+      }
+      return next;
+    });
+
+    if (selectedRecordId && ids.includes(selectedRecordId)) {
+      setSelectedRecordId(null);
+      setDraftRecordState(null);
+      setLastSavedRecordState(null);
+    }
+
+    if (failedCount > 0) {
+      setError(`Unable to delete ${failedCount} of ${ids.length} record${ids.length === 1 ? "" : "s"}.`);
     }
   }
 
@@ -205,15 +345,15 @@ export function useCmsWorkspace() {
     setError(null);
 
     try {
-      await adapter.importRecords(activeCollection.id, rows);
-      const nextRecords = await adapter.listRecords(activeCollection.id);
+      await data.importRecords(activeCollection.id, rows);
+      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
       setCollections((currentCollections) =>
-        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: nextRecords.length } : collection))
+        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))
       );
       setIsImportOpen(false);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unable to import records.");
+      setError(describeCmsError(nextError));
     }
   }
 
@@ -233,16 +373,17 @@ export function useCmsWorkspace() {
     setError(null);
 
     try {
-      const record = await adapter.createRecord(activeCollection.id);
-      const nextRecords = await adapter.listRecords(activeCollection.id);
+      const record = await data.createRecord(activeCollection.id);
+      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
       setCollections((currentCollections) =>
-        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: nextRecords.length } : collection))
+        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))
       );
       setSelectedRecordId(record.id);
-      setDraftRecord(record);
+      setDraftRecordState(record);
+      setLastSavedRecordState(record);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unable to create record.");
+      setError(describeCmsError(nextError));
     }
   }
 
@@ -256,7 +397,7 @@ export function useCmsWorkspace() {
     try {
       const values: Record<string, CmsRecordValue> = { ...draftRecord.values };
 
-      // System identifiers must not carry into the copy; the adapter assigns new ones.
+      // System identifiers must not carry into the copy; the backend assigns new ones.
       for (const field of activeCollection.fields) {
         if (field.type === "readonly") {
           delete values[field.key];
@@ -268,19 +409,20 @@ export function useCmsWorkspace() {
         values[titleKey] = `${values[titleKey]} (copy)`;
       }
 
-      const [copy] = await adapter.importRecords(activeCollection.id, [values]);
-      const nextRecords = await adapter.listRecords(activeCollection.id);
+      const [copy] = await data.importRecords(activeCollection.id, [values]);
+      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
       setRecords(nextRecords);
       setCollections((currentCollections) =>
-        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: nextRecords.length } : collection))
+        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))
       );
 
       if (copy) {
         setSelectedRecordId(copy.id);
-        setDraftRecord(copy);
+        setDraftRecordState(copy);
+        setLastSavedRecordState(copy);
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unable to duplicate record.");
+      setError(describeCmsError(nextError));
     }
   }
 
@@ -292,20 +434,88 @@ export function useCmsWorkspace() {
     setIsSaving(true);
     setError(null);
 
+    const recordToSave = nextStatus ? { ...draftRecord, publishStatus: nextStatus } : draftRecord;
+    // Snapshot of what we're sending, so we can tell afterwards which fields
+    // the user changed *while the request was in flight*.
+    const valuesAtSaveStart = recordToSave.values;
+
     try {
-      const recordToSave = nextStatus ? { ...draftRecord, publishStatus: nextStatus } : draftRecord;
-      const savedRecord = await adapter.saveRecord(activeCollection.id, recordToSave);
-      setDraftRecord(savedRecord);
+      const savedRecord = await data.saveRecord(activeCollection.id, recordToSave, {
+        expectedModifiedAt: lastSavedRecord?.modifiedAt
+      });
+
+      setDraftRecordState((current) => {
+        if (!current || current.id !== savedRecord.id) {
+          // The user navigated away from this record before the save resolved.
+          return current;
+        }
+
+        // Server-normalised values win for every field the user left alone;
+        // anything they changed since the save started is preserved.
+        const mergedValues: Record<string, CmsRecordValue> = { ...savedRecord.values };
+
+        for (const key of Object.keys(current.values)) {
+          if (current.values[key] !== valuesAtSaveStart[key]) {
+            mergedValues[key] = current.values[key];
+          }
+        }
+
+        return { ...savedRecord, values: mergedValues };
+      });
+      setLastSavedRecordState(savedRecord);
       setRecords((currentRecords) => currentRecords.map((record) => (record.id === savedRecord.id ? savedRecord : record)));
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unable to save record.");
+      setError(describeCmsError(nextError));
     } finally {
       setIsSaving(false);
     }
   }
 
+  /**
+   * Re-reads the active collection's records and count without disturbing the
+   * open draft. Used after a publish transition changes statuses server-side.
+   */
+  async function refreshRecords() {
+    if (!activeCollection) {
+      return;
+    }
+
+    try {
+      const { records: nextRecords, total } = await data.listRecords(activeCollection.id);
+      setRecords(nextRecords);
+      setCollections((currentCollections) =>
+        currentCollections.map((collection) => (collection.id === activeCollection.id ? { ...collection, count: total } : collection))
+      );
+
+      if (selectedRecordId && !isDirty) {
+        const record = await data.getRecord(activeCollection.id, selectedRecordId);
+        setDraftRecordState(record);
+        setLastSavedRecordState(record);
+      }
+    } catch (nextError) {
+      setError(describeCmsError(nextError));
+    }
+  }
+
+  /** Discards the draft and re-fetches the record — the recovery path from a `conflict` save error. */
+  async function reloadRecord() {
+    if (!activeCollection || !selectedRecordId) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const record = await data.getRecord(activeCollection.id, selectedRecordId);
+      setDraftRecordState(record);
+      setLastSavedRecordState(record);
+    } catch (nextError) {
+      setError(describeCmsError(nextError));
+    }
+  }
+
   function updateDraftValue(fieldKey: string, value: CmsRecordValue) {
-    setDraftRecord((record) => {
+    setDraftRecordState((record) => {
       if (!record) {
         return record;
       }
@@ -323,27 +533,48 @@ export function useCmsWorkspace() {
   async function handleAssetUpload(field: AssetField, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
-    if (!activeCollection || !file) {
+    if (!activeCollection || !file || !draftRecord) {
       return;
     }
 
+    // Capture which record we're uploading into: if the editor switches to a
+    // different record before the upload resolves, the URL must not land there.
+    const uploadRecordId = draftRecord.id;
     setUploadingField(field.key);
     setError(null);
 
     try {
-      const result = await adapter.uploadAsset(activeCollection.id, field.key, file);
-      updateDraftValue(field.key, result.url);
+      const result = await storage.uploadAsset(activeCollection.id, field.key, file);
+
+      setDraftRecordState((current) => {
+        if (!current || current.id !== uploadRecordId) {
+          return current;
+        }
+
+        return {
+          ...current,
+          values: {
+            ...current.values,
+            [field.key]: result.url
+          }
+        };
+      });
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unable to upload asset.");
+      setError(describeCmsError(nextError));
     } finally {
       setUploadingField(null);
       event.target.value = "";
     }
   }
 
+  function clearError() {
+    setError(null);
+  }
+
   return {
     activeCollection,
     activeCollectionId,
+    clearError,
     draftRecord,
     error,
     filteredRecords,
@@ -356,11 +587,14 @@ export function useCmsWorkspace() {
     handleImportRecords,
     handleSaveRecord,
     handleSelectCollection,
+    isDirty,
     isImportOpen,
     isLoadingCollections,
     isLoadingRecords,
     isSaving,
     records,
+    refreshRecords,
+    reloadRecord,
     search,
     selectedIds,
     selectedRecordId,
