@@ -306,7 +306,7 @@ provider behind every one of those interfaces today.
 | `NEON_AUTH_JWKS_URL` | api | Reserved for future direct-JWT verification; not used by `requireAuth` today. |
 | `AWS_ENDPOINT_URL_S3` / `AWS_REGION` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | api | Standard AWS SDK vars pointed at Neon's S3-compatible object storage. Neon is the only Data Store/Blob Store backend — there's no backend-selection var. |
 | `PUBLISH_TOKEN` | api | Optional shared secret accepted by `/api/cms/*`, `/api/deploy`, `/api/deploy-status` (scripts/CI). Auth is required in every environment: unset alongside an unset `NEON_AUTH_BASE_URL` always 503s, with no dev-mode bypass. |
-| `VERCEL_DEPLOY_HOOK_URL` / `VERCEL_TOKEN` / `VERCEL_PROJECT_ID` / `VERCEL_TEAM_ID` / `VERCEL_API_BASE` | api | Deploy hook and polling credentials used by the site deploy step. |
+| `VERCEL_DEPLOY_HOOK_URL` / `VERCEL_TOKEN` / `VERCEL_TEAM_ID` / `VERCEL_API_BASE` | api | Deploy hook and polling credentials used by the site deploy step. The site project id is parsed from `VERCEL_DEPLOY_HOOK_URL`, not read from `VERCEL_PROJECT_ID` — that name is a Vercel system env var Vercel auto-populates with the `api` project's own id at runtime, so a manually-set value there gets silently overridden. `SITE_VERCEL_PROJECT_ID` (optional) overrides the parsed id when the hook URL is unset or unparseable. |
 | `API_ALLOWED_ORIGINS` | api | Optional extra browser origins allowed to call the API directly (cross-origin). |
 | `API_ORIGIN` | web, cms | Where `/api/*` gets rewritten/proxied to. Required for both — `apps/web` has no local content to fall back to. |
 | `VITE_SITE_URL` | web | Canonical site origin, used for URLs, sitemap, and social tags. |
@@ -447,8 +447,10 @@ Editors change data, then click **Publish** in the CMS top bar. That runs the **
 transition** (flips queued records to published in the data store) and then triggers
 `POST /api/deploy` (a Vercel Deploy Hook that rebuilds the static site), polling
 `GET /api/deploy-status` for live state: **queued → building → deployed ✓** (or failed).
-Configure `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, and `VERCEL_PROJECT_ID` in
-`apps/api`; when unset, the flow degrades gracefully with a clear message.
+Configure `VERCEL_DEPLOY_HOOK_URL` and `VERCEL_TOKEN` in `apps/api` (the site
+project id is derived from the hook URL, not a separate `VERCEL_PROJECT_ID` —
+see the env matrix above); when unset, the flow degrades gracefully with a
+clear message.
 
 ## Deploying to Vercel
 
@@ -459,7 +461,7 @@ directory:
 | --- | --- | --- | --- |
 | web | `apps/web` | Astro | `VITE_SITE_URL`, `API_ORIGIN` (required — no local content fallback) |
 | cms | `apps/cms` | Vite | `API_ORIGIN` (optionally `VITE_API_URL`) |
-| api | `apps/api` | Other/Node (Vercel Functions) | `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_ORIGIN`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, optionally `PUBLISH_TOKEN` and `API_ALLOWED_ORIGINS` (`DATABASE_URL_UNPOOLED` is only used by the local `db:migrate` script, so it isn't needed on Vercel) |
+| api | `apps/api` | Other/Node (Vercel Functions) | `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_ORIGIN`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, optionally `SITE_VERCEL_PROJECT_ID` (only if the hook URL can't be parsed — do *not* set `VERCEL_PROJECT_ID`, a Vercel system var that gets overwritten with this project's own id), `PUBLISH_TOKEN`, and `API_ALLOWED_ORIGINS` (`DATABASE_URL_UNPOOLED` is only used by the local `db:migrate` script, so it isn't needed on Vercel) |
 
 Vercel installs dependencies per workspace (it runs `npm install` inside the project's
 root directory, which npm treats as `npm install -w <that app>`), so root-level

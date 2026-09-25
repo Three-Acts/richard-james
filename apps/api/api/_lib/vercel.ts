@@ -110,24 +110,53 @@ type RawDeployment = {
   meta?: Record<string, unknown>;
 };
 
+type DeployHook = { projectId?: string; hookId?: string };
+
 /**
- * Extract a Deploy Hook's id — the last path segment of its trigger URL
- * (`https://api.vercel.com/v1/integrations/deploy/<projectId>/<hookId>`) —
- * so it can be matched against a deployment's `meta.deployHookId`. Vercel
- * stamps that field on deployments it creates from a hook POST, which is an
- * unambiguous way to find "the deployment our hook started" even when other
- * deployments (a teammate's push, a promote) land in the same window.
+ * Parse a Deploy Hook's trigger URL
+ * (`https://api.vercel.com/v1/integrations/deploy/<projectId>/<hookId>`)
+ * into its project id and hook id.
+ *
+ * `hookId` is the last path segment, matched against a deployment's
+ * `meta.deployHookId` — Vercel stamps that field on deployments it creates
+ * from a hook POST, which is an unambiguous way to find "the deployment our
+ * hook started" even when other deployments (a teammate's push, a promote)
+ * land in the same window.
+ *
+ * `projectId` is the second-to-last segment, accepted only when it looks
+ * like a Vercel project id (`prj_...`) so a malformed/unexpected URL shape
+ * doesn't get silently misread as a project id.
  */
-function parseDeployHookId(hookUrl: string | undefined): string | undefined {
+function parseDeployHook(hookUrl: string | undefined): DeployHook {
   if (!hookUrl) {
-    return undefined;
+    return {};
   }
   try {
     const segments = new URL(hookUrl).pathname.split("/").filter(Boolean);
-    return segments.at(-1) || undefined;
+    const hookId = segments.at(-1) || undefined;
+    const maybeProjectId = segments.at(-2);
+    const projectId = maybeProjectId && /^prj_/.test(maybeProjectId) ? maybeProjectId : undefined;
+    return { projectId, hookId };
   } catch {
-    return undefined;
+    return {};
   }
+}
+
+/**
+ * Resolve the *site* Vercel project id — the static web app the deploy hook
+ * rebuilds — that `triggerDeploy`'s baseline lookup and `getDeploymentStatus`
+ * query deployments for.
+ *
+ * Deliberately never reads `process.env.VERCEL_PROJECT_ID`: Vercel injects
+ * that as a *system* env var at runtime, auto-populated with the currently
+ * running project's own id (this `api` project), which silently overrides
+ * any manually-set value meant to point at the site project instead. Derived
+ * from `VERCEL_DEPLOY_HOOK_URL` by default; `SITE_VERCEL_PROJECT_ID` (a
+ * non-reserved name, so Vercel never auto-injects it) is the override for
+ * when the hook URL is unset or doesn't parse.
+ */
+function resolveSiteProjectId(): string | undefined {
+  return parseDeployHook(process.env.VERCEL_DEPLOY_HOOK_URL).projectId ?? process.env.SITE_VERCEL_PROJECT_ID;
 }
 
 function toDeploymentStatus(deployment: RawDeployment): DeploymentStatus {
@@ -169,7 +198,7 @@ export async function triggerDeploy(): Promise<DeployTriggerResult> {
   }
 
   const token = process.env.VERCEL_TOKEN;
-  const projectId = process.env.VERCEL_PROJECT_ID;
+  const projectId = resolveSiteProjectId();
   const baselineDeploymentId =
     token && projectId ? await fetchLatestProductionDeploymentId(projectId) : undefined;
 
@@ -247,7 +276,7 @@ async function fetchDeploymentAfter(
   const createdAtOrAfterSince = (deployment: RawDeployment) =>
     sinceMs === undefined || (deployment.createdAt !== undefined && deployment.createdAt >= sinceMs);
 
-  const hookId = parseDeployHookId(process.env.VERCEL_DEPLOY_HOOK_URL);
+  const hookId = parseDeployHook(process.env.VERCEL_DEPLOY_HOOK_URL).hookId;
   const hookMatch = hookId
     ? deployments.find(
         (deployment) => !!deployment.uid && deployment.meta?.deployHookId === hookId && createdAtOrAfterSince(deployment)
@@ -296,12 +325,13 @@ export async function getDeploymentStatus(
   }
 
   const token = process.env.VERCEL_TOKEN;
-  const projectId = process.env.VERCEL_PROJECT_ID;
+  const projectId = resolveSiteProjectId();
 
   if (!token || (id === undefined && !projectId)) {
     return {
       state: "unconfigured",
-      message: "Set VERCEL_TOKEN and VERCEL_PROJECT_ID to track deployment status."
+      message:
+        "Set VERCEL_TOKEN and VERCEL_DEPLOY_HOOK_URL (or SITE_VERCEL_PROJECT_ID) to track deployment status."
     };
   }
 
@@ -314,7 +344,8 @@ export async function getDeploymentStatus(
   if (!projectId) {
     return {
       state: "unconfigured",
-      message: "Set VERCEL_TOKEN and VERCEL_PROJECT_ID to track deployment status."
+      message:
+        "Set VERCEL_TOKEN and VERCEL_DEPLOY_HOOK_URL (or SITE_VERCEL_PROJECT_ID) to track deployment status."
     };
   }
 
