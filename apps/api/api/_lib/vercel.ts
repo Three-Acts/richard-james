@@ -7,7 +7,10 @@
  *   timestamp. The CMS uses those to poll for "the deployment we just
  *   started" specifically via `getDeploymentStatus({ after, since })`.
  * - `getDeploymentStatus` polls the Vercel REST API for live deployment state so
- *   the CMS can show real progress (queued → building → ready/error).
+ *   the CMS can show real progress (queued → building → ready/error). When
+ *   polling by baseline, it prefers matching the deployment Vercel tags with
+ *   our hook's id (`meta.deployHookId`) over the baseline/timestamp heuristic
+ *   alone — see `fetchDeploymentAfter`.
  *
  * All secrets stay server-side (this app), never in the browser. When the env
  * is not configured, helpers return an `unconfigured` state so local dev and
@@ -104,7 +107,28 @@ type RawDeployment = {
   url?: string;
   ready?: number;
   createdAt?: number;
+  meta?: Record<string, unknown>;
 };
+
+/**
+ * Extract a Deploy Hook's id — the last path segment of its trigger URL
+ * (`https://api.vercel.com/v1/integrations/deploy/<projectId>/<hookId>`) —
+ * so it can be matched against a deployment's `meta.deployHookId`. Vercel
+ * stamps that field on deployments it creates from a hook POST, which is an
+ * unambiguous way to find "the deployment our hook started" even when other
+ * deployments (a teammate's push, a promote) land in the same window.
+ */
+function parseDeployHookId(hookUrl: string | undefined): string | undefined {
+  if (!hookUrl) {
+    return undefined;
+  }
+  try {
+    const segments = new URL(hookUrl).pathname.split("/").filter(Boolean);
+    return segments.at(-1) || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function toDeploymentStatus(deployment: RawDeployment): DeploymentStatus {
   return {
@@ -192,7 +216,19 @@ async function fetchDeploymentById(id: string): Promise<DeploymentStatus> {
   };
 }
 
-/** Newest deployment that isn't `after`, and (if `since` given) was created at/after it. */
+/**
+ * Newest deployment that isn't `after`, and (if `since` given) was created
+ * at/after it.
+ *
+ * Prefers an unambiguous match on `meta.deployHookId` (the deployment Vercel
+ * stamps as created by our hook, restricted to created-at/after `since` so an
+ * older deployment that happens to share the hook id — e.g. the baseline
+ * itself, or last publish's deployment on a fast-retriggered hook — can't
+ * match). Falls back to the "newest deployment that isn't the baseline"
+ * heuristic when no hook-id match is found yet: the id parse can fail (env
+ * misconfigured), or `meta` can lag briefly behind the deployment appearing
+ * in this list.
+ */
 async function fetchDeploymentAfter(
   projectId: string,
   after: string | undefined,
@@ -208,15 +244,24 @@ async function fetchDeploymentAfter(
   const deployments = payload.deployments ?? [];
   const sinceMs = since !== undefined ? Date.parse(since) : undefined;
 
-  const match = deployments.find((deployment) => {
-    if (!deployment.uid || deployment.uid === after) {
-      return false;
-    }
-    if (sinceMs !== undefined && (deployment.createdAt === undefined || deployment.createdAt < sinceMs)) {
-      return false;
-    }
-    return true;
-  });
+  const createdAtOrAfterSince = (deployment: RawDeployment) =>
+    sinceMs === undefined || (deployment.createdAt !== undefined && deployment.createdAt >= sinceMs);
+
+  const hookId = parseDeployHookId(process.env.VERCEL_DEPLOY_HOOK_URL);
+  const hookMatch = hookId
+    ? deployments.find(
+        (deployment) => !!deployment.uid && deployment.meta?.deployHookId === hookId && createdAtOrAfterSince(deployment)
+      )
+    : undefined;
+
+  const match =
+    hookMatch ??
+    deployments.find((deployment) => {
+      if (!deployment.uid || deployment.uid === after) {
+        return false;
+      }
+      return createdAtOrAfterSince(deployment);
+    });
 
   if (!match) {
     return { state: "pending", message: "Waiting for the new deployment to register." };
