@@ -54,8 +54,13 @@ export interface CmsDataStore {
   /** Returns whether a row was actually deleted. */
   deleteRecord(collection: CmsCollection, recordId: string): Promise<boolean>;
 
-  /** Flips every `queued_to_publish` record in this collection to `published`; returns the count changed. */
-  publishQueued(collection: CmsCollection): Promise<number>;
+  /**
+   * Flips every `queued_to_publish` record in this collection to `published`;
+   * returns the ids that changed, so a caller whose subsequent deploy fails
+   * can revert exactly these records (and no others) back to
+   * `queued_to_publish`.
+   */
+  publishQueued(collection: CmsCollection): Promise<string[]>;
 
   /**
    * Sets `status` (and stamps the modified column with "now") on every id in

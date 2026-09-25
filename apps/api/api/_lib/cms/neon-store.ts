@@ -312,19 +312,19 @@ export class NeonDataStore implements CmsDataStore {
     return (result.rowCount ?? 0) > 0;
   }
 
-  async publishQueued(collection: CmsCollection): Promise<number> {
+  async publishQueued(collection: CmsCollection): Promise<string[]> {
     const sys = systemColumnsFor(collection);
     const table = quoteIdent(collection.tableName);
     const publishedStatus: PublishStatus = "published";
     const queuedStatus: PublishStatus = "queued_to_publish";
 
     const result = await timeDb(() =>
-      getPool().query(`update ${table} set ${quoteIdent(sys.publishStatus)} = $1 where ${quoteIdent(sys.publishStatus)} = $2`, [
-        publishedStatus,
-        queuedStatus
-      ])
+      getPool().query(
+        `update ${table} set ${quoteIdent(sys.publishStatus)} = $1 where ${quoteIdent(sys.publishStatus)} = $2 returning ${quoteIdent(sys.id)} as id`,
+        [publishedStatus, queuedStatus]
+      )
     );
-    return result.rowCount ?? 0;
+    return result.rows.map((row) => String((row as { id: unknown }).id));
   }
 
   async setPublishStatus(collection: CmsCollection, recordIds: string[], status: PublishStatus): Promise<CmsRecord[]> {

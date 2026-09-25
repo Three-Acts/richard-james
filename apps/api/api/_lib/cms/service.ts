@@ -15,6 +15,7 @@ import {
   type GalleryField,
   type ListRecordsOptions,
   type ListRecordsResult,
+  type PublishQueuedResult,
   type PublishStatus,
   type SelectField,
   type UploadAssetBody
@@ -454,16 +455,22 @@ export async function uploadAsset(collectionId: string, fieldKey: string, body: 
   return { path: uploaded.path, url: uploaded.url, fileName: body.fileName, size: buffer.length };
 }
 
-export async function publishQueued(collectionId?: string): Promise<{ published: number }> {
+export async function publishQueued(collectionId?: string): Promise<PublishQueuedResult> {
   const collections = collectionId ? [getCollectionOrThrow(collectionId)] : collectionRegistry;
   const store = getDataStore();
 
+  const recordsByCollection: PublishQueuedResult["recordsByCollection"] = [];
   let published = 0;
+
   for (const collection of collections) {
-    published += await store.publishQueued(collection);
+    const recordIds = await store.publishQueued(collection);
+    if (recordIds.length > 0) {
+      recordsByCollection.push({ collectionId: collection.id, recordIds });
+      published += recordIds.length;
+    }
   }
 
-  return { published };
+  return { published, recordsByCollection };
 }
 
 /**

@@ -12,6 +12,7 @@ import type {
   ListRecordsOptions,
   ListRecordsResult,
   PublishBody,
+  PublishQueuedResult,
   PublishStatus,
   SaveRecordBody,
   SaveRecordOptions,
@@ -140,7 +141,7 @@ export function createRestCmsBackend(options: RestCmsBackendOptions): CmsBackend
 
       publishQueued(collectionId?: string) {
         const body: PublishBody = { collectionId };
-        return cmsRequest<{ published: number }>(cmsApiPaths.publish(), jsonInit(body));
+        return cmsRequest<PublishQueuedResult>(cmsApiPaths.publish(), jsonInit(body));
       },
 
       setPublishStatus(collectionId: string, recordIds: string[], status: Exclude<PublishStatus, "published">) {

@@ -151,6 +151,9 @@ export async function triggerDeploy(): Promise<DeployTriggerResult> {
 
   const response = await fetch(hookUrl, { method: "POST" });
   if (!response.ok) {
+    // withApi only logs unexpected errors, so record Vercel's reply here.
+    const body = await response.text().catch(() => "");
+    console.error("Deploy hook failed", response.status, body.slice(0, 500));
     throw new ApiError(502, "deploy_hook_failed", "Deploy hook failed. Try again shortly.");
   }
 

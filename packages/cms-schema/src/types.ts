@@ -173,6 +173,12 @@ export type SaveRecordOptions = {
   expectedModifiedAt?: string;
 };
 
+/** See `CmsDataAdapter.publishQueued`. */
+export type PublishQueuedResult = {
+  published: number;
+  recordsByCollection: Array<{ collectionId: string; recordIds: string[] }>;
+};
+
 /**
  * Record access. Datetime values are ISO 8601 UTC strings ("...Z") or "".
  * Implementations throw `CmsError` (see ./errors) for expected failures so the
@@ -190,9 +196,12 @@ export type CmsDataAdapter = {
   /**
    * Publish step 1: flip every `queued_to_publish` record (optionally in one
    * collection) to `published`. The deploy/rebuild is step 2 and lives outside
-   * the data adapter.
+   * the data adapter. The result reports exactly which records changed (by
+   * collection) so a caller whose step 2 then fails can put them back into
+   * `queued_to_publish` via `setPublishStatus` instead of leaving them stuck
+   * "published" with nothing actually live.
    */
-  publishQueued: (collectionId?: string) => Promise<{ published: number }>;
+  publishQueued: (collectionId?: string) => Promise<PublishQueuedResult>;
   /**
    * Bulk status override for the selection toolbar ("Update items"). Only
    * `queued_to_publish` and `not_published` are valid targets: `published` is

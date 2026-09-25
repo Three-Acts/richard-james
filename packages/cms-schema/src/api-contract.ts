@@ -14,7 +14,7 @@ import type { CmsRecord, CmsRecordValue, ListRecordsOptions, PublishStatus } fro
  *   POST   /api/cms/collections/:collectionId/import              body ImportRecordsBody  -> CmsRecord[]
  *   POST   /api/cms/collections/:collectionId/assets/:fieldKey    body UploadAssetBody    -> AssetUploadResult
  *   POST   /api/cms/collections/:collectionId/status              body SetPublishStatusBody -> CmsRecord[]
- *   POST   /api/cms/publish                                       body PublishBody        -> { published: number }
+ *   POST   /api/cms/publish                                       body PublishBody        -> PublishQueuedResult
  *
  * All routes require the same bearer auth as /api/deploy.
  */

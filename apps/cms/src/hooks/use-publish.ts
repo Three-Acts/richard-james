@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import type { CmsBackend, PublishQueuedResult } from "../cms/types";
 import { useCmsBackend } from "../cms/backend-context";
 import { describeCmsError } from "../cms/errors";
 import { apiFetch } from "../lib/api-client";
@@ -34,6 +35,21 @@ const PROGRESS_LABEL: Record<string, string> = {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * Puts records back into `queued_to_publish` after the deploy hook failed to
+ * fire — `publishQueued` already flipped them to `published` in the DB, and
+ * with no deploy triggered that would otherwise leave them stuck "published"
+ * with nothing actually live and no way to retry (the Publish button only
+ * shows while something is queued). Best-effort: a collection whose revert
+ * request itself fails is left published (rare — logged nowhere else in this
+ * hook either), but every other collection still gets reverted.
+ */
+async function revertToQueued(backend: CmsBackend, recordsByCollection: PublishQueuedResult["recordsByCollection"]): Promise<void> {
+  await Promise.allSettled(
+    recordsByCollection.map(({ collectionId, recordIds }) => backend.data.setPublishStatus(collectionId, recordIds, "queued_to_publish"))
+  );
+}
+
+/**
  * Drives the global "Publish" action: flips queued records to published,
  * triggers a Vercel deploy via the API, then polls deployment status and
  * reports progress through a single toast that moves from queued → building
@@ -61,14 +77,24 @@ export function usePublish({ onPublished }: { onPublished?: () => void } = {}) {
     const toastId = toast.push({ tone: "loading", title: "Publishing…", description: "Publishing queued records…" });
 
     try {
-      const { published } = await backend.data.publishQueued();
+      const { published, recordsByCollection } = await backend.data.publishQueued();
       onPublished?.();
 
       const requestDescription =
         published > 0 ? `Published ${published} queued record${published === 1 ? "" : "s"}. Requesting a deploy.` : "Requesting a deploy.";
       toast.update(toastId, { tone: "loading", title: "Publishing…", description: requestDescription });
 
-      const trigger = await apiFetch<DeployTrigger>("/deploy", { method: "POST" });
+      let trigger: DeployTrigger;
+      try {
+        trigger = await apiFetch<DeployTrigger>("/deploy", { method: "POST" });
+      } catch (deployError) {
+        // The hook never fired: put the records back in the publish queue
+        // (rather than leaving them stuck "published" with nothing live) so
+        // the Publish button reappears and a retry picks them up.
+        await revertToQueued(backend, recordsByCollection);
+        onPublished?.();
+        throw deployError;
+      }
 
       if (!trigger.triggered) {
         toast.update(toastId, {
@@ -132,10 +158,16 @@ export function usePublish({ onPublished }: { onPublished?: () => void } = {}) {
           duration: 8000
         });
       } else if (status.state === "ERROR" || status.state === "CANCELED") {
+        // The hook fired, but the build itself never went live — same as a
+        // hook-trigger failure from the site's point of view, so put the
+        // records back in the queue rather than leaving them "published"
+        // with nothing actually deployed.
+        await revertToQueued(backend, recordsByCollection);
+        onPublished?.();
         toast.update(toastId, {
           tone: "error",
           title: "Deploy failed",
-          description: `Deployment ${status.state.toLowerCase()}.`
+          description: `Deployment ${status.state.toLowerCase()}. Records are back in the publish queue — try again shortly.`
         });
       } else {
         // Attempts ran out while still queued/building/pending/unknown — the
