@@ -170,17 +170,17 @@ export function RecordEditor({
         <EditorSection title="Item details">
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             {publishable ? (
-              <DetailRow label="Publish status">
+              <DetailRow description="Whether this item is published, saved as a draft or waiting to publish." label="Publish status">
                 <StatusPill status={draftRecord.publishStatus} />
               </DetailRow>
             ) : null}
-            <DetailRow label="Created">
+            <DetailRow description="When this item was first created." label="Created">
               <span className="tabular-nums">{formatDateTime(draftRecord.createdAt)}</span>
             </DetailRow>
-            <DetailRow label="Modified">
+            <DetailRow description="When this item's content was last saved." label="Modified">
               <span className="tabular-nums">{formatDateTime(draftRecord.modifiedAt)}</span>
             </DetailRow>
-            <DetailRow label="Item ID">
+            <DetailRow description="The unique reference for this item." label="Item ID">
               <code className="truncate">{draftRecord.id}</code>
             </DetailRow>
           </div>

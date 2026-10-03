@@ -10,7 +10,7 @@ export const collectionRegistry: CmsCollection[] = [
     orderingField: "sortOrder",
     description: "Portfolio projects with an ordered image gallery and publishing status.",
     fields: [
-      { key: "title", label: "Title", type: "text", required: true, section: "basic" },
+      { key: "title", label: "Title", type: "text", required: true, helpText: "The work's name, shown on its project page and in the portfolio.", section: "basic" },
       {
         key: "slug",
         label: "Slug",
@@ -48,7 +48,7 @@ export const collectionRegistry: CmsCollection[] = [
         key: "originalTitleLang",
         label: "Original title language",
         type: "text",
-        helpText: "BCP 47 language tag for the original title, e.g. fa or hi",
+        helpText: "Language code for the original title, such as fa (Persian) or hi (Hindi).",
         section: "custom"
       },
       {
@@ -66,7 +66,7 @@ export const collectionRegistry: CmsCollection[] = [
         helpText: "Slide text shown on the project page. Use the toolbar for headings, emphasis and lists.",
         section: "custom"
       },
-      { key: "hero", label: "Hero", type: "asset", required: true, bucket: "public", accept: "image/*", section: "custom" },
+      { key: "hero", label: "Hero", type: "asset", required: true, bucket: "public", accept: "image/*", helpText: "The main image representing this work on the home page and project page.", section: "custom" },
       {
         key: "thumb",
         label: "Thumb",
@@ -83,14 +83,14 @@ export const collectionRegistry: CmsCollection[] = [
         bucket: "public",
         accept: "image/*",
         helpText:
-          "All images of the work in viewing order. Drag files in to add; reorder with the arrows; captions are optional and show under the image in the gallery grid.",
+          "Images in viewing order. Drop files to add them, then drag or use the arrows to reorder. Optional captions appear beneath each image on the project page.",
         section: "custom"
       },
       {
         key: "gridStride",
         label: "Grid stride",
         type: "number",
-        helpText: "Show every Nth gallery image in the grid (all images stay in the viewer). 0 or 1 shows every image.",
+        helpText: "Show every Nth image in the project gallery. All images stay in the full-screen viewer. Use 0 or 1 to show every image.",
         section: "custom"
       },
       {
@@ -135,14 +135,14 @@ export const collectionRegistry: CmsCollection[] = [
     allowDelete: false,
     description: "The site's fixed pages. Edit the copy and imagery; pages cannot be added or removed here.",
     fields: [
-      { key: "title", label: "Title", type: "text", required: true, section: "basic" },
+      { key: "title", label: "Title", type: "text", required: true, helpText: "The page's name, used to identify it in the CMS and in page titles.", section: "basic" },
       {
         key: "slug",
         label: "Slug",
         type: "slug",
         required: true,
         urlPrefix: "https://www.richardjamesart.com/",
-        helpText: "The page's address on the site",
+        helpText: "The page's address on the site. Use lowercase words separated by dashes; changing it changes the page's URL.",
         section: "basic"
       },
       {
@@ -154,10 +154,10 @@ export const collectionRegistry: CmsCollection[] = [
         helpText: "Portrait or lead image shown beside the text, where the page uses one",
         section: "custom"
       },
-      { key: "body", label: "Body", type: "richtext", required: true, section: "custom" },
-      { key: "metaTitle", label: "Meta title", type: "text", section: "seo" },
-      { key: "metaDescription", label: "Meta description", type: "textarea", section: "seo" },
-      { key: "ogImage", label: "Social image", type: "asset", bucket: "public", accept: "image/*", section: "seo" }
+      { key: "body", label: "Body", type: "richtext", required: true, helpText: "The page's main text. Use the editor toolbar for headings, links and lists.", section: "custom" },
+      { key: "metaTitle", label: "Meta title", type: "text", helpText: "A title for search results and browser tabs. Leave blank to use the page title.", section: "seo" },
+      { key: "metaDescription", label: "Meta description", type: "textarea", helpText: "A short summary for search results and link previews. Leave blank to use the page's default description.", section: "seo" },
+      { key: "ogImage", label: "Social image", type: "asset", bucket: "public", accept: "image/*", helpText: "An image for previews when this page is shared. Leave blank to use the page's image or the site's default.", section: "seo" }
     ],
     listColumns: [
       { key: "title", label: "Name" },
@@ -178,15 +178,15 @@ export const collectionRegistry: CmsCollection[] = [
     allowDelete: false,
     description: "One record. The site reads the most recently modified record.",
     fields: [
-      { key: "name", label: "Name", type: "text", required: true, section: "custom" },
-      { key: "tagline", label: "Tagline", type: "text", required: true, section: "custom" },
-      { key: "location", label: "Location", type: "text", section: "custom" },
-      { key: "email", label: "Email", type: "text", required: true, section: "custom" },
+      { key: "name", label: "Name", type: "text", required: true, helpText: "The artist or site name used in the site's identity and page titles.", section: "custom" },
+      { key: "tagline", label: "Tagline", type: "text", required: true, helpText: "A short line describing the artist's work.", section: "custom" },
+      { key: "location", label: "Location", type: "text", helpText: "The artist's city or region, as it should appear on the site.", section: "custom" },
+      { key: "email", label: "Email", type: "text", required: true, helpText: "The public email address visitors can use to get in touch.", section: "custom" },
       {
         key: "phone",
         label: "Phone",
         type: "text",
-        helpText: "Displayed as written; the tel: link is derived from it automatically.",
+        helpText: "The public contact number, including its country code. Visitors can click it to call.",
         section: "custom"
       },
       {
@@ -194,10 +194,10 @@ export const collectionRegistry: CmsCollection[] = [
         label: "Description",
         type: "textarea",
         required: true,
-        helpText: "Default meta description",
+        helpText: "A short description of the site, used in search results and link previews when a page has no description of its own.",
         section: "custom"
       },
-      { key: "ogImage", label: "Social image", type: "asset", bucket: "public", accept: "image/*", section: "custom" }
+      { key: "ogImage", label: "Social image", type: "asset", bucket: "public", accept: "image/*", helpText: "The default image for shared links when a page has no social image of its own.", section: "custom" }
     ],
     listColumns: [
       { key: "name", label: "Name" },

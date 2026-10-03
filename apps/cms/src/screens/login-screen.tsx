@@ -35,7 +35,7 @@ export function LoginScreen({
           <h2 className="m-0 text-ui-lg font-semibold">Welcome back</h2>
           <p className="mb-6 mt-1.5 text-ui text-cms-muted">Sign in with the editor account you were given.</p>
           <form className="grid" onSubmit={handleSubmit} noValidate>
-            <FormField label="Email" required>
+            <FormField description="The email address for your editor account." label="Email" required>
               <Input
                 autoComplete="email"
                 onChange={(event) => setEmail(event.target.value)}
@@ -44,7 +44,7 @@ export function LoginScreen({
                 value={email}
               />
             </FormField>
-            <FormField label="Password" required>
+            <FormField description="The password for your editor account." label="Password" required>
               <Input
                 autoComplete="current-password"
                 onChange={(event) => setPassword(event.target.value)}
