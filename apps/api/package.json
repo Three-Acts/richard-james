@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "schema:sql": "tsx scripts/print-schema.ts",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate:cms-editing": "tsx scripts/migrate.ts --cms-editing",
     "db:seed": "tsx scripts/seed.ts",
     "auth:create-editor": "tsx scripts/create-editor.ts"
   },

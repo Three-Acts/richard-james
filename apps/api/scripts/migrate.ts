@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "pg";
 import { loadEnvFiles } from "./load-env";
-import { generateSchemaSql } from "./schema-sql";
+import { generateCmsEditingMigrationSql, generateSchemaSql } from "./schema-sql";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -25,7 +25,7 @@ async function main() {
     process.exit(1);
   }
 
-  const sql = generateSchemaSql();
+  const sql = process.argv.includes("--cms-editing") ? generateCmsEditingMigrationSql() : generateSchemaSql();
   const client = new Client({ connectionString });
 
   await client.connect();

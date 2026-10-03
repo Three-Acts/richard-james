@@ -7,6 +7,8 @@ type NumberInputProps = {
   className?: string;
   onValueChange: (value: number | null) => void;
   required?: boolean;
+  min?: number;
+  step?: number;
   value: number | null;
 };
 
@@ -19,7 +21,7 @@ const stepper = cn(
 
 // Base UI NumberField: keyboard stepping, wheel/scrub guards, and locale-aware
 // parsing that a bare `<input type="number">` does not provide.
-export function NumberInput({ className, onValueChange, required, value }: NumberInputProps) {
+export function NumberInput({ className, onValueChange, required, value, min, step }: NumberInputProps) {
   return (
     <NumberField.Root
       className={className}
@@ -29,6 +31,8 @@ export function NumberInput({ className, onValueChange, required, value }: Numbe
       format={{ useGrouping: false, maximumFractionDigits: 20 }}
       onValueChange={(next) => onValueChange(next)}
       required={required}
+      min={min}
+      step={step}
       value={value}
     >
       <NumberField.Group className="flex items-stretch gap-1">

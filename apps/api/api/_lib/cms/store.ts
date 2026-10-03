@@ -21,6 +21,13 @@ export type ListRecordsStoreOptions = ListRecordsOptions & {
   filter?: { publishStatus?: PublishStatus };
 };
 
+export type RecordToInsert = {
+  publishStatus: PublishStatus;
+  values: Record<string, CmsRecordValue>;
+  /** Generated slug bases, reserved atomically by the store. Never sent to clients. */
+  generatedSlugBases?: Record<string, string>;
+};
+
 export interface CmsDataStore {
   readonly name: string;
 
@@ -36,7 +43,7 @@ export interface CmsDataStore {
   /** The store owns ids and timestamps for new rows. */
   insertRecords(
     collection: CmsCollection,
-    rows: Array<{ publishStatus: PublishStatus; values: Record<string, CmsRecordValue> }>
+    rows: RecordToInsert[]
   ): Promise<CmsRecord[]>;
 
   /**
@@ -48,8 +55,11 @@ export interface CmsDataStore {
    * - returns `"conflict"` when the record exists but its stored
    *   `modifiedAt` no longer matches `expectedModifiedAt`
    * - returns `null` when the record does not exist at all
+   * Ordered collections move the edited record and shift siblings atomically.
+   * `orderingProvided: false` preserves its latest position under the lock;
+   * `generatedSlugBases` requests atomic reservation of title-derived slugs.
    */
-  updateRecord(collection: CmsCollection, record: CmsRecord, expectedModifiedAt?: string): Promise<CmsRecord | "conflict" | null>;
+  updateRecord(collection: CmsCollection, record: CmsRecord, expectedModifiedAt?: string, orderingProvided?: boolean, generatedSlugBases?: Record<string, string>): Promise<CmsRecord | "conflict" | null>;
 
   /** Returns whether a row was actually deleted. */
   deleteRecord(collection: CmsCollection, recordId: string): Promise<boolean>;
@@ -59,6 +69,8 @@ export interface CmsDataStore {
    * returns the ids that changed, so a caller whose subsequent deploy fails
    * can revert exactly these records (and no others) back to
    * `queued_to_publish`.
+   * Ordered collections also promote queued deliberate moves, without counting
+   * indirectly shifted siblings in the returned ids.
    */
   publishQueued(collection: CmsCollection): Promise<string[]>;
 

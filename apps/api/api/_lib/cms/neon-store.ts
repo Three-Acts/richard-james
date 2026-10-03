@@ -8,9 +8,11 @@ import {
   type ListRecordsResult,
   type PublishStatus
 } from "../schema.js";
-import { getPool } from "../db.js";
+import { getPool, withTransaction } from "../db.js";
+import type { PoolClient } from "pg";
+import { lockOrdering, orderingColumn, PENDING_ORDER_COLUMN, PUBLISHED_ORDER_COLUMN, placeItem, publishOrdering, writePositions } from "./ordering.js";
 import { timeDb } from "../server-timing.js";
-import type { CmsDataStore, ListRecordsStoreOptions } from "./store.js";
+import type { CmsDataStore, ListRecordsStoreOptions, RecordToInsert } from "./store.js";
 
 /** Field types whose backing column is free text and safe to `ILIKE` search over. */
 const SEARCHABLE_FIELD_TYPES = new Set<CmsField["type"]>(["text", "textarea", "slug", "richtext"]);
@@ -143,6 +145,24 @@ function bindValue(value: CmsRecordValue): unknown {
   return value === undefined ? null : value;
 }
 
+function reserveGeneratedSlugs(collection: CmsCollection, rows: Pick<RecordToInsert, "values" | "generatedSlugBases">[], existing: Record<string, unknown>[]): void {
+  for (const field of collection.fields.filter((item) => item.type === "slug")) {
+    const column = columnForField(collection, field);
+    const used = new Set(existing.map((row) => String(row[column] ?? "")));
+    // Reserve custom slugs first, including those later in an import batch.
+    for (const row of rows) if (!row.generatedSlugBases?.[field.key]) used.add(String(row.values[field.key] ?? ""));
+    for (const row of rows) {
+      const base = row.generatedSlugBases?.[field.key];
+      if (!base) continue;
+      let candidate = base;
+      let suffix = 2;
+      while (used.has(candidate)) candidate = `${base}-${suffix++}`;
+      row.values[field.key] = candidate;
+      used.add(candidate);
+    }
+  }
+}
+
 /** `CmsDataStore` backed by plain parameterised SQL over a `pg` pool (see scripts/schema-sql.ts). */
 export class NeonDataStore implements CmsDataStore {
   readonly name = "neon";
@@ -169,8 +189,10 @@ export class NeonDataStore implements CmsDataStore {
 
     const whereSql = whereClauses.length > 0 ? `where ${whereClauses.join(" and ")}` : "";
 
-    const sortColumn = quoteIdent(options.sort ? resolveSortColumn(collection, options.sort.key) : sys.modifiedAt);
-    const direction = options.sort?.direction === "asc" ? "asc" : "desc";
+    const publicOrdering = Boolean(collection.orderingField && options.filter?.publishStatus === "published");
+    const sortKey = options.sort?.key ?? collection.orderingField;
+    const sortColumn = quoteIdent(publicOrdering && sortKey === collection.orderingField ? PUBLISHED_ORDER_COLUMN : sortKey ? resolveSortColumn(collection, sortKey) : sys.modifiedAt);
+    const direction = options.sort ? options.sort.direction : collection.orderingField ? "asc" : "desc";
 
     const dataParams = [...whereParams];
     let limitOffsetSql = "";
@@ -180,7 +202,7 @@ export class NeonDataStore implements CmsDataStore {
     }
 
     const fields = options.fields === "list" ? listFieldsOf(collection) : collection.fields;
-    const selectColumns = options.fields === "list" ? selectColumnsSql(collection, fields) : "*";
+    const selectColumns = options.fields === "list" ? `${selectColumnsSql(collection, fields)}${publicOrdering ? `, ${quoteIdent(PUBLISHED_ORDER_COLUMN)}` : ""}` : "*";
 
     const countSql = `select count(*)::text as count from ${table} ${whereSql}`;
     const dataSql = `select ${selectColumns} from ${table} ${whereSql} order by ${sortColumn} ${direction}${limitOffsetSql}`;
@@ -193,7 +215,7 @@ export class NeonDataStore implements CmsDataStore {
     const total = Number(countResult.rows[0]?.count ?? 0);
 
     return {
-      records: dataResult.rows.map((row) => mapRowToRecord(collection, row as Record<string, unknown>, fields)),
+      records: dataResult.rows.map((row) => mapRowToRecord(collection, publicOrdering ? { ...row, [orderingColumn(collection)!]: row[PUBLISHED_ORDER_COLUMN] } : row as Record<string, unknown>, fields)),
       total
     };
   }
@@ -236,7 +258,38 @@ export class NeonDataStore implements CmsDataStore {
 
   async insertRecords(
     collection: CmsCollection,
-    rows: Array<{ publishStatus: PublishStatus; values: Record<string, CmsRecordValue> }>
+    rows: RecordToInsert[]
+  ): Promise<CmsRecord[]> {
+    if (!rows.length) return [];
+    const column = orderingColumn(collection);
+    if (!column && !rows.some((row) => Object.keys(row.generatedSlugBases ?? {}).length)) return this.insertRows(collection, rows, getPool());
+    return withTransaction(async (client) => {
+      const sys = systemColumnsFor(collection);
+      const existing = await lockOrdering(client, collection);
+      reserveGeneratedSlugs(collection, rows, existing);
+      let ids = existing.map((row) => String(row[sys.id]));
+      const inserted = await this.insertRows(collection, rows, client);
+      if (!column) return inserted;
+      for (const [index, record] of inserted.entries()) {
+        ids = placeItem(ids, record.id, Number(rows[index].values[collection.orderingField!] ?? ids.length + 1));
+      }
+      await writePositions(client, collection, ids, column);
+      await client.query(`update ${quoteIdent(collection.tableName)} set ${quoteIdent(PENDING_ORDER_COLUMN)} = true where ${quoteIdent(sys.id)} = any($1::uuid[])`, [inserted.map((record) => record.id)]);
+      const publishedIds = new Set(inserted.filter((record) => record.publishStatus === "published").map((record) => record.id));
+      if (publishedIds.size) {
+        const ordered = await lockOrdering(client, collection);
+        await publishOrdering(client, collection, ordered.filter((row) => row[sys.publishStatus] === "published").map((row) => publishedIds.has(String(row[sys.id])) ? { ...row, [sys.publishStatus]: "queued_to_publish" } : row));
+      }
+      const result = await client.query(`select * from ${quoteIdent(collection.tableName)} where ${quoteIdent(sys.id)} = any($1::uuid[])`, [inserted.map((record) => record.id)]);
+      const byId = new Map(result.rows.map((row) => [String(row[sys.id]), mapRowToRecord(collection, row)]));
+      return inserted.map((record) => byId.get(record.id)!);
+    });
+  }
+
+  private async insertRows(
+    collection: CmsCollection,
+    rows: Array<{ publishStatus: PublishStatus; values: Record<string, CmsRecordValue> }>,
+    connection: Pick<PoolClient, "query">
   ): Promise<CmsRecord[]> {
     if (rows.length === 0) {
       return [];
@@ -262,11 +315,40 @@ export class NeonDataStore implements CmsDataStore {
     });
 
     const sql = `insert into ${table} (${quotedColumns}) values ${valueRows.join(", ")} returning *`;
-    const result = await timeDb(() => getPool().query(sql, params));
+    const result = await timeDb(() => connection.query(sql, params));
     return result.rows.map((row) => mapRowToRecord(collection, row as Record<string, unknown>));
   }
 
-  async updateRecord(collection: CmsCollection, record: CmsRecord, expectedModifiedAt?: string): Promise<CmsRecord | "conflict" | null> {
+  async updateRecord(collection: CmsCollection, record: CmsRecord, expectedModifiedAt?: string, orderingProvided = true, generatedSlugBases: Record<string, string> = {}): Promise<CmsRecord | "conflict" | null> {
+    const column = orderingColumn(collection);
+    if (!column && !Object.keys(generatedSlugBases).length) return this.writeRecord(collection, record, expectedModifiedAt, getPool());
+    return withTransaction(async (client) => {
+      const sys = systemColumnsFor(collection);
+      const rows = await lockOrdering(client, collection);
+      const existing = rows.find((row) => String(row[sys.id]) === record.id);
+      if (!existing) return null;
+      if (column && !orderingProvided) record = { ...record, values: { ...record.values, [collection.orderingField!]: Number(existing[column]) } };
+      reserveGeneratedSlugs(collection, [{ values: record.values, generatedSlugBases }], rows.filter((row) => String(row[sys.id]) !== record.id));
+      const result = await this.writeRecord(collection, record, expectedModifiedAt, client);
+      if (!result || result === "conflict") return result;
+      if (!column) return result;
+      const position = Number(record.values[collection.orderingField!]);
+      if (position !== Number(existing[column])) {
+        const ids = placeItem(rows.map((row) => String(row[sys.id])), record.id, position);
+        await writePositions(client, collection, ids, column);
+        await client.query(`update ${quoteIdent(collection.tableName)} set ${quoteIdent(PENDING_ORDER_COLUMN)} = true where ${quoteIdent(sys.id)} = $1`, [record.id]);
+        result.values[collection.orderingField!] = ids.indexOf(record.id) + 1;
+      }
+      // Direct store writes are used by seeding, which deliberately bypasses the editorial queue.
+      if (record.publishStatus === "published") {
+        const ordered = await lockOrdering(client, collection);
+        await publishOrdering(client, collection, ordered.filter((row) => row[sys.publishStatus] === "published").map((row) => String(row[sys.id]) === record.id ? { ...row, [sys.publishStatus]: "queued_to_publish", [PENDING_ORDER_COLUMN]: true } : row));
+      }
+      return result;
+    });
+  }
+
+  private async writeRecord(collection: CmsCollection, record: CmsRecord, expectedModifiedAt: string | undefined, connection: Pick<PoolClient, "query">): Promise<CmsRecord | "conflict" | null> {
     const sys = systemColumnsFor(collection);
     const table = quoteIdent(collection.tableName);
     const now = new Date().toISOString();
@@ -294,20 +376,34 @@ export class NeonDataStore implements CmsDataStore {
     }
     sql += " returning *";
 
-    const result = await timeDb(() => getPool().query(sql, params));
+    const result = await timeDb(() => connection.query(sql, params));
     if (result.rows.length > 0) {
       return mapRowToRecord(collection, result.rows[0] as Record<string, unknown>);
     }
 
     // Zero rows updated: either the record doesn't exist, or (when checking
     // expectedModifiedAt) it exists but was modified since the caller last read it.
-    const stillExists = await this.getRecord(collection, record.id);
-    return stillExists ? "conflict" : null;
+    // Use the same connection: acquiring another pooled client while holding
+    // the collection lock can exhaust the pool behind concurrent writers.
+    const stillExists = await connection.query(`select ${quoteIdent(sys.id)} from ${table} where ${quoteIdent(sys.id)} = $1`, [record.id]);
+    return stillExists.rows.length ? "conflict" : null;
   }
 
   async deleteRecord(collection: CmsCollection, recordId: string): Promise<boolean> {
     const sys = systemColumnsFor(collection);
     const table = quoteIdent(collection.tableName);
+    const column = orderingColumn(collection);
+    if (column) {
+      return withTransaction(async (client) => {
+        const rows = await lockOrdering(client, collection);
+        const result = await client.query(`delete from ${table} where ${quoteIdent(sys.id)} = $1`, [recordId]);
+        if (!result.rowCount) return false;
+        const remaining = rows.filter((row) => String(row[sys.id]) !== recordId);
+        await writePositions(client, collection, remaining.map((row) => String(row[sys.id])), column);
+        await writePositions(client, collection, remaining.filter((row) => row[PUBLISHED_ORDER_COLUMN] != null).sort((a, b) => Number(a[PUBLISHED_ORDER_COLUMN]) - Number(b[PUBLISHED_ORDER_COLUMN])).map((row) => String(row[sys.id])), PUBLISHED_ORDER_COLUMN);
+        return true;
+      });
+    }
     const result = await timeDb(() => getPool().query(`delete from ${table} where ${quoteIdent(sys.id)} = $1`, [recordId]));
     return (result.rowCount ?? 0) > 0;
   }
@@ -317,6 +413,17 @@ export class NeonDataStore implements CmsDataStore {
     const table = quoteIdent(collection.tableName);
     const publishedStatus: PublishStatus = "published";
     const queuedStatus: PublishStatus = "queued_to_publish";
+
+    if (orderingColumn(collection)) {
+      return withTransaction(async (client) => {
+        const rows = await lockOrdering(client, collection);
+        const queuedIds = rows.filter((row) => row[sys.publishStatus] === queuedStatus).map((row) => String(row[sys.id]));
+        if (!queuedIds.length) return [];
+        await publishOrdering(client, collection, rows);
+        await client.query(`update ${table} set ${quoteIdent(sys.publishStatus)} = $1 where ${quoteIdent(sys.id)} = any($2::uuid[])`, [publishedStatus, queuedIds]);
+        return queuedIds;
+      });
+    }
 
     const result = await timeDb(() =>
       getPool().query(

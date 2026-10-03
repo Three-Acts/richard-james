@@ -78,6 +78,7 @@ export function RecordEditor({
     return (
       <FieldControl
         field={field}
+        isPosition={field.key === collection.orderingField}
         galleryOptimizing={galleryOptimizing}
         key={field.key}
         locked={isUploading}

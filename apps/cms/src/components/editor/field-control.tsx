@@ -30,6 +30,7 @@ export type UploadProgress = { completed: number; total: number } | null;
 
 type FieldControlProps = {
   field: CmsField;
+  isPosition?: boolean;
   /** Files an editor picked/dropped onto a `gallery` field's control. */
   onGalleryUpload: (field: GalleryField, files: File[]) => void;
   galleryOptimizing: GalleryOptimizeProgress;
@@ -120,6 +121,7 @@ function ReferenceFieldControl({
 
 export function FieldControl({
   field,
+  isPosition,
   galleryOptimizing,
   locked,
   onAssetUpload,
@@ -229,7 +231,7 @@ export function FieldControl({
   if (field.type === "number") {
     return (
       <FormField description={field.helpText} label={field.label} required={field.required}>
-        <NumberInput onValueChange={(next) => onUpdateValue(field.key, next)} required={field.required} value={toNumberValue(value)} />
+        <NumberInput min={isPosition ? 1 : undefined} step={isPosition ? 1 : undefined} onValueChange={(next) => onUpdateValue(field.key, next)} required={field.required} value={toNumberValue(value)} />
       </FormField>
     );
   }

@@ -1,6 +1,7 @@
 import {
   CmsError,
   MAX_ASSET_UPLOAD_BYTES,
+  normalizeSlug,
   collectionRegistry,
   parseGalleryValue,
   referenceFieldsOf,
@@ -97,7 +98,7 @@ function validateFieldValue(field: CmsField, raw: CmsRecordValue, enforceRequire
     case "asset":
     case "reference":
     case "richtext": {
-      const text = raw === null || raw === undefined ? "" : String(raw);
+      const text = field.type === "slug" ? normalizeSlug(String(raw ?? "")) : raw === null || raw === undefined ? "" : String(raw);
       if (enforceRequired && field.required && !text.trim()) {
         throw validationError(field, `${field.label} is required.`);
       }
@@ -111,7 +112,7 @@ function validateFieldValue(field: CmsField, raw: CmsRecordValue, enforceRequire
         return 0;
       }
       const num = typeof raw === "number" ? raw : Number(raw);
-      if (typeof raw === "boolean" || Number.isNaN(num)) {
+      if (typeof raw === "boolean" || !Number.isFinite(num)) {
         throw validationError(field, `${field.label} must be a number.`);
       }
       return num;
@@ -237,10 +238,44 @@ function buildRecordValues(
       raw = defaultValueForField(field);
     }
 
+    if (field.key === collection.orderingField) {
+      // An omitted position on creation means append; an explicit invalid position is an error.
+      if (!provided && !existingValues) {
+        values[field.key] = undefined;
+        continue;
+      }
+      if (typeof raw === "boolean" || raw === "" || raw === null || !Number.isSafeInteger(Number(raw)) || Number(raw) < 1) {
+        throw validationError(field, `${field.label} must be a whole number of at least 1.`);
+      }
+    }
+    if (field.type === "slug" && !normalizeSlug(String(raw ?? ""))) {
+      const titleKey = collection.titleField ?? "title";
+      raw = normalizeSlug(String(input?.[titleKey] ?? existingValues?.[titleKey] ?? ""));
+    }
     values[field.key] = validateFieldValue(field, raw, enforceRequired);
   }
 
   return values;
+}
+
+/** Only automatically generated slugs receive suffixes; custom URL collisions remain visible errors. */
+function generatedSlugBasesFor(
+  collection: CmsCollection,
+  values: Record<string, CmsRecordValue>,
+  input: Partial<Record<string, CmsRecordValue>> | undefined,
+  existing?: CmsRecord
+): Record<string, string> {
+  const bases: Record<string, string> = {};
+  const slugFields = collection.fields.filter((field) => field.type === "slug");
+  for (const field of slugFields) {
+    const slug = String(values[field.key] ?? "");
+    const titleSlug = normalizeSlug(String(values[collection.titleField ?? "title"] ?? ""));
+    const inputSlug = normalizeSlug(String(input?.[field.key] ?? existing?.values[field.key] ?? ""));
+    if (slug && (!inputSlug || (!existing?.values[field.key] && inputSlug === titleSlug))) {
+      bases[field.key] = slug;
+    }
+  }
+  return bases;
 }
 
 /**
@@ -326,7 +361,7 @@ export async function createRecord(collectionId: string, values?: Partial<Record
   await assertCreateAllowed(collection);
   const normalizedValues = buildRecordValues(collection, values, undefined);
   await assertReferencesExist(collection, normalizedValues);
-  const [record] = await getDataStore().insertRecords(collection, [{ publishStatus: "not_published", values: normalizedValues }]);
+  const [record] = await getDataStore().insertRecords(collection, [{ publishStatus: "not_published", values: normalizedValues, generatedSlugBases: generatedSlugBasesFor(collection, normalizedValues, values) }]);
   return record;
 }
 
@@ -348,10 +383,14 @@ export async function saveRecord(
     throw new CmsError("not_found", `Unknown record: ${recordId}`);
   }
 
-  const publishStatus = isPublishStatus(record.publishStatus) ? record.publishStatus : existing.publishStatus;
+  let publishStatus = isPublishStatus(record.publishStatus) ? record.publishStatus : existing.publishStatus;
   // Required fields gate publishing, not drafting.
   const enforceRequired = publishStatus === "published" || publishStatus === "queued_to_publish";
   const normalizedValues = buildRecordValues(collection, record.values, existing.values, enforceRequired);
+  const generatedSlugBases = generatedSlugBasesFor(collection, normalizedValues, record.values, existing);
+  if (hasPublishWorkflow(collection) && publishStatus === "published" && collection.fields.some((field) => normalizedValues[field.key] !== existing.values[field.key])) {
+    publishStatus = "queued_to_publish";
+  }
   await assertReferencesExist(collection, normalizedValues);
 
   const nextRecord: CmsRecord = {
@@ -362,7 +401,7 @@ export async function saveRecord(
     values: normalizedValues
   };
 
-  const result = await store.updateRecord(collection, nextRecord, expectedModifiedAt);
+  const result = await store.updateRecord(collection, nextRecord, expectedModifiedAt, !collection.orderingField || Object.prototype.hasOwnProperty.call(record.values, collection.orderingField), generatedSlugBases);
 
   if (result === "conflict") {
     throw new CmsError("conflict", "This record was changed elsewhere. Reload and try again.");
@@ -395,10 +434,10 @@ export async function importRecords(collectionId: string, rows: Array<Record<str
     throw new CmsError("validation", `Import is limited to ${MAX_IMPORT_ROWS} rows per request.`);
   }
 
-  const prepared = rows.map((row) => ({
-    publishStatus: "not_published" as const,
-    values: buildRecordValues(collection, row, undefined)
-  }));
+  const prepared = rows.map((row) => {
+    const values = buildRecordValues(collection, row, undefined);
+    return { publishStatus: "not_published" as const, values, generatedSlugBases: generatedSlugBasesFor(collection, values, row) };
+  });
 
   for (const row of prepared) {
     await assertReferencesExist(collection, row.values);

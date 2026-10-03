@@ -12,11 +12,11 @@ import type {
   ListRecordsResult,
   PublishStatus
 } from "../cms/types";
-import { MAX_ASSET_UPLOAD_BYTES, parseGalleryValue, serializeGalleryValue } from "../cms/types";
+import { MAX_ASSET_UPLOAD_BYTES, parseGalleryValue, serializeGalleryValue, updateSlugValues } from "../cms/types";
 import { rememberAssetMeta, useToast } from "../components/atoms";
 import type { GalleryOptimizeProgress, UploadProgress } from "../components/editor/field-control";
 import type { CollectionGroup } from "../components/workspace";
-import { areValuesEqual, assertNoBlobUrls, getRecordTitle, replaceBlobUrlsForKeys, stripBlobUrls } from "../lib/records";
+import { areValuesEqual, assertNoBlobUrls, getRecordTitle, replaceBlobUrlsForKeys, stripBlobUrls, valuesForSave } from "../lib/records";
 import { exportRecords } from "../lib/export-records";
 import { looksLikeImage, optimizeImage } from "../lib/optimize-image";
 import { bumpReferenceCache } from "./use-reference-options";
@@ -743,7 +743,7 @@ export function useCmsWorkspace() {
     const valuesAtSaveStart = recordToSave.values;
 
     try {
-      const savedRecord = await data.saveRecord(activeCollection.id, recordToSave, {
+      const savedRecord = await data.saveRecord(activeCollection.id, { ...recordToSave, values: valuesForSave(activeCollection, recordToSave.values, lastSavedRecord?.values ?? {}) }, {
         expectedModifiedAt: lastSavedRecord?.modifiedAt
       });
 
@@ -772,10 +772,12 @@ export function useCmsWorkspace() {
       // cached options for this collection could now be stale.
       bumpReferenceCache(activeCollection.id);
 
-      // A plain field-value save never moves a record in or out of
-      // "queued_to_publish", so only a status-changing save needs to refresh
-      // the summaries the Publish button and sidebar counts read from.
-      if (nextStatus) {
+      if (activeCollection.orderingField) {
+        const { records: nextRecords } = await data.listRecords(activeCollection.id, { fields: "list" });
+        setRecords(nextRecords);
+      }
+      // The API queues an edited published item; incidental shifts don't change sibling statuses.
+      if (nextStatus || savedRecord.publishStatus !== draftRecord.publishStatus) {
         await refreshCollections();
       }
     } catch (nextError) {
@@ -912,10 +914,7 @@ export function useCmsWorkspace() {
 
       return {
         ...record,
-        values: {
-          ...record.values,
-          [fieldKey]: value
-        }
+        values: activeCollection ? updateSlugValues(activeCollection, record.values, lastSavedRecord?.values ?? {}, fieldKey, value) : { ...record.values, [fieldKey]: value }
       };
     });
   }

@@ -6,6 +6,7 @@
  * Idempotent: safe to run repeatedly against the same database.
  */
 import { collectionRegistry, columnForField, systemColumnsFor, type CmsCollection, type CmsField } from "@three-acts/cms-schema";
+import { orderingColumn, PENDING_ORDER_COLUMN, PUBLISHED_ORDER_COLUMN } from "../api/_lib/cms/ordering.js";
 
 function sqlColumnType(field: CmsField): string {
   switch (field.type) {
@@ -45,6 +46,48 @@ function quoteIdent(name: string): string {
 // from before this fix).
 const MILLISECOND_NOW = "date_trunc('milliseconds', now())";
 
+function timestampTriggerSql(collection: CmsCollection): string {
+  const sys = systemColumnsFor(collection);
+  const table = quoteIdent(collection.tableName);
+  const triggerFn = quoteIdent(`set_${collection.tableName}_${sys.modifiedAt}`);
+  const trigger = quoteIdent(`trg_${collection.tableName}_${sys.modifiedAt}`);
+  const column = orderingColumn(collection);
+  const ignored = [column, PUBLISHED_ORDER_COLUMN, PENDING_ORDER_COLUMN, sys.modifiedAt].filter(Boolean).map((name) => `'${name!.replace(/'/g, "''")}'`).join(", ");
+  return [
+    `create or replace function ${triggerFn}() returns trigger as $$`,
+    `begin`,
+    ...(column ? [
+      `  if (to_jsonb(new) - array[${ignored}]) = (to_jsonb(old) - array[${ignored}]) and new.${quoteIdent(sys.modifiedAt)} = old.${quoteIdent(sys.modifiedAt)} then`,
+      `    return new;`,
+      `  end if;`
+    ] : []),
+    `  new.${quoteIdent(sys.modifiedAt)} = ${MILLISECOND_NOW};`,
+    `  return new;`,
+    `end; $$ language plpgsql;`,
+    `drop trigger if exists ${trigger} on ${table};`,
+    `create trigger ${trigger} before update on ${table} for each row execute function ${triggerFn}();`
+  ].join("\n");
+}
+
+function orderingMigrationSql(collection: CmsCollection): string {
+  const column = orderingColumn(collection);
+  if (!column) return "";
+  const table = quoteIdent(collection.tableName);
+  const sys = systemColumnsFor(collection);
+  const id = quoteIdent(sys.id);
+  const order = quoteIdent(column);
+  const published = quoteIdent(PUBLISHED_ORDER_COLUMN);
+  return [
+    `alter table ${table} add column if not exists ${published} numeric;`,
+    `alter table ${table} add column if not exists ${quoteIdent(PENDING_ORDER_COLUMN)} boolean not null default false;`,
+    timestampTriggerSql(collection),
+    `with positions as (select ${id}, row_number() over (order by ${order} asc nulls last, ${quoteIdent(sys.createdAt)}, ${id}) as position from ${table})`,
+    `update ${table} as item set ${order} = positions.position from positions where item.${id} = positions.${id} and item.${order} is distinct from positions.position;`,
+    `with positions as (select ${id}, row_number() over (order by ${order}, ${id}) as position from ${table} where ${quoteIdent(sys.publishStatus)} in ('published', 'queued_to_publish'))`,
+    `update ${table} as item set ${published} = positions.position from positions where item.${id} = positions.${id} and item.${published} is null;`
+  ].join("\n");
+}
+
 function tableSql(collection: CmsCollection): string {
   const sys = systemColumnsFor(collection);
 
@@ -57,8 +100,6 @@ function tableSql(collection: CmsCollection): string {
   ];
 
   const table = quoteIdent(collection.tableName);
-  const triggerFn = quoteIdent(`set_${collection.tableName}_${sys.modifiedAt}`);
-  const trigger = quoteIdent(`trg_${collection.tableName}_${sys.modifiedAt}`);
 
   // `create table if not exists` is a no-op on a table that already exists,
   // so a field added to the registry after a table's first migration (e.g.
@@ -84,19 +125,7 @@ function tableSql(collection: CmsCollection): string {
     `alter table ${table} alter column ${quoteIdent(sys.createdAt)} set default ${MILLISECOND_NOW};`,
     `alter table ${table} alter column ${quoteIdent(sys.modifiedAt)} set default ${MILLISECOND_NOW};`,
     ``,
-    `create or replace function ${triggerFn}()`,
-    `returns trigger as $$`,
-    `begin`,
-    `  new.${quoteIdent(sys.modifiedAt)} = ${MILLISECOND_NOW};`,
-    `  return new;`,
-    `end;`,
-    `$$ language plpgsql;`,
-    ``,
-    `drop trigger if exists ${trigger} on ${table};`,
-    `create trigger ${trigger}`,
-    `before update on ${table}`,
-    `for each row`,
-    `execute function ${triggerFn}();`
+    orderingColumn(collection) ? orderingMigrationSql(collection) : timestampTriggerSql(collection)
   ].join("\n");
 }
 
@@ -121,8 +150,10 @@ function indexSql(collection: CmsCollection): string {
     const column = columnForField(collection, field);
 
     if (field.type === "slug" && (field.key === "slug" || field.key === "key")) {
+      // Replace the old unconditional unique index: many unfinished drafts may have a blank slug.
+      lines.push(`drop index if exists ${quoteIdent(`uq_${collection.tableName}_${column}`)};`);
       lines.push(
-        `create unique index if not exists ${quoteIdent(`uq_${collection.tableName}_${column}`)} on ${table} (${quoteIdent(column)});`
+        `create unique index if not exists ${quoteIdent(`uq_${collection.tableName}_${column}`)} on ${table} (${quoteIdent(column)}) where ${quoteIdent(column)} is not null and ${quoteIdent(column)} <> '';`
       );
     }
 
@@ -199,4 +230,9 @@ export function generateSchemaSql(): string {
   const tables = collectionRegistry.map((collection) => `${tableSql(collection)}\n\n${indexSql(collection)}`).join("\n\n");
 
   return `${header}\n${tables}\n\n${LEGACY_CLEANUP_SQL}\n`;
+}
+
+/** Focused upgrade for existing databases; excludes unrelated legacy table/column cleanup. */
+export function generateCmsEditingMigrationSql(): string {
+  return collectionRegistry.map((collection) => [orderingMigrationSql(collection), indexSql(collection)].filter(Boolean).join("\n")).join("\n\n");
 }

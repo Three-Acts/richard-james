@@ -25,6 +25,15 @@ export function hasPublishWorkflow(collection: CmsCollection) {
   return getCollectionMode(collection) === "editorial";
 }
 
+/** An unchanged editor position may have shifted on the server since this record was opened. */
+export function valuesForSave(collection: CmsCollection, values: CmsRecord["values"], savedValues: CmsRecord["values"]): CmsRecord["values"] {
+  const next = { ...values };
+  if (collection.orderingField && values[collection.orderingField] === savedValues[collection.orderingField]) {
+    delete next[collection.orderingField];
+  }
+  return next;
+}
+
 /**
  * Shallow-compares two records' editable surface (field values), field by
  * field, using `collection.fields` to tell a `richtext` value apart from

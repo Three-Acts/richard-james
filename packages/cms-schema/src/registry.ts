@@ -7,6 +7,7 @@ export const collectionRegistry: CmsCollection[] = [
     tableName: "projects",
     group: "Work",
     titleField: "title",
+    orderingField: "sortOrder",
     description: "Portfolio projects with an ordered image gallery and publishing status.",
     fields: [
       { key: "title", label: "Title", type: "text", required: true, section: "basic" },
@@ -15,6 +16,7 @@ export const collectionRegistry: CmsCollection[] = [
         label: "Slug",
         type: "slug",
         required: true,
+        helpText: "Generated from the title. You can customise it; spaces become dashes and letters are lowercase.",
         urlPrefix: "https://www.richardjamesart.com/projects/",
         section: "basic"
       },
@@ -25,7 +27,7 @@ export const collectionRegistry: CmsCollection[] = [
         type: "number",
         required: true,
         helpText:
-          "Position in the browsing order (1 = first). Next/previous links and the home stage follow this order.",
+          "Position (1 = first). Moving this item shifts others automatically; only this item is queued. The order goes live when published.",
         section: "custom"
       },
       {

@@ -112,6 +112,8 @@ export type CmsCollection = {
   mode?: CollectionMode;
   group?: string;
   titleField?: string;
+  /** Numeric, one-based collection position. Incidental shifts never queue siblings. */
+  orderingField?: string;
   description?: string;
   fields: CmsField[];
   listColumns: ListColumn[];
