@@ -280,10 +280,6 @@ async function upsertProjects(
       // collection) there's no separate table to skip re-touching.
       gallery: serializeGalleryValue(galleryItems)
     };
-    if (project.gridStride) {
-      values.gridStride = project.gridStride;
-    }
-
     if (dryRun) {
       console.log(`[dry-run] project ${sortOrder}: ${project.slug} (${galleryItems.length} gallery images)`);
       continue;

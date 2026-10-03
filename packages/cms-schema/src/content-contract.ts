@@ -57,8 +57,6 @@ export type ProjectContent = {
   /** Absolute public URL; the API substitutes `hero` when no thumb is set. */
   thumb: string;
   images: ProjectImageContent[];
-  /** Show every Nth gallery image in the grid; undefined, 0 or 1 shows all. */
-  gridStride?: number;
   /** 1-based position in the browsing order. Next/previous derive from it. */
   sortOrder: number;
   seo: SeoContent;

@@ -15,12 +15,6 @@ export interface Props {
  *
  * Each image keeps its natural aspect ratio, caption and scroll reveal.
  *
- * A project may set `gridStride` to show only every Nth image here (works
- * documented as near-identical runs of frames). The fullscreen viewer always
- * receives the COMPLETE list, so the frames omitted from the grid are still
- * reachable by swiping — which is why each button carries its index into the
- * full list, not into the visible subset.
- *
  * Clicking an image opens that viewer, the one genuinely interactive piece here.
  * It shares the gesture engine with the home stage, so it stays React and is
  * pulled in by a dynamic import on the first click (see mountLightbox.tsx) —
@@ -31,11 +25,6 @@ const { project } = Astro.props
 const images = project.images
 const total = images.length
 
-const stride = Math.max(1, project.gridStride ?? 1)
-// Keep each image's position in the full list — that index is what the viewer opens on.
-const visible = images
-  .map((image, index) => ({ image, index }))
-  .filter(({ index }) => index % stride === 0)
 ---
 
 <section
@@ -45,10 +34,10 @@ const visible = images
 >
   <div class="masonry-gallery" data-masonry>
     {
-      visible.map(({ image, index }, position) => (
+      images.map((image, index) => (
         <figure class="gallery-item" data-masonry-item>
           {/* Keep the quiet alternating reveal without tying it to fixed-height rows. */}
-          <Reveal y={32} delay={(position % 2) * 0.08}>
+          <Reveal y={32} delay={(index % 2) * 0.08}>
             <button
               type="button"
               data-lightbox-open={index}

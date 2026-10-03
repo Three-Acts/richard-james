@@ -58,7 +58,6 @@ export interface Project {
    * runs, where the grid should carry one representative per piece rather than
    * every frame. Omit (or 1) to show them all.
    */
-  gridStride?: number
   /** Slug of the next project (wraps around) — informational only; the
    *  seeded `sortOrder` (this project's 1-based array index) is what actually
    *  drives next/previous in the API's content contract. */

@@ -87,13 +87,6 @@ export const collectionRegistry: CmsCollection[] = [
         section: "custom"
       },
       {
-        key: "gridStride",
-        label: "Grid stride",
-        type: "number",
-        helpText: "Show every Nth image in the project gallery. All images stay in the full-screen viewer. Use 0 or 1 to show every image.",
-        section: "custom"
-      },
-      {
         key: "metaTitle",
         label: "Meta title",
         type: "text",

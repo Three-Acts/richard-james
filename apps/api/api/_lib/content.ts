@@ -101,7 +101,6 @@ function toPageContent(record: CmsRecord): PageContent {
 function toProjectContent(record: CmsRecord): ProjectContent {
   const hero = stringValue(record, "hero");
   const thumbRaw = stringValue(record, "thumb");
-  const gridStrideRaw = numberValue(record, "gridStride");
 
   return {
     slug: stringValue(record, "slug"),
@@ -118,9 +117,6 @@ function toProjectContent(record: CmsRecord): ProjectContent {
     // Images live on the project row itself now (the `gallery` field, a JSON
     // GalleryItem[] string) rather than a joined project-images collection.
     images: parseGalleryValue(record.values.gallery),
-    // 0 or empty shows every image (see registry helpText); the contract
-    // leaves that as "unset".
-    gridStride: gridStrideRaw ? gridStrideRaw : undefined,
     sortOrder: numberValue(record, "sortOrder"),
     seo: buildSeo(record)
   };
