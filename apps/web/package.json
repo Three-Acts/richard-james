@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "astro check",
     "test:gestures": "node scripts/test-carousel.ts",
-    "test:content": "node scripts/test-markdown.ts"
+    "test:content": "node scripts/test-markdown.ts",
+    "test:masonry": "node scripts/test-masonry.ts"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.2",

@@ -8,14 +8,12 @@ export interface Props {
 }
 
 /**
- * The gallery of a project's images: a two-column grid on desktop, one column on
- * mobile, filled in reading order — row by row, left then right. It is a real
- * CSS grid rather than CSS multi-column so that order is row-major; multi-column
- * fills the entire left column before starting the right, which makes the eye
- * jump down and back up again.
+ * A masonry gallery: two columns on desktop and one on mobile. Each successive
+ * image fills the shorter column, avoiding the empty space a shared grid row
+ * leaves beneath landscape images beside portraits. DOM and viewer order stay
+ * in the CMS's sequence; a regular grid remains available without JavaScript.
  *
- * Each image keeps its natural aspect ratio and rises in on scroll, the
- * right-hand image of each row a beat behind the left.
+ * Each image keeps its natural aspect ratio, caption and scroll reveal.
  *
  * A project may set `gridStride` to show only every Nth image here (works
  * documented as near-identical runs of frames). The fullscreen viewer always
@@ -45,11 +43,11 @@ const visible = images
   aria-label={`${project.title} — gallery`}
   class="u-container pb-[clamp(5rem,14vh,11rem)]"
 >
-  <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-2 md:gap-8">
+  <div class="masonry-gallery" data-masonry>
     {
       visible.map(({ image, index }, position) => (
-        <figure>
-          {/* Stagger by column, so each row cascades left → right. */}
+        <figure class="gallery-item" data-masonry-item>
+          {/* Keep the quiet alternating reveal without tying it to fixed-height rows. */}
           <Reveal y={32} delay={(position % 2) * 0.08}>
             <button
               type="button"
@@ -94,12 +92,50 @@ const visible = images
   />
 </section>
 
+<style>
+  .masonry-gallery {
+    --gallery-columns: 1;
+    --gallery-gap: 24px;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--gallery-columns), minmax(0, 1fr));
+    align-items: start;
+    gap: var(--gallery-gap);
+  }
+
+  .masonry-gallery[data-masonry-ready] {
+    display: block;
+  }
+
+  .masonry-gallery[data-masonry-ready] > .gallery-item {
+    position: absolute;
+    width: calc((100% - (var(--gallery-columns) - 1) * var(--gallery-gap)) / var(--gallery-columns));
+  }
+
+  .gallery-item :global(img) {
+    height: auto;
+    /* Reserve a square until a lazy image supplies its natural proportions. */
+    aspect-ratio: auto 1;
+  }
+
+  @media (min-width: 48rem) {
+    .masonry-gallery {
+      --gallery-columns: 2;
+      --gallery-gap: 32px;
+    }
+  }
+</style>
+
 <script>
   import { onEachPage } from '@/lib/pageScript'
+  import { initMasonry } from '@/lib/masonry'
 
   onEachPage(() => {
     const gallery = document.querySelector<HTMLElement>('[data-gallery]')
     if (!gallery) return
+    const masonry = gallery.querySelector<HTMLElement>('[data-masonry]')
+    if (!masonry) return
+    const cleanupMasonry = initMasonry(masonry)
 
     // Cached so the framework is fetched once per session, not once per click.
     let viewer: Promise<typeof import('./mountLightbox')> | null = null
@@ -124,6 +160,9 @@ const visible = images
     }
 
     gallery.addEventListener('click', onClick)
-    return () => gallery.removeEventListener('click', onClick)
+    return () => {
+      cleanupMasonry()
+      gallery.removeEventListener('click', onClick)
+    }
   })
 </script>
