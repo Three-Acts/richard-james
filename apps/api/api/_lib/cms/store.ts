@@ -58,8 +58,9 @@ export interface CmsDataStore {
    * Ordered collections move the edited record and shift siblings atomically.
    * `orderingProvided: false` preserves its latest position under the lock;
    * `generatedSlugBases` requests atomic reservation of title-derived slugs.
+   * `publishImmediately` is reserved for seeding; CMS saves never publish ordering.
    */
-  updateRecord(collection: CmsCollection, record: CmsRecord, expectedModifiedAt?: string, orderingProvided?: boolean, generatedSlugBases?: Record<string, string>): Promise<CmsRecord | "conflict" | null>;
+  updateRecord(collection: CmsCollection, record: CmsRecord, expectedModifiedAt?: string, orderingProvided?: boolean, generatedSlugBases?: Record<string, string>, options?: { publishImmediately?: boolean }): Promise<CmsRecord | "conflict" | null>;
 
   /** Returns whether a row was actually deleted. */
   deleteRecord(collection: CmsCollection, recordId: string): Promise<boolean>;
@@ -72,7 +73,11 @@ export interface CmsDataStore {
    * Ordered collections also promote queued deliberate moves, without counting
    * indirectly shifted siblings in the returned ids.
    */
-  publishQueued(collection: CmsCollection): Promise<string[]>;
+  publishQueued(collection: CmsCollection): Promise<{ recordIds: string[]; orderingPublished: boolean }>;
+
+  hasPendingOrder(collection: CmsCollection): Promise<boolean>;
+  reorderRecord(collection: CmsCollection, recordId: string, position: number): Promise<CmsRecord[] | null>;
+  queueOrdering(collection: CmsCollection): Promise<void>;
 
   /**
    * Sets `status` (and stamps the modified column with "now") on every id in

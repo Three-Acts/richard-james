@@ -112,7 +112,7 @@ export type CmsCollection = {
   mode?: CollectionMode;
   group?: string;
   titleField?: string;
-  /** Numeric, one-based collection position. Incidental shifts never queue siblings. */
+  /** Internal numeric, one-based position, managed by list reordering. */
   orderingField?: string;
   description?: string;
   fields: CmsField[];
@@ -134,7 +134,9 @@ export type CmsCollection = {
 
 export type CmsCollectionSummary = CmsCollection & {
   count: number;
-  /** Records currently `queued_to_publish`; drives whether "Publish site" is offered. */
+  /** Ordering changes waiting to be sent to the site, independently of record statuses. */
+  hasPendingOrder: boolean;
+  /** Records currently `queued_to_publish`. */
   queuedCount: number;
 };
 
@@ -178,6 +180,7 @@ export type SaveRecordOptions = {
 /** See `CmsDataAdapter.publishQueued`. */
 export type PublishQueuedResult = {
   published: number;
+  reorderedCollectionIds: string[];
   recordsByCollection: Array<{ collectionId: string; recordIds: string[] }>;
 };
 
@@ -193,10 +196,15 @@ export type CmsDataAdapter = {
   /** The server owns ids and timestamps; optional initial values seed the row. */
   createRecord: (collectionId: string, values?: Partial<Record<string, CmsRecordValue>>) => Promise<CmsRecord>;
   saveRecord: (collectionId: string, record: CmsRecord, options?: SaveRecordOptions) => Promise<CmsRecord>;
+  /** Move an item without changing its content, status or modified timestamp. */
+  reorderRecord: (collectionId: string, recordId: string, position: number) => Promise<CmsRecord[]>;
+  /** Restore the ordering publish action after a deploy fails. */
+  queueOrdering: (collectionId: string) => Promise<void>;
   deleteRecord: (collectionId: string, recordId: string) => Promise<void>;
   importRecords: (collectionId: string, rows: Array<Record<string, CmsRecordValue>>) => Promise<CmsRecord[]>;
   /**
-   * Publish step 1: flip every `queued_to_publish` record (optionally in one
+   * Publish step 1: promote pending list ordering and flip every
+   * `queued_to_publish` record (optionally in one
    * collection) to `published`. The deploy/rebuild is step 2 and lives outside
    * the data adapter. The result reports exactly which records changed (by
    * collection) so a caller whose step 2 then fails can put them back into

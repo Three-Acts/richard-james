@@ -332,10 +332,11 @@ export async function listCollections(): Promise<CmsCollectionSummary[]> {
   // in parallel — was two sequential `countRecords` queries per collection.
   return Promise.all(
     collectionRegistry.map(async (collection) => {
-      const counts = await store.countByStatus(collection);
+      const [counts, hasPendingOrder] = await Promise.all([store.countByStatus(collection), store.hasPendingOrder(collection)]);
       return {
         ...collection,
         count: counts.published + counts.not_published + counts.queued_to_publish,
+        hasPendingOrder,
         queuedCount: hasPublishWorkflow(collection) ? counts.queued_to_publish : 0
       };
     })
@@ -500,16 +501,18 @@ export async function publishQueued(collectionId?: string): Promise<PublishQueue
 
   const recordsByCollection: PublishQueuedResult["recordsByCollection"] = [];
   let published = 0;
+  const reorderedCollectionIds: string[] = [];
 
   for (const collection of collections) {
-    const recordIds = await store.publishQueued(collection);
+    const { recordIds, orderingPublished } = await store.publishQueued(collection);
+    if (orderingPublished) reorderedCollectionIds.push(collection.id);
     if (recordIds.length > 0) {
       recordsByCollection.push({ collectionId: collection.id, recordIds });
       published += recordIds.length;
     }
   }
 
-  return { published, recordsByCollection };
+  return { published, recordsByCollection, reorderedCollectionIds };
 }
 
 /**
@@ -543,4 +546,25 @@ export async function setPublishStatus(collectionId: string, recordIds: string[]
   }
 
   return getDataStore().setPublishStatus(collection, recordIds, status);
+}
+
+
+function orderedCollection(collectionId: string): CmsCollection {
+  const collection = assertWritable(getCollectionOrThrow(collectionId));
+  if (!collection.orderingField) throw new CmsError("validation", "This collection does not support ordering.");
+  return collection;
+}
+
+export async function reorderRecord(collectionId: string, recordId: string, position: number): Promise<CmsRecord[]> {
+  const collection = orderedCollection(collectionId);
+  if (typeof recordId !== "string" || !recordId || typeof position !== "number" || !Number.isSafeInteger(position) || position < 1) {
+    throw new CmsError("validation", "Choose a record and a whole-number position starting at 1.");
+  }
+  const records = await getDataStore().reorderRecord(collection, recordId, position);
+  if (!records) throw new CmsError("not_found", "The record no longer exists. Reload the list and try again.");
+  return records;
+}
+
+export async function queueOrdering(collectionId: string): Promise<void> {
+  await getDataStore().queueOrdering(orderedCollection(collectionId));
 }

@@ -37,20 +37,10 @@ export async function writePositions(client: PoolClient, collection: CmsCollecti
   );
 }
 
-/** Promote only deliberate moves on queued items; incidental shifts don't become publish operations. */
+/** Publish the saved list order, projecting out items that are still drafts. */
 export async function publishOrdering(client: PoolClient, collection: CmsCollection, rows: OrderingRow[]): Promise<void> {
   const sys = systemColumnsFor(collection);
-  const idOf = (row: OrderingRow) => String(row[sys.id]);
-  const eligible = rows.filter((row) => row[sys.publishStatus] === "published" || row[sys.publishStatus] === "queued_to_publish");
-  const moving = eligible.filter((row) => row[sys.publishStatus] === "queued_to_publish" && (row[PENDING_ORDER_COLUMN] || row[PUBLISHED_ORDER_COLUMN] == null));
-  if (!moving.length) return;
-  const movingIds = new Set(moving.map(idOf));
-  let liveIds = eligible.filter((row) => !movingIds.has(idOf(row)))
-    .sort((a, b) => Number(a[PUBLISHED_ORDER_COLUMN] ?? Infinity) - Number(b[PUBLISHED_ORDER_COLUMN] ?? Infinity)).map(idOf);
-  // `rows` are in draft order; insert multiple queued moves in that order.
-  for (const row of moving) {
-    liveIds = placeItem(liveIds, idOf(row), eligible.findIndex((item) => idOf(item) === idOf(row)) + 1);
-  }
-  await writePositions(client, collection, liveIds, PUBLISHED_ORDER_COLUMN);
-  await client.query(`update ${quoteIdent(collection.tableName)} set ${quoteIdent(PENDING_ORDER_COLUMN)} = false where ${quoteIdent(sys.id)} = any($1::uuid[])`, [[...movingIds]]);
+  const eligible = rows.filter(row => row[sys.publishStatus] === "published" || row[sys.publishStatus] === "queued_to_publish");
+  await writePositions(client, collection, eligible.map(row => String(row[sys.id])), PUBLISHED_ORDER_COLUMN);
+  await client.query(`update ${quoteIdent(collection.tableName)} set ${quoteIdent(PENDING_ORDER_COLUMN)} = false where ${quoteIdent(PENDING_ORDER_COLUMN)} = true`);
 }

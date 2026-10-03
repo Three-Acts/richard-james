@@ -14,6 +14,7 @@ function autoMap(headers: string[], collection: CmsCollectionSummary): Record<st
   const mapping: Record<string, string> = {};
 
   for (const field of collection.fields) {
+    if (field.key === collection.orderingField) continue;
     const match = headers.find(
       (header) => header.toLowerCase() === field.key.toLowerCase() || header.toLowerCase() === field.label.toLowerCase()
     );
@@ -89,6 +90,7 @@ export function ImportDialog({ collection, open, onOpenChange, onImport }: Impor
       const next: Record<string, CmsRecordValue> = {};
 
       for (const field of collection.fields) {
+        if (field.key === collection.orderingField) continue;
         const header = mapping[field.key];
 
         if (header && header !== IGNORE) {
@@ -158,7 +160,7 @@ export function ImportDialog({ collection, open, onOpenChange, onImport }: Impor
           ) : null}
           <p className="m-0 text-cms-subtle">Match each Collection Field to a column from your file.</p>
           <div className="grid gap-2">
-            {collection.fields.map((field) => (
+            {collection.fields.filter(field => field.key !== collection.orderingField).map((field) => (
               <div className="grid grid-cols-mapping items-center gap-2" key={field.key}>
                 <span className="truncate text-cms-muted">{field.label}</span>
                 <Select

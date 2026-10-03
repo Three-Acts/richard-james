@@ -130,6 +130,14 @@ export function createRestCmsBackend(options: RestCmsBackendOptions): CmsBackend
         return cmsRequest<CmsRecord>(cmsApiPaths.record(collectionId, record.id), jsonInit(body, "PUT"));
       },
 
+      reorderRecord(collectionId: string, recordId: string, position: number) {
+        return cmsRequest<CmsRecord[]>(cmsApiPaths.order(collectionId), jsonInit({ recordId, position }));
+      },
+
+      async queueOrdering(collectionId: string) {
+        await cmsRequest(cmsApiPaths.orderRetry(collectionId), jsonInit({}));
+      },
+
       async deleteRecord(collectionId: string, recordId: string) {
         await cmsRequest<{ deleted: true }>(cmsApiPaths.record(collectionId, recordId), { method: "DELETE" });
       },

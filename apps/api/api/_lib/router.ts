@@ -1,3 +1,5 @@
+import cmsOrder from "../_routes/cms/collections/[collectionId]/order.js";
+import cmsOrderRetry from "../_routes/cms/collections/[collectionId]/order/retry.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { applyCors, handleOptions } from "./cors.js";
 
@@ -51,6 +53,8 @@ const routes = {
   "/api/cms/collections/[collectionId]/import": cmsImport,
   "/api/cms/collections/[collectionId]/assets/[fieldKey]": cmsAssets,
   "/api/cms/collections/[collectionId]/status": cmsStatus,
+  "/api/cms/collections/[collectionId]/order": cmsOrder,
+  "/api/cms/collections/[collectionId]/order/retry": cmsOrderRetry,
   "/api/cms/publish": cmsPublish
 } satisfies Record<string, ApiHandler>;
 

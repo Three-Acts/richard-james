@@ -340,9 +340,9 @@ live data fetched from `apps/api` (`API_ORIGIN` is required — see **Local dev 
 Content is authored in the CMS across three collections (`packages/cms-schema/src/registry.ts`):
 
 - **Projects** (editorial) - one record per artwork/body of work: title, slug, year,
-  sort order (drives the browsing order and the home stage), subtitle/original-title
+  a list order managed by drag handles (drives browsing and the home stage), subtitle/original-title
   fields, medium, a rich-text description, a hero asset, an optional thumb (falls back
-  to hero), a **gallery** field, and an optional grid stride, plus a Meta title/Meta
+  to hero), a **gallery** field, plus a Meta title/Meta
   description/Social image SEO group. The gallery field holds the project's whole image
   set as one ordered value (JSON `{ src, caption? }[]`) on the project row itself -
   there is no separate per-image collection or table. The CMS editor renders it as a
@@ -397,8 +397,11 @@ then the site's default description; the social image falls back to the record's
 
 To add a project as an editor: create a **Projects** record, upload its hero image, drag
 its images into the **Gallery** drop zone, reorder them and add captions where useful,
-set the project's own sort order to place it in the browsing sequence, queue it to
-publish, then click **Publish** in the CMS top bar. SEO fields are optional - leave them
+queue it to publish, then click **Publish** in the CMS top bar. Drag project rows
+in the table or adjacent editor list to change their order (or focus a drag handle
+and use the up/down arrow keys). Reordering saves automatically without changing
+record statuses or modified timestamps; **Publish** sends the saved order to the
+site. Every gallery image is displayed; remove unwanted images in the gallery. SEO fields are optional - leave them
 blank to use the fallbacks above.
 
 Content is read through `apps/web/src/content/`, a `ContentSource` interface with a

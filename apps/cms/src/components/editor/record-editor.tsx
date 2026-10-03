@@ -78,7 +78,6 @@ export function RecordEditor({
     return (
       <FieldControl
         field={field}
-        isPosition={field.key === collection.orderingField}
         galleryOptimizing={galleryOptimizing}
         key={field.key}
         locked={isUploading}
@@ -92,9 +91,10 @@ export function RecordEditor({
     );
   }
 
-  const basicFields = collection.fields.filter((field) => sectionOf(field) === "basic");
-  const customFields = collection.fields.filter((field) => sectionOf(field) === "custom");
-  const seoFields = collection.fields.filter((field) => sectionOf(field) === "seo");
+  const editableFields = collection.fields.filter(field => field.key !== collection.orderingField);
+  const basicFields = editableFields.filter((field) => sectionOf(field) === "basic");
+  const customFields = editableFields.filter((field) => sectionOf(field) === "custom");
+  const seoFields = editableFields.filter((field) => sectionOf(field) === "seo");
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-cms-bg" aria-label={`${getRecordTitle(collection, draftRecord)} editor`}>

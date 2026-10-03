@@ -291,7 +291,7 @@ async function upsertProjects(
         ...existing,
         publishStatus: "published",
         values: { ...existing.values, ...values }
-      });
+      }, undefined, true, {}, { publishImmediately: true });
       projectsUpdated += 1;
     } else {
       await store.insertRecords(projectsCollection, [{ publishStatus: "published", values }]);

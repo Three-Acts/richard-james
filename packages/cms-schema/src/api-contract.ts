@@ -14,6 +14,8 @@ import type { CmsRecord, CmsRecordValue, ListRecordsOptions, PublishStatus } fro
  *   POST   /api/cms/collections/:collectionId/import              body ImportRecordsBody  -> CmsRecord[]
  *   POST   /api/cms/collections/:collectionId/assets/:fieldKey    body UploadAssetBody    -> AssetUploadResult
  *   POST   /api/cms/collections/:collectionId/status              body SetPublishStatusBody -> CmsRecord[]
+ *   POST   /api/cms/collections/:collectionId/order               body ReorderRecordBody -> CmsRecord[]
+ *   POST   /api/cms/collections/:collectionId/order/retry         -> { queued: true }
  *   POST   /api/cms/publish                                       body PublishBody        -> PublishQueuedResult
  *
  * All routes require the same bearer auth as /api/deploy.
@@ -27,12 +29,15 @@ export const cmsApiPaths = {
   asset: (collectionId: string, fieldKey: string) =>
     `/cms/collections/${encodeURIComponent(collectionId)}/assets/${encodeURIComponent(fieldKey)}` as const,
   status: (collectionId: string) => `/cms/collections/${encodeURIComponent(collectionId)}/status` as const,
+  order: (collectionId: string) => `/cms/collections/${encodeURIComponent(collectionId)}/order` as const,
+  orderRetry: (collectionId: string) => `/cms/collections/${encodeURIComponent(collectionId)}/order/retry` as const,
   publish: () => "/cms/publish" as const
 };
 
 export type CreateRecordBody = { values?: Partial<Record<string, CmsRecordValue>> };
 export type SaveRecordBody = { record: CmsRecord; expectedModifiedAt?: string };
 export type ImportRecordsBody = { rows: Array<Record<string, CmsRecordValue>> };
+export type ReorderRecordBody = { recordId: string; position: number };
 export type PublishBody = { collectionId?: string };
 export type SetPublishStatusBody = { recordIds: string[]; publishStatus: Exclude<PublishStatus, "published"> };
 /** Base64 payload keeps the bridge dependency-free; keep files under 4 MB (Vercel body limit). */

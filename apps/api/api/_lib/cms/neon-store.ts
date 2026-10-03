@@ -45,7 +45,7 @@ function listFieldsOf(collection: CmsCollection): CmsField[] {
   const listColumnKeys = new Set(collection.listColumns.map((column) => column.key));
   return collection.fields.filter(
     (field) =>
-      field.key === collection.titleField || listColumnKeys.has(field.key) || field.type === "slug" || field.type === "reference"
+      field.key === collection.titleField || field.key === collection.orderingField || listColumnKeys.has(field.key) || field.type === "slug" || field.type === "reference"
   );
 }
 
@@ -274,7 +274,6 @@ export class NeonDataStore implements CmsDataStore {
         ids = placeItem(ids, record.id, Number(rows[index].values[collection.orderingField!] ?? ids.length + 1));
       }
       await writePositions(client, collection, ids, column);
-      await client.query(`update ${quoteIdent(collection.tableName)} set ${quoteIdent(PENDING_ORDER_COLUMN)} = true where ${quoteIdent(sys.id)} = any($1::uuid[])`, [inserted.map((record) => record.id)]);
       const publishedIds = new Set(inserted.filter((record) => record.publishStatus === "published").map((record) => record.id));
       if (publishedIds.size) {
         const ordered = await lockOrdering(client, collection);
@@ -319,7 +318,7 @@ export class NeonDataStore implements CmsDataStore {
     return result.rows.map((row) => mapRowToRecord(collection, row as Record<string, unknown>));
   }
 
-  async updateRecord(collection: CmsCollection, record: CmsRecord, expectedModifiedAt?: string, orderingProvided = true, generatedSlugBases: Record<string, string> = {}): Promise<CmsRecord | "conflict" | null> {
+  async updateRecord(collection: CmsCollection, record: CmsRecord, expectedModifiedAt?: string, orderingProvided = true, generatedSlugBases: Record<string, string> = {}, options: { publishImmediately?: boolean } = {}): Promise<CmsRecord | "conflict" | null> {
     const column = orderingColumn(collection);
     if (!column && !Object.keys(generatedSlugBases).length) return this.writeRecord(collection, record, expectedModifiedAt, getPool());
     return withTransaction(async (client) => {
@@ -340,7 +339,7 @@ export class NeonDataStore implements CmsDataStore {
         result.values[collection.orderingField!] = ids.indexOf(record.id) + 1;
       }
       // Direct store writes are used by seeding, which deliberately bypasses the editorial queue.
-      if (record.publishStatus === "published") {
+      if (options.publishImmediately && record.publishStatus === "published") {
         const ordered = await lockOrdering(client, collection);
         await publishOrdering(client, collection, ordered.filter((row) => row[sys.publishStatus] === "published").map((row) => String(row[sys.id]) === record.id ? { ...row, [sys.publishStatus]: "queued_to_publish", [PENDING_ORDER_COLUMN]: true } : row));
       }
@@ -408,7 +407,33 @@ export class NeonDataStore implements CmsDataStore {
     return (result.rowCount ?? 0) > 0;
   }
 
-  async publishQueued(collection: CmsCollection): Promise<string[]> {
+  async hasPendingOrder(collection: CmsCollection): Promise<boolean> {
+    if (!orderingColumn(collection)) return false;
+    const result = await getPool().query(`select exists(select 1 from ${quoteIdent(collection.tableName)} where ${quoteIdent(PENDING_ORDER_COLUMN)} = true) as pending`);
+    return Boolean(result.rows[0].pending);
+  }
+
+  async reorderRecord(collection: CmsCollection, recordId: string, position: number): Promise<CmsRecord[] | null> {
+    return withTransaction(async client => {
+      const sys = systemColumnsFor(collection);
+      const rows = await lockOrdering(client, collection);
+      const currentIndex = rows.findIndex(row => String(row[sys.id]) === recordId);
+      if (currentIndex < 0) return null;
+      const ids = placeItem(rows.map(row => String(row[sys.id])), recordId, position);
+      if (ids.indexOf(recordId) !== currentIndex) {
+        await writePositions(client, collection, ids, orderingColumn(collection)!);
+        await client.query(`update ${quoteIdent(collection.tableName)} set ${quoteIdent(PENDING_ORDER_COLUMN)} = true where ${quoteIdent(sys.id)} = $1`, [recordId]);
+      }
+      const byId = new Map(rows.map(row => [String(row[sys.id]), row]));
+      return ids.map((id, index) => mapRowToRecord(collection, { ...byId.get(id)!, [orderingColumn(collection)!]: index + 1 }, listFieldsOf(collection)));
+    });
+  }
+
+  async queueOrdering(collection: CmsCollection): Promise<void> {
+    await getPool().query(`update ${quoteIdent(collection.tableName)} set ${quoteIdent(PENDING_ORDER_COLUMN)} = true`);
+  }
+
+  async publishQueued(collection: CmsCollection): Promise<{ recordIds: string[]; orderingPublished: boolean }> {
     const sys = systemColumnsFor(collection);
     const table = quoteIdent(collection.tableName);
     const publishedStatus: PublishStatus = "published";
@@ -417,21 +442,20 @@ export class NeonDataStore implements CmsDataStore {
     if (orderingColumn(collection)) {
       return withTransaction(async (client) => {
         const rows = await lockOrdering(client, collection);
-        const queuedIds = rows.filter((row) => row[sys.publishStatus] === queuedStatus).map((row) => String(row[sys.id]));
-        if (!queuedIds.length) return [];
+        const recordIds = rows.filter(row => row[sys.publishStatus] === queuedStatus).map(row => String(row[sys.id]));
+        const orderingPublished = rows.some(row => row[PENDING_ORDER_COLUMN]);
+        if (!recordIds.length && !orderingPublished) return { recordIds, orderingPublished };
         await publishOrdering(client, collection, rows);
-        await client.query(`update ${table} set ${quoteIdent(sys.publishStatus)} = $1 where ${quoteIdent(sys.id)} = any($2::uuid[])`, [publishedStatus, queuedIds]);
-        return queuedIds;
+        if (recordIds.length) await client.query(`update ${table} set ${quoteIdent(sys.publishStatus)} = $1 where ${quoteIdent(sys.id)} = any($2::uuid[])`, [publishedStatus, recordIds]);
+        return { recordIds, orderingPublished };
       });
     }
 
-    const result = await timeDb(() =>
-      getPool().query(
-        `update ${table} set ${quoteIdent(sys.publishStatus)} = $1 where ${quoteIdent(sys.publishStatus)} = $2 returning ${quoteIdent(sys.id)} as id`,
-        [publishedStatus, queuedStatus]
-      )
-    );
-    return result.rows.map((row) => String((row as { id: unknown }).id));
+    const result = await timeDb(() => getPool().query(
+      `update ${table} set ${quoteIdent(sys.publishStatus)} = $1 where ${quoteIdent(sys.publishStatus)} = $2 returning ${quoteIdent(sys.id)} as id`,
+      [publishedStatus, queuedStatus]
+    ));
+    return { recordIds: result.rows.map(row => String(row.id)), orderingPublished: false };
   }
 
   async setPublishStatus(collection: CmsCollection, recordIds: string[], status: PublishStatus): Promise<CmsRecord[]> {

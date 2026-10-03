@@ -4,16 +4,18 @@ import { Button, Logo, PanelHeader, Tooltip } from "../atoms";
 import { usePublish } from "../../hooks/use-publish";
 
 type TopBarProps = {
+  disabled?: boolean;
+  hasPendingOrder: boolean;
   /** Called after queued records have been published so the workspace can refresh its list. */
   onPublished?: () => void;
   onSignOut: () => Promise<void>;
-  /** Records queued across every collection; the Publish button only renders while this is > 0. */
+  /** Content records queued across all collections; pending ordering also enables Publish. */
   queuedCount: number;
   user: AuthUser;
 };
 
-export function TopBar({ onPublished, onSignOut, queuedCount, user }: TopBarProps) {
-  const { publish, isPublishing } = usePublish({ onPublished });
+export function TopBar({ disabled, hasPendingOrder, onPublished, onSignOut, queuedCount, user }: TopBarProps) {
+  const { publish, isPublishing, retryPending } = usePublish({ onPublished });
 
   return (
     <PanelHeader className="justify-between border-cms-line-strong bg-cms-bg">
@@ -28,9 +30,9 @@ export function TopBar({ onPublished, onSignOut, queuedCount, user }: TopBarProp
             <span className="truncate">{user.name}</span>
           </Button>
         </Tooltip>
-        {queuedCount > 0 ? (
+        {queuedCount > 0 || hasPendingOrder || retryPending || isPublishing ? (
           <Tooltip content="Build and deploy the live site">
-            <Button disabled={isPublishing} onClick={publish} variant="primary">
+            <Button disabled={disabled || isPublishing} onClick={publish} variant="primary">
               {isPublishing ? <Loader2 className="animate-spin" size={13} /> : <Rocket size={13} />}
               {isPublishing ? "Publishing…" : "Publish site"}
             </Button>

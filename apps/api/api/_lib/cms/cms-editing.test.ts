@@ -1,3 +1,4 @@
+import * as cms from "./service.js";
 import { after, before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { getPool } from "../db.js";
@@ -146,4 +147,95 @@ test("focused migration upgrades legacy ordering without changing statuses or ti
   }
   assert.equal((await getPool().query("select to_regclass('project_images') as name")).rows[0].name, "project_images");
   await getPool().query("drop table project_images");
+});
+
+
+test("list moves preserve every status and timestamp and wait for order-only publishing", async () => {
+  const [a, b, c] = await publishedProjects();
+  const draft = await project("Draft");
+  const queued = await project("Queued");
+  await setPublishStatus("projects", [queued.id], "queued_to_publish");
+  const before = await order();
+  await cms.reorderRecord("projects", c.id, 1);
+  assert.deepEqual((await order()).map(item => item.values.title), ["C", "A", "B", "Draft", "Queued"]);
+  for (const item of await order()) {
+    const original = before.find(record => record.id === item.id)!;
+    assert.equal(item.publishStatus, original.publishStatus);
+    assert.equal(item.modifiedAt, original.modifiedAt);
+  }
+  assert.deepEqual((await listProjectsContent()).map(item => item.title), ["A", "B", "C"]);
+  let summary = (await listCollections()).find(item => item.id === "projects")!;
+  assert.equal(summary.queuedCount, 1);
+  assert.equal(summary.hasPendingOrder, true);
+  // Remove the unrelated queued content: an ordering publish must work on its own.
+  await setPublishStatus("projects", [queued.id], "not_published");
+  const result = await publishQueued("projects");
+  assert.equal(result.published, 0);
+  assert.deepEqual(result.recordsByCollection, []);
+  assert.deepEqual(result.reorderedCollectionIds, ["projects"]);
+  assert.deepEqual((await listProjectsContent()).map(item => [item.title, item.sortOrder]), [["C", 1], ["A", 2], ["B", 3]]);
+  summary = (await listCollections()).find(item => item.id === "projects")!;
+  assert.equal(summary.hasPendingOrder, false);
+  assert.equal((await getRecord("projects", draft.id)).publishStatus, "not_published");
+  for (const original of [a, b, c]) assert.equal((await getRecord("projects", original.id)).modifiedAt, original.modifiedAt);
+});
+
+test("order retry keeps Publish available without changing content statuses", async () => {
+  const [a, , c] = await publishedProjects();
+  await cms.reorderRecord("projects", c.id, 1);
+  await publishQueued("projects");
+  await cms.queueOrdering("projects");
+  const summary = (await listCollections()).find(item => item.id === "projects")!;
+  assert.equal(summary.queuedCount, 0);
+  assert.equal(summary.hasPendingOrder, true);
+  assert.equal((await getRecord("projects", a.id)).publishStatus, "published");
+  assert.equal((await getRecord("projects", a.id)).modifiedAt, a.modifiedAt);
+  await publishQueued("projects");
+  assert.equal((await listCollections()).find(item => item.id === "projects")!.hasPendingOrder, false);
+});
+
+test("moves reject malformed positions and missing records; same-position moves do not queue ordering", async () => {
+  const a = await project("A");
+  for (const position of [0, -1, 1.5, Infinity, NaN, "2", null]) {
+    await assert.rejects(cms.reorderRecord("projects", a.id, position as number), { code: "validation" });
+  }
+  await assert.rejects(cms.reorderRecord("projects", "missing", 1), { code: "not_found" });
+  await assert.rejects(cms.reorderRecord("pages", a.id, 1), { code: "validation" });
+  await cms.reorderRecord("projects", a.id, 1);
+  assert.equal((await listCollections()).find(item => item.id === "projects")!.hasPendingOrder, false);
+});
+
+test("concurrent list moves retain unique positions and content saves keep the latest order", async () => {
+  const [a, , c] = await publishedProjects();
+  await Promise.all([cms.reorderRecord("projects", c.id, 1), cms.reorderRecord("projects", a.id, 3)]);
+  assert.deepEqual((await order()).map(item => item.values.sortOrder), [1, 2, 3]);
+  const values: CmsRecord["values"] = { ...a.values, description: "Content edit" };
+  delete values.sortOrder;
+  const saved = await saveRecord("projects", a.id, { ...a, values }, a.modifiedAt);
+  assert.equal(saved.values.sortOrder, 3);
+});
+
+test("draft moves publish ordering without publishing draft content and clear pending ordering", async () => {
+  await publishedProjects();
+  const draft = await project("Draft");
+  await cms.reorderRecord("projects", draft.id, 1);
+  const result = await publishQueued("projects");
+  assert.equal(result.published, 0);
+  assert.deepEqual((await listProjectsContent()).map(item => item.title), ["A", "B", "C"]);
+  assert.equal((await getRecord("projects", draft.id)).publishStatus, "not_published");
+  assert.equal((await listCollections()).find(item => item.id === "projects")!.hasPendingOrder, false);
+  await setPublishStatus("projects", [draft.id], "queued_to_publish");
+  await publishQueued("projects");
+  assert.deepEqual((await listProjectsContent()).map(item => item.title), ["Draft", "A", "B", "C"]);
+});
+
+test("saving unchanged published content cannot publish unrelated pending ordering", async () => {
+  const [a, , c] = await publishedProjects();
+  await cms.reorderRecord("projects", c.id, 1);
+  const current = await getRecord("projects", a.id);
+  const values = { ...current.values };
+  delete values.sortOrder;
+  await saveRecord("projects", a.id, { ...current, values }, current.modifiedAt);
+  assert.deepEqual((await listProjectsContent()).map(item => item.title), ["A", "B", "C"]);
+  assert.equal((await listCollections()).find(item => item.id === "projects")!.hasPendingOrder, true);
 });

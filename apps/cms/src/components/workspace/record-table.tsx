@@ -1,3 +1,5 @@
+import { RecordDragHandle } from "./record-drag-handle";
+import { useRecordReordering } from "../../hooks/use-record-reordering";
 import { useMemo } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@three-acts/utils";
@@ -15,6 +17,8 @@ type RecordTableProps = {
   /** Whether `records` is already filtered by a search query — changes the empty-state copy. */
   hasSearch?: boolean;
   isLoading: boolean;
+  isReordering?: boolean;
+  onReorder?: (recordId: string, position: number) => void;
   onSelectRecord: (recordId: string) => void;
   onToggleSelectAll: (selected: boolean) => void;
   onToggleSelected: (recordId: string) => void;
@@ -27,6 +31,8 @@ export function RecordTable({
   collection,
   hasSearch,
   isLoading,
+  isReordering,
+  onReorder,
   onSelectRecord,
   onToggleSelectAll,
   onToggleSelected,
@@ -34,9 +40,11 @@ export function RecordTable({
   selectedIds,
   selectionMode
 }: RecordTableProps) {
+  const reorderable = Boolean(collection.orderingField);
+  const ordering = useRecordReordering(records, onReorder, isReordering);
   const columns = collection.listColumns;
   const columnTemplate = columns.map((column) => column.width ?? "minmax(var(--spacing-col-min), 1fr)").join(" ");
-  const gridTemplateColumns = selectionMode ? `var(--spacing-select-col) ${columnTemplate}` : columnTemplate;
+  const gridTemplateColumns = `${reorderable ? "32px " : ""}${selectionMode ? "var(--spacing-select-col) " : ""}${columnTemplate}`;
   const allSelected = records.length > 0 && records.every((record) => selectedIds.has(record.id));
   const someSelected = records.some((record) => selectedIds.has(record.id));
 
@@ -66,6 +74,7 @@ export function RecordTable({
     return (
       <div className="min-h-0 flex-1 overflow-hidden" aria-busy="true">
         <div className={cn(columnHeaderClass, "grid bg-cms-bg")} role="row" style={{ gridTemplateColumns }}>
+          {reorderable ? <div role="columnheader" aria-label="Reorder" /> : null}
           {columns.map((column) => (
             <div className="min-w-0 truncate px-3" key={column.key} role="columnheader">
               {column.label}
@@ -104,6 +113,7 @@ export function RecordTable({
           role="row"
           style={{ gridTemplateColumns }}
         >
+          {reorderable ? <div role="columnheader" aria-label="Reorder" /> : null}
           {selectionMode ? (
             <div className="flex items-center justify-center" role="columnheader">
               <Checkbox ariaLabel="Select all" checked={allSelected} indeterminate={someSelected && !allSelected} onChange={onToggleSelectAll} />
@@ -128,10 +138,12 @@ export function RecordTable({
 
           return (
             <div
+              {...ordering.rowProps(record.id)}
               aria-selected={selectionMode ? selected : undefined}
               className={cn(
                 "grid h-8 w-full cursor-pointer items-center border-b border-cms-line text-left text-ui text-cms-muted transition-colors",
-                "hover:bg-cms-surface hover:text-cms-text",
+                "hover:bg-cms-surface hover:text-cms-text data-[order-drop=before]:border-t data-[order-drop=before]:border-t-cms-accent data-[order-drop=after]:border-b-cms-accent",
+                ordering.draggedId === record.id && "opacity-50",
                 selected && "bg-cms-raised text-cms-text",
                 focusRing
               )}
@@ -147,6 +159,9 @@ export function RecordTable({
               style={{ gridTemplateColumns }}
               tabIndex={0}
             >
+              {reorderable ? (
+                <span role="gridcell"><RecordDragHandle title={getRecordTitle(collection, record)} {...ordering.handleProps(record.id)} /></span>
+              ) : null}
               {selectionMode ? (
                 <span className="flex items-center justify-center" role="gridcell">
                   {/* Presentational mirror of the Checkbox atom — a real checkbox

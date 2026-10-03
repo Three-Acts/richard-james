@@ -27,7 +27,7 @@ export const collectionRegistry: CmsCollection[] = [
         type: "number",
         required: true,
         helpText:
-          "Position (1 = first). Moving this item shifts others automatically; only this item is queued. The order goes live when published.",
+          "Managed by dragging items in the project list. Publish the site to make the order live.",
         section: "custom"
       },
       {
@@ -113,7 +113,6 @@ export const collectionRegistry: CmsCollection[] = [
     listColumns: [
       { key: "title", label: "Name", width: "minmax(220px, 1.4fr)" },
       { key: "year", label: "Year", width: "90px" },
-      { key: "sortOrder", label: "Order", width: "90px" },
       { key: "publishStatus", label: "Status", valueType: "status", width: "160px" },
       { key: "modifiedAt", label: "Modified", valueType: "datetime", width: "170px" }
     ]

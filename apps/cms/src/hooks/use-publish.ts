@@ -34,19 +34,15 @@ const PROGRESS_LABEL: Record<string, string> = {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Puts records back into `queued_to_publish` after the deploy hook failed to
- * fire — `publishQueued` already flipped them to `published` in the DB, and
- * with no deploy triggered that would otherwise leave them stuck "published"
- * with nothing actually live and no way to retry (the Publish button only
- * shows while something is queued). Best-effort: a collection whose revert
- * request itself fails is left published (rare — logged nowhere else in this
- * hook either), but every other collection still gets reverted.
- */
-async function revertToQueued(backend: CmsBackend, recordsByCollection: PublishQueuedResult["recordsByCollection"]): Promise<void> {
-  await Promise.allSettled(
-    recordsByCollection.map(({ collectionId, recordIds }) => backend.data.setPublishStatus(collectionId, recordIds, "queued_to_publish"))
+/** Restore queued content and pending order independently; reject partial restores so the UI keeps a retry action. */
+async function revertToQueued(backend: CmsBackend, recordsByCollection: PublishQueuedResult["recordsByCollection"], reorderedCollectionIds: string[]): Promise<void> {
+  const results = await Promise.allSettled(
+    [...recordsByCollection.map(({ collectionId, recordIds }) => backend.data.setPublishStatus(collectionId, recordIds, "queued_to_publish")),
+      ...reorderedCollectionIds.map(collectionId => backend.data.queueOrdering(collectionId))]
   );
+  if (results.some(result => result.status === "rejected")) {
+    throw new Error("Could not restore all pending changes. Use Publish site to retry when the connection returns.");
+  }
 }
 
 /**
@@ -56,13 +52,14 @@ async function revertToQueued(backend: CmsBackend, recordsByCollection: PublishQ
  * → deployed (or failed).
  *
  * `onPublished` is an optional hook for callers whose record list goes stale
- * once queued records flip to published (nothing wires it up yet — see the
- * pluggable-backend refactor's follow-ups).
+ * once queued records or list ordering are published.
  */
 export function usePublish({ onPublished }: { onPublished?: () => void } = {}) {
   const backend = useCmsBackend();
   const toast = useToast();
   const [isPublishing, setIsPublishing] = useState(false);
+  const [retryPending, setRetryPending] = useState(false);
+  const retryResultRef = useRef<PublishQueuedResult | null>(null);
   // A ref guard closes the double-click race that state alone can't: both
   // clicks can read stale `isPublishing` state before either re-render lands.
   const isPublishingRef = useRef(false);
@@ -74,10 +71,28 @@ export function usePublish({ onPublished }: { onPublished?: () => void } = {}) {
     isPublishingRef.current = true;
     setIsPublishing(true);
 
-    const toastId = toast.push({ tone: "loading", title: "Publishing…", description: "Publishing queued records…" });
+    const toastId = toast.push({ tone: "loading", title: "Publishing…", description: "Publishing content and ordering…" });
+
+    let publication: PublishQueuedResult | undefined;
+    let needsRestore = false;
+    async function restorePublication(result: PublishQueuedResult) {
+      retryResultRef.current = result;
+      setRetryPending(true);
+      try {
+        await revertToQueued(backend, result.recordsByCollection, result.reorderedCollectionIds);
+        retryResultRef.current = null;
+        setRetryPending(false);
+        needsRestore = false;
+      } finally {
+        onPublished?.();
+      }
+    }
 
     try {
-      const { published, recordsByCollection } = await backend.data.publishQueued();
+      if (retryResultRef.current) await restorePublication(retryResultRef.current);
+      publication = await backend.data.publishQueued();
+      needsRestore = true;
+      const { published } = publication;
       onPublished?.();
 
       const requestDescription =
@@ -91,12 +106,12 @@ export function usePublish({ onPublished }: { onPublished?: () => void } = {}) {
         // The hook never fired: put the records back in the publish queue
         // (rather than leaving them stuck "published" with nothing live) so
         // the Publish button reappears and a retry picks them up.
-        await revertToQueued(backend, recordsByCollection);
-        onPublished?.();
+        await restorePublication(publication);
         throw deployError;
       }
 
       if (!trigger.triggered) {
+        await restorePublication(publication);
         toast.update(toastId, {
           tone: "info",
           title: "Publishing not configured",
@@ -162,12 +177,11 @@ export function usePublish({ onPublished }: { onPublished?: () => void } = {}) {
         // hook-trigger failure from the site's point of view, so put the
         // records back in the queue rather than leaving them "published"
         // with nothing actually deployed.
-        await revertToQueued(backend, recordsByCollection);
-        onPublished?.();
+        await restorePublication(publication);
         toast.update(toastId, {
           tone: "error",
           title: "Deploy failed",
-          description: `Deployment ${status.state.toLowerCase()}. Records are back in the publish queue — try again shortly.`
+          description: `Deployment ${status.state.toLowerCase()}. Your changes are ready to publish again — try shortly.`
         });
       } else {
         // Attempts ran out while still queued/building/pending/unknown — the
@@ -179,11 +193,20 @@ export function usePublish({ onPublished }: { onPublished?: () => void } = {}) {
           duration: 8000
         });
       }
+      needsRestore = false;
     } catch (error) {
+      let description = describeCmsError(error);
+      if (needsRestore && publication) {
+        try { await restorePublication(publication); }
+        catch (restoreError) {
+          const restoreMessage = describeCmsError(restoreError);
+          if (restoreMessage !== description) description += ` ${restoreMessage}`;
+        }
+      }
       toast.update(toastId, {
         tone: "error",
         title: "Publish failed",
-        description: describeCmsError(error)
+        description
       });
     } finally {
       isPublishingRef.current = false;
@@ -191,5 +214,5 @@ export function usePublish({ onPublished }: { onPublished?: () => void } = {}) {
     }
   }, [backend, onPublished, toast]);
 
-  return { publish, isPublishing };
+  return { publish, isPublishing, retryPending };
 }

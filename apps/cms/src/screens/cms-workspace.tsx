@@ -41,6 +41,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
     handleExport,
     handleGalleryUpload,
     handleImportRecords,
+    handleReorderRecord,
     handleSaveRecord,
     handleSelectCollection,
     handleUpdateSelectedStatus,
@@ -48,8 +49,10 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
     isImportOpen,
     isLoadingCollections,
     isLoadingRecords,
+    isReordering,
     isSaving,
     optimizingField,
+    hasPendingOrder,
     queuedCount,
     records,
     refreshCollections,
@@ -147,7 +150,7 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
 
   return (
     <div className="flex h-screen flex-col bg-cms-bg text-ui text-cms-text">
-      <TopBar onPublished={handlePublished} onSignOut={handleSignOutRequest} queuedCount={queuedCount} user={user} />
+      <TopBar disabled={isReordering} hasPendingOrder={hasPendingOrder} onPublished={handlePublished} onSignOut={handleSignOutRequest} queuedCount={queuedCount} user={user} />
       <div className="flex min-h-0 flex-1">
         <CollectionSidebar
           activeCollectionId={activeCollectionId}
@@ -209,6 +212,8 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                 <RecordListPane
                   collection={activeCollection}
                   onCreate={handleCreateRecord}
+                  isReordering={isReordering}
+                  onReorder={!isSaving && !search.trim() ? handleReorderRecord : undefined}
                   onSelectRecord={handleSelectRecordFromList}
                   records={filteredRecords}
                   selectedRecordId={selectedRecordId}
@@ -239,6 +244,8 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
                     collection={activeCollection}
                     hasSearch={search.trim().length > 0}
                     isLoading={isLoadingRecords}
+                    isReordering={isReordering}
+                    onReorder={!selectionMode && !search.trim() ? handleReorderRecord : undefined}
                     onSelectRecord={setSelectedRecordId}
                     onToggleSelectAll={toggleSelectAll}
                     onToggleSelected={toggleRecordSelected}

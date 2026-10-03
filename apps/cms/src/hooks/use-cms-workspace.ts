@@ -60,6 +60,10 @@ export function useCmsWorkspace() {
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const [isLoadingRecords, setIsLoadingRecords] = useState(() => collectionRegistry.length > 0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const reorderingRef = useRef(false);
+  const activeCollectionIdRef = useRef(activeCollectionId);
+  activeCollectionIdRef.current = activeCollectionId;
   const [error, setError] = useState<string | null>(null);
   // "Optimizing" — client-side decode/resize/re-encode right after a file is
   // picked/dropped. No network call has happened yet at this point; see
@@ -372,6 +376,7 @@ export function useCmsWorkspace() {
   // collection actually has something queued. Lives on the summary rather
   // than being derived from `records` because the active collection's
   // records are only a slice of what's queued across the whole registry.
+  const hasPendingOrder = collections.some(collection => collection.hasPendingOrder);
   const queuedCount = useMemo(() => collections.reduce((sum, collection) => sum + collection.queuedCount, 0), [collections]);
 
   const groups = useMemo<CollectionGroup[]>(() => {
@@ -792,6 +797,40 @@ export function useCmsWorkspace() {
     }
   }
 
+  async function handleReorderRecord(recordId: string, position: number) {
+    if (!activeCollection?.orderingField || reorderingRef.current || isLoadingRecords || search.trim() || selectionMode) return;
+    const collectionId = activeCollection.id;
+    const orderingField = activeCollection.orderingField;
+    const before = records;
+    const from = records.findIndex(record => record.id === recordId);
+    if (from < 0 || position === from + 1) return;
+    const optimistic = [...records];
+    const [moved] = optimistic.splice(from, 1);
+    optimistic.splice(position - 1, 0, moved);
+    setRecords(optimistic.map((record, index) => ({ ...record, values: { ...record.values, [orderingField]: index + 1 } })));
+    reorderingRef.current = true;
+    setIsReordering(true);
+    try {
+      const nextRecords = await data.reorderRecord(collectionId, recordId, position);
+      setCollections(current => current.map(collection => collection.id === collectionId ? { ...collection, hasPendingOrder: true } : collection));
+      if (activeCollectionIdRef.current === collectionId) {
+        setRecords(nextRecords);
+        const positions = new Map(nextRecords.map(record => [record.id, record.values[orderingField]]));
+        // Only replace the internal position; content edits in the open editor stay intact.
+        for (const update of [setDraftRecordState, setLastSavedRecordState]) {
+          update(current => current && positions.has(current.id) ? { ...current, values: { ...current.values, [orderingField]: positions.get(current.id) } } : current);
+        }
+      }
+      await refreshCollections();
+    } catch (nextError) {
+      if (activeCollectionIdRef.current === collectionId) setRecords(before);
+      pushActionErrorToast(toast, "Could not reorder items", nextError);
+    } finally {
+      reorderingRef.current = false;
+      setIsReordering(false);
+    }
+  }
+
   /**
    * Re-reads the active collection's records and count without disturbing the
    * open draft. Used after a publish transition changes statuses server-side.
@@ -1105,6 +1144,7 @@ export function useCmsWorkspace() {
     handleExport,
     handleGalleryUpload,
     handleImportRecords,
+    handleReorderRecord,
     handleSaveRecord,
     handleSelectCollection,
     handleUpdateSelectedStatus,
@@ -1112,8 +1152,10 @@ export function useCmsWorkspace() {
     isImportOpen,
     isLoadingCollections,
     isLoadingRecords,
+    isReordering,
     isSaving,
     optimizingField,
+    hasPendingOrder,
     queuedCount,
     records,
     refreshCollections,
