@@ -69,9 +69,7 @@ export default function Image({
         sizes={sizes}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
-        // React types lag the DOM attribute; lower-case form is valid HTML.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        {...({ fetchpriority: priority ? 'high' : 'auto' } as any)}
+        fetchPriority={priority ? 'high' : 'auto'}
         draggable={draggable}
         onLoad={markLoaded}
         className="h-full w-full object-cover"
