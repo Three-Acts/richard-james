@@ -7,4 +7,5 @@ export * from "./registry-helpers.js";
 export * from "./gallery.js";
 export * from "./content-contract.js";
 export * from "./auth-contract.js";
+export * from "./tutorial-contract.js";
 export * from "./slugs.js";

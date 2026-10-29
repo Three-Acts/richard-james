@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1139.0",
+    "@aws-sdk/s3-request-presigner": "^3.1159.0",
     "@three-acts/cms-schema": "*",
     "@vercel/functions": "^3.9.9",
     "pg": "^8.23.0"

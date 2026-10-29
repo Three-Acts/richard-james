@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@three-acts/utils";
 import type { AuthUser } from "../auth/auth-context";
@@ -6,9 +6,12 @@ import { singularize } from "../lib/format";
 import { hasPublishWorkflow, isEditable } from "../lib/records";
 import { BareIconButton, Button, ConfirmDialog, PanelHeader, Tooltip, useToast } from "../components/atoms";
 import { useCmsWorkspace } from "../hooks/use-cms-workspace";
+import { useWorkspaceView } from "../hooks/use-workspace-view";
 import { CollectionSidebar, RecordListPane, RecordsToolbar, RecordTable, TopBar } from "../components/workspace";
 import { RecordEditor } from "../components/editor";
 import { ImportDialog } from "../components/import";
+
+const TutorialsScreen = lazy(() => import("./tutorials-screen"));
 
 /** Stand-in for a record's fields while its data is still loading. */
 function EditorSkeleton() {
@@ -73,6 +76,8 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
   } = useCmsWorkspace();
 
   const toast = useToast();
+  const { view, showContent, showTutorials, selectTutorial } = useWorkspaceView();
+  const tutorialsActive = view.page === "tutorials";
 
   // Any navigation that would blow away an in-progress edit (switching
   // records/collections, going Back, signing out) routes through here so it
@@ -126,7 +131,10 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
   }
 
   function handleSelectCollectionGuarded(collectionId: string) {
-    guardNavigation(() => handleSelectCollection(collectionId));
+    guardNavigation(() => {
+      handleSelectCollection(collectionId);
+      showContent();
+    });
   }
 
   function handleSignOutRequest(): Promise<void> {
@@ -153,13 +161,19 @@ export function CmsWorkspace({ onSignOut, user }: { onSignOut: () => Promise<voi
       <TopBar disabled={isReordering} hasPendingOrder={hasPendingOrder} onPublished={handlePublished} onSignOut={handleSignOutRequest} queuedCount={queuedCount} user={user} />
       <div className="flex min-h-0 flex-1">
         <CollectionSidebar
-          activeCollectionId={activeCollectionId}
+          activeCollectionId={tutorialsActive ? null : activeCollectionId}
           groups={groups}
           isLoading={isLoadingCollections}
           onSelectCollection={handleSelectCollectionGuarded}
+          onOpenTutorials={showTutorials}
+          tutorialsActive={tutorialsActive}
         />
 
-        {activeCollection?.singleton ? (
+        {view.page === "tutorials" ? (
+          <Suspense fallback={<main className="grid min-w-0 flex-1 place-items-center text-cms-muted" role="status">Loading tutorials…</main>}>
+            <TutorialsScreen activeId={view.tutorialId} onBack={showContent} onSelect={selectTutorial} />
+          </Suspense>
+        ) : activeCollection?.singleton ? (
           <main className="relative flex min-h-0 min-w-0 flex-1 bg-cms-bg">
             {isLoadingRecords || (selectedRecordId !== null && !draftRecord) ? (
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">

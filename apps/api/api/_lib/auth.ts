@@ -4,7 +4,10 @@ import { ApiError } from "./http.js";
 import { getSession } from "./neon-auth.js";
 
 /**
- * Guards every `/api/cms/*` route plus `/api/deploy` and `/api/deploy-status`.
+ * General CMS/service guard used by `/api/cms/*`, `/api/deploy`, and
+ * `/api/deploy-status` routes that accept either editor sessions or the
+ * publishing service token. The private tutorial-media route uses
+ * `requireEditorSession` below instead.
  *
  * A bearer token is accepted when either:
  * (a) `PUBLISH_TOKEN` is set and the token equals it, compared in constant
@@ -97,6 +100,25 @@ export async function requireAuth(request: VercelRequest): Promise<void> {
       cacheStore(token);
       return;
     }
+  }
+
+  throw new ApiError(401, "unauthorized", "Unauthorized.");
+}
+
+/**
+ * Guards media delivery that is explicitly for signed-in CMS editors.
+ * Unlike `requireAuth`, this deliberately never accepts `PUBLISH_TOKEN`;
+ * service credentials must not be able to mint browser media URLs.
+ */
+export async function requireEditorSession(request: VercelRequest): Promise<void> {
+  const token = extractBearerToken(request);
+  if (!token || !process.env.NEON_AUTH_BASE_URL) {
+    throw new ApiError(401, "unauthorized", "Unauthorized.");
+  }
+
+  const session = await getSession(token);
+  if (session) {
+    return;
   }
 
   throw new ApiError(401, "unauthorized", "Unauthorized.");

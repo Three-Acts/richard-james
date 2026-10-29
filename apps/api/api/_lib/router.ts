@@ -22,6 +22,7 @@ import cmsImport from "../_routes/cms/collections/[collectionId]/import.js";
 import cmsAssets from "../_routes/cms/collections/[collectionId]/assets/[fieldKey].js";
 import cmsStatus from "../_routes/cms/collections/[collectionId]/status.js";
 import cmsPublish from "../_routes/cms/publish.js";
+import cmsTutorialMedia from "../_routes/cms/tutorials/[tutorialId]/media.js";
 
 export type ApiHandler = (request: VercelRequest, response: VercelResponse) => void | Promise<void>;
 
@@ -55,7 +56,8 @@ const routes = {
   "/api/cms/collections/[collectionId]/status": cmsStatus,
   "/api/cms/collections/[collectionId]/order": cmsOrder,
   "/api/cms/collections/[collectionId]/order/retry": cmsOrderRetry,
-  "/api/cms/publish": cmsPublish
+  "/api/cms/publish": cmsPublish,
+  "/api/cms/tutorials/[tutorialId]/media": cmsTutorialMedia
 } satisfies Record<string, ApiHandler>;
 
 type CompiledRoute = {

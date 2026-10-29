@@ -12,3 +12,5 @@ coverage
 .neon
 .claude
 .vercel
+/output/
+/.playwright-cli/

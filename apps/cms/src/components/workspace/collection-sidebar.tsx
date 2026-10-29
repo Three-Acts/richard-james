@@ -1,4 +1,5 @@
 import { cn } from "@three-acts/utils";
+import { BookOpen } from "lucide-react";
 import type { CmsCollectionSummary } from "../../cms/types";
 import { eyebrowClass, focusRing, PanelHeader, ScrollArea } from "../atoms";
 
@@ -8,15 +9,17 @@ export type CollectionGroup = {
 };
 
 type CollectionSidebarProps = {
-  activeCollectionId: string;
+  activeCollectionId: string | null;
   groups: CollectionGroup[];
   isLoading: boolean;
   onSelectCollection: (collectionId: string) => void;
+  onOpenTutorials: () => void;
+  tutorialsActive: boolean;
 };
 
-export function CollectionSidebar({ activeCollectionId, groups, isLoading, onSelectCollection }: CollectionSidebarProps) {
+export function CollectionSidebar({ activeCollectionId, groups, isLoading, onSelectCollection, onOpenTutorials, tutorialsActive }: CollectionSidebarProps) {
   return (
-    <aside className="flex w-pane shrink-0 flex-col border-r border-cms-line-strong bg-cms-bg" aria-label="CMS collections">
+    <aside className={cn("flex w-pane shrink-0 flex-col border-r border-cms-line-strong bg-cms-bg", tutorialsActive && "hidden md:flex")} aria-label="CMS navigation">
       <PanelHeader>
         <span className="text-ui-lg font-semibold text-cms-text">Collections</span>
       </PanelHeader>
@@ -60,6 +63,22 @@ export function CollectionSidebar({ activeCollectionId, groups, isLoading, onSel
           </div>
         ))}
       </ScrollArea>
+      <div className="shrink-0 border-t border-cms-line p-2">
+        <div className={cn(eyebrowClass, "px-2 pb-1.5 pt-1")}>Help</div>
+        <button
+          aria-current={tutorialsActive ? "page" : undefined}
+          className={cn(
+            "flex h-7 w-full items-center gap-2 rounded-cms px-2 text-left text-ui transition-colors",
+            tutorialsActive ? "bg-cms-raised font-medium text-cms-text" : "text-cms-muted hover:bg-cms-surface hover:text-cms-text",
+            focusRing
+          )}
+          onClick={onOpenTutorials}
+          type="button"
+        >
+          <BookOpen aria-hidden="true" size={13} />
+          Tutorials
+        </button>
+      </div>
     </aside>
   );
 }

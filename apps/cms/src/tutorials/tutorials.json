@@ -1,0 +1,801 @@
+[
+  {
+    "id": "01",
+    "slug": "sign-in",
+    "title": "Sign in and find your content",
+    "goal": "Open the CMS and choose the area you want to edit.",
+    "steps": [
+      "Open the private CMS address supplied with your editor account. Enter your email and password, then click Log in.",
+      "Choose Projects in the left sidebar for portfolio work, Pages for the fixed text pages, or Site Settings for site wide details.",
+      "In Projects or Pages, use Search to find an item. Click its row to open the editor.",
+      "Use Back to table to return to the full list."
+    ],
+    "check": "The selected item opens with its fields and save controls.",
+    "notes": [
+      "The training recordings use a local copy and example credentials. Use your own editor account on the real CMS.",
+      "The CMS has no public sign up or password reset control on this screen. Ask the site administrator for access or password help."
+    ],
+    "category": "Getting started",
+    "duration": 30.482,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To sign in, open the private CMS address provided with your editor account. Enter your email and password."
+      },
+      {
+        "start": 8.724,
+        "text": "Click Log in. The left sidebar separates Projects, Pages, and Site Settings."
+      },
+      {
+        "start": 15.954,
+        "text": "Choose Projects. Use the search box to find a work, then click its row to open the editor."
+      },
+      {
+        "start": 23.52,
+        "text": "The item fields appear on the right. Back to table returns to the full list."
+      }
+    ]
+  },
+  {
+    "id": "02",
+    "slug": "add-project",
+    "title": "Add a project",
+    "goal": "Create a new portfolio entry and prepare it for review.",
+    "steps": [
+      "Choose Projects, then New Project. A new empty record is created immediately.",
+      "Enter Title, Year, and Medium. Put separate materials or dimensions on separate lines in Medium.",
+      "Review the generated Slug. Fill in optional subtitles, original title, language code, and Description as needed.",
+      "Add a Hero image. Add gallery images if the work needs additional views.",
+      "Click Save to keep a draft. When the required fields are complete, use Queue to publish, then Publish site when you are ready to release the changes."
+    ],
+    "check": "The project has the intended title and images. Its status remains Not published until it is queued and published.",
+    "notes": [
+      "Title, Slug, Year, Medium, Hero, and the internally managed position are required when publishing. Incomplete drafts can be saved.",
+      "Creating a record is immediate. Discarding field edits does not remove the new record. Delete an unused empty draft separately."
+    ],
+    "category": "Projects and images",
+    "duration": 43.468,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To add a project, open Projects and click New Project. This creates an empty draft straight away."
+      },
+      {
+        "start": 8.434,
+        "text": "Enter the title, year, and materials. The slug follows the title while it is new. Check the address before saving."
+      },
+      {
+        "start": 18.256,
+        "text": "Add a description if needed. Then choose a Hero image, which represents the work on the website."
+      },
+      {
+        "start": 25.869,
+        "text": "Wait for image optimisation to finish. Click Save to store the draft and upload the selected image."
+      },
+      {
+        "start": 34.011,
+        "text": "The work is saved as Not published. Use Queue to publish when it is complete, then follow the separate publishing procedure."
+      }
+    ]
+  },
+  {
+    "id": "03",
+    "slug": "edit-project-text",
+    "title": "Edit project text and its address",
+    "goal": "Update a work without losing track of its website address.",
+    "steps": [
+      "Open the project and edit Title, Year, Medium, Subtitle, or original title fields.",
+      "Use Description for the text shown with the work. Select text and use the toolbar for headings, bold, italic, lists, and links.",
+      "Review Slug only if you intend to change the URL. Existing saved slugs do not follow later title changes.",
+      "Click Save. If the item was Published, saving changed content queues it for publishing. Publish the site to release it."
+    ],
+    "check": "Unsaved disappears and the saved text remains when you reopen the item.",
+    "notes": [
+      "Changing a slug changes the project address. Existing links may stop working; there is no redirect editor in this CMS.",
+      "The slug link points to the public website. It is not a preview of unsaved changes."
+    ],
+    "category": "Projects and images",
+    "duration": 33.502,
+    "chapters": [
+      {
+        "start": 0.151,
+        "text": "To edit a work, open its record and change the relevant text fields."
+      },
+      {
+        "start": 5.917,
+        "text": "The Description toolbar supports formatted text. Select words before applying bold, italic, headings, or a list."
+      },
+      {
+        "start": 15.785,
+        "text": "An existing saved slug stays the same when you rename a work. Change the slug only when you intend to change its web address."
+      },
+      {
+        "start": 25.03,
+        "text": "Click Save. Changes to a published item are queued. Publish the site when the update is ready."
+      }
+    ]
+  },
+  {
+    "id": "04",
+    "slug": "replace-image",
+    "title": "Replace a project image",
+    "goal": "Change a Hero image or another single image field.",
+    "steps": [
+      "Open the project and scroll to Hero, Thumb, or Social image.",
+      "Click Replace beside an existing image, then select the new file. Empty image fields accept a file by clicking the drop area or dropping a file onto it.",
+      "Wait for Optimising to finish. Pending upload means the file is staged in this browser and has not yet been uploaded.",
+      "Click Save or Queue to publish. Wait for the upload to finish before leaving. Publish the site when ready."
+    ],
+    "check": "The new thumbnail appears and Pending upload is gone after saving.",
+    "notes": [
+      "Hero is required to publish. Thumb is optional and falls back to Hero when empty. Social image also falls back to Hero for projects.",
+      "For an optional single image, Delete clears that field; save the record to keep the change. It does not delete the project.",
+      "The CMS normally optimises raster images to a maximum long edge of 1920 pixels and checks a 4 MB upload limit. Keep original master images separately."
+    ],
+    "category": "Projects and images",
+    "duration": 34.56,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To replace a project image, open the work and scroll to Hero. Click Replace and select the new file."
+      },
+      {
+        "start": 8.388,
+        "text": "The CMS optimises the file first. Pending upload means it is still staged locally in this browser."
+      },
+      {
+        "start": 16.745,
+        "text": "Click Save to upload and attach the replacement. Wait until saving finishes."
+      },
+      {
+        "start": 23.542,
+        "text": "The new thumbnail is now saved. Publish the site to update the live image. Optional Thumb and Social image fields work the same way."
+      }
+    ]
+  },
+  {
+    "id": "05",
+    "slug": "add-gallery-images",
+    "title": "Add images to a gallery",
+    "goal": "Add extra views to a project in viewing order.",
+    "steps": [
+      "Open the project and scroll to Gallery.",
+      "Click the gallery drop area and select one or more files, or drag image files onto it.",
+      "Wait for optimisation. Review the new rows, image names, and thumbnails.",
+      "Click Save to upload the staged files. Use the separate reorder and caption procedures as needed, then publish when ready."
+    ],
+    "check": "The new gallery rows remain when the project is reopened and no longer show Pending upload.",
+    "notes": [
+      "The gallery accepts multiple files and allows up to 200 images by default. Add large sets in manageable batches.",
+      "Gallery images and Hero are separate fields. Adding a gallery image does not replace Hero."
+    ],
+    "category": "Projects and images",
+    "duration": 29.33,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To add more views of a work, open its Gallery field."
+      },
+      {
+        "start": 4.789,
+        "text": "Click the drop area and select your image files. You can also drag files onto this area."
+      },
+      {
+        "start": 12.236,
+        "text": "Wait for optimisation. Each added file appears as a gallery row with a thumbnail and an optional caption."
+      },
+      {
+        "start": 20.641,
+        "text": "Click Save to upload the images. Check that Pending upload disappears, then publish the site when ready."
+      }
+    ]
+  },
+  {
+    "id": "06",
+    "slug": "gallery-captions",
+    "title": "Add or change a gallery caption",
+    "goal": "Write the text displayed beneath a gallery image.",
+    "steps": [
+      "Open the project and scroll to Gallery.",
+      "Find the correct image using its thumbnail and file name.",
+      "Paste the complete caption into Caption optional beneath that image. Clear the field to remove a caption.",
+      "Click Save, then publish the site when ready."
+    ],
+    "check": "The saved caption is attached to the intended image. After deployment, it appears beneath that image on the project page.",
+    "notes": [
+      "Reordering an image carries its caption with it. Check the image itself rather than relying only on its current row number.",
+      "In this version, typing a caption can remove spaces. Pasting the complete caption preserves internal spaces."
+    ],
+    "category": "Projects and images",
+    "duration": 28.945,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To add a gallery caption, find the image by its thumbnail and file name."
+      },
+      {
+        "start": 6.061,
+        "text": "Click Caption optional beneath that image and paste the complete caption. This preserves spaces in the current version."
+      },
+      {
+        "start": 14.731,
+        "text": "Click Save. Clearing this same field removes the caption without removing the image."
+      },
+      {
+        "start": 21.648,
+        "text": "Publish the site when ready, then check the caption beneath the correct image on the project page."
+      }
+    ]
+  },
+  {
+    "id": "07",
+    "slug": "reorder-gallery",
+    "title": "Reorder gallery images",
+    "goal": "Change the sequence of images within one project.",
+    "steps": [
+      "Open the project and scroll to Gallery.",
+      "Drag the grip on an image row to its new position. Drop at the insertion line.",
+      "For keyboard control, focus the same grip and press Arrow Up or Arrow Down.",
+      "Review the sequence from top to bottom, click Save, then publish the site."
+    ],
+    "check": "The saved gallery sequence matches the intended order and each caption stays with its image.",
+    "notes": [
+      "This changes the order inside one project. Use the project list to change the order of works across the portfolio."
+    ],
+    "category": "Projects and images",
+    "duration": 28.225,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To change the image sequence within a project, use the grip at the left of a Gallery row."
+      },
+      {
+        "start": 6.661,
+        "text": "Drag the image to its new position and release at the insertion line. The caption moves with the image."
+      },
+      {
+        "start": 14.587,
+        "text": "You can also focus an image grip and press the up or down arrow key to move it one position."
+      },
+      {
+        "start": 21.119,
+        "text": "Review the sequence, click Save, and publish the site to make the gallery order live."
+      }
+    ]
+  },
+  {
+    "id": "08",
+    "slug": "remove-gallery-image",
+    "title": "Remove an image from a gallery",
+    "goal": "Remove one gallery entry while keeping the project.",
+    "steps": [
+      "Open the project and scroll to Gallery.",
+      "Locate the image by its thumbnail and file name.",
+      "Click its Remove button at the right of the row. Check that the correct row disappears.",
+      "Click Save to keep the removal, then publish the site. Use Discard before saving if you removed the wrong image."
+    ],
+    "check": "The intended image is absent from the saved gallery and the remaining images are in the right order.",
+    "notes": [
+      "The gallery Remove button has no confirmation dialog. The change is still a local edit until you save.",
+      "Removing an image entry does not delete the whole project or offer a media library cleanup command."
+    ],
+    "category": "Projects and images",
+    "duration": 29.207,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To remove one gallery image, find the correct thumbnail and file name."
+      },
+      {
+        "start": 5.892,
+        "text": "Click the Remove button at the right of that row. The image disappears from the gallery immediately."
+      },
+      {
+        "start": 13.456,
+        "text": "Check the remaining images before clicking Save. If you removed the wrong one, Discard restores the last saved record."
+      },
+      {
+        "start": 22.533,
+        "text": "After saving, publish the site to remove the image from the live project page."
+      }
+    ]
+  },
+  {
+    "id": "09",
+    "slug": "reorder-projects",
+    "title": "Reorder projects",
+    "goal": "Change the order of works across the portfolio.",
+    "steps": [
+      "Choose Projects and return to the full table. Clear Search and leave Select mode if either is active.",
+      "Drag the grip at the far left of a project row to its new position. Use the insertion line to place it.",
+      "Wait for the list to settle. You can also reorder from the narrow project list while an editor is open, when search is clear.",
+      "Click Publish site to make the new portfolio order live."
+    ],
+    "check": "The moved work stays in its new CMS position. After deployment, the public portfolio follows that order.",
+    "notes": [
+      "Project list moves save automatically. There is no Sort order field to edit in the form.",
+      "Publishing an order change does not require editing the project content. Dragging is disabled while searching or selecting multiple items.",
+      "An accidental saved move can be corrected by dragging the work back before publishing."
+    ],
+    "category": "Projects and images",
+    "duration": 31.39,
+    "chapters": [
+      {
+        "start": 0.151,
+        "text": "To reorder the portfolio, open the Projects table. Clear search and leave selection mode first."
+      },
+      {
+        "start": 8.077,
+        "text": "Drag the grip at the far left of a project row. Release at the insertion line for the new position."
+      },
+      {
+        "start": 15.69,
+        "text": "The move saves automatically. Review the new order before continuing."
+      },
+      {
+        "start": 21.815,
+        "text": "Click Publish site to make the order live. Moving gallery rows is a separate procedure inside an individual project."
+      }
+    ]
+  },
+  {
+    "id": "10",
+    "slug": "duplicate-project",
+    "title": "Duplicate a project",
+    "goal": "Use an existing work as a starting point for a new entry.",
+    "steps": [
+      "Open the source project and save it first, especially if it contains staged images.",
+      "Click Duplicate in the bottom toolbar. The copy opens immediately.",
+      "Rename the copy, review its new slug, and replace inherited text and images as needed.",
+      "Save the copy. Queue and publish it only when it is ready."
+    ],
+    "check": "The new record is a draft with copy in its title and a distinct slug. The original is still present.",
+    "notes": [
+      "Duplicate creates the new record immediately. Discard does not remove it.",
+      "Pending uploads are not copied. Save the original first if its staged images should carry over.",
+      "The copy references the saved image files from the original. Replace its image fields when it needs different media."
+    ],
+    "category": "Projects and images",
+    "duration": 30.198,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To duplicate a work, save the original first so its images are no longer pending."
+      },
+      {
+        "start": 6.565,
+        "text": "Click Duplicate in the bottom toolbar. A new draft opens with copy added to its title and a distinct slug."
+      },
+      {
+        "start": 15.067,
+        "text": "Rename the new work and review all inherited text and images before saving."
+      },
+      {
+        "start": 22.733,
+        "text": "The original stays in place. Queue and publish the copy only when the new entry is ready."
+      }
+    ]
+  },
+  {
+    "id": "11",
+    "slug": "save-draft",
+    "title": "Save work as a draft",
+    "goal": "Keep an incomplete project out of the publish queue.",
+    "steps": [
+      "Open a new or existing draft and make your edits.",
+      "Open More publish options, the arrow beside Queue to publish.",
+      "Choose Save as draft. The record is saved with the status Not published.",
+      "Reopen it to continue editing. Use Queue to publish when the required fields are complete."
+    ],
+    "check": "The status reads Not published and the edits remain after reopening.",
+    "notes": [
+      "Save stores edits but preserves the current workflow where possible. Use Save as draft when you specifically need Not published.",
+      "On an already published item, Save as draft changes its publication status. Use this deliberately and rebuild the live site if it should disappear."
+    ],
+    "category": "Saving and publishing",
+    "duration": 29.332,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To keep an incomplete work as a draft, make your edits in the project editor."
+      },
+      {
+        "start": 6.061,
+        "text": "Open the arrow beside Queue to publish. Choose Save as draft."
+      },
+      {
+        "start": 11.827,
+        "text": "The status changes to Not published. Your saved edits remain available when you reopen the record."
+      },
+      {
+        "start": 19.73,
+        "text": "When the work is complete, use Queue to publish. Be deliberate when applying draft status to a work that is already live."
+      }
+    ]
+  },
+  {
+    "id": "12",
+    "slug": "publish-site",
+    "title": "Queue changes and publish the site",
+    "goal": "Release completed content and ordering changes to the public website.",
+    "steps": [
+      "Finish editing the item. Click Queue to publish and wait for saving or image uploads to finish.",
+      "Review the intended queued records across Projects and Pages. Publish site acts globally, including other queued items and pending project order changes.",
+      "Click Publish site in the top bar. Watch the notification while the deployment is queued and building.",
+      "Wait for Deployed and Your site is live. Open the public website, refresh it, and verify the changed text, images, or order.",
+      "If publishing fails, follow the error message. The CMS attempts to restore affected content and ordering so they can be retried."
+    ],
+    "check": "The deployment reaches Deployed and the intended result is visible on the public website.",
+    "notes": [
+      "Save and Queue to publish do not by themselves rebuild the public website. The website is generated during deployment.",
+      "Publish site is shown when there are queued records, pending order changes, or a retry. It does not publish only the currently open record.",
+      "The training clip simulates deployment states. It demonstrates the UI without triggering a real website deployment.",
+      "If the message says Still deploying, check with the administrator before retrying. Deploy triggered alone does not confirm that a build has completed."
+    ],
+    "category": "Saving and publishing",
+    "duration": 47.336,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To release a finished item, click Queue to publish. This saves the content and uploads any staged images."
+      },
+      {
+        "start": 8.7,
+        "text": "Publish site acts on all queued content and pending project order changes. Check the other queued work before proceeding."
+      },
+      {
+        "start": 17.801,
+        "text": "Click Publish site in the top bar. Watch the deployment notification as the website is queued and built."
+      },
+      {
+        "start": 26.038,
+        "text": "Wait for Deployed and Your site is live. This training copy simulates those states; it does not deploy the real website."
+      },
+      {
+        "start": 35.191,
+        "text": "On the real site, refresh the public page and check the result. If a deployment fails or keeps building, follow the message and contact the administrator if needed."
+      }
+    ]
+  },
+  {
+    "id": "13",
+    "slug": "unpublish-project",
+    "title": "Unpublish a project",
+    "goal": "Hide a work without deleting its saved content.",
+    "steps": [
+      "Open the published project you want to remove from public view.",
+      "Open More publish options and choose Unpublish.",
+      "Check that the status changes to Not published. The record stays in the CMS.",
+      "Rebuild the website using Publish site. If that button is absent, queue a complete item that should remain visible, then publish, or ask the administrator to rebuild the site."
+    ],
+    "check": "After a successful deployment, the work is absent from the public portfolio but remains editable in the CMS.",
+    "notes": [
+      "Unpublish is available for Published records. It is not a deletion.",
+      "The old public page can remain visible until the next successful build. Unpublishing alone may not show Publish site."
+    ],
+    "category": "Saving and publishing",
+    "duration": 35.564,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To hide a published work while retaining its content, open the project and then More publish options."
+      },
+      {
+        "start": 7.259,
+        "text": "Choose Unpublish. The record stays in the CMS with the status Not published."
+      },
+      {
+        "start": 14.272,
+        "text": "The public website needs a new build. If Publish site is absent, queue a complete item that should remain visible, then publish, or ask the administrator to rebuild."
+      },
+      {
+        "start": 26.156,
+        "text": "After deployment, check that the work is gone from the public portfolio. You can queue it again later to republish it."
+      }
+    ]
+  },
+  {
+    "id": "14",
+    "slug": "delete-project",
+    "title": "Delete a project",
+    "goal": "Permanently remove an unwanted project record.",
+    "steps": [
+      "Open the project and verify its title. Export a copy first if you need a reference.",
+      "Click Delete in the bottom toolbar.",
+      "Read the confirmation and click Delete only when the record is correct. Cancel leaves it in place.",
+      "If the work was live, rebuild the website. If Publish site is absent, queue a complete item that should remain visible and publish, or ask the administrator to rebuild."
+    ],
+    "check": "The record is absent from Projects. After deployment, it is absent from the public portfolio.",
+    "notes": [
+      "The confirmation states that deletion cannot be undone. There is no trash or restore interface.",
+      "For a temporary removal, use Unpublish instead. Fixed Pages and Site Settings have no Delete control.",
+      "CSV export preserves record values and image URLs, not an independent backup of the image files."
+    ],
+    "category": "Saving and publishing",
+    "duration": 32.516,
+    "chapters": [
+      {
+        "start": 0.151,
+        "text": "To permanently remove a project, open it and check the title carefully."
+      },
+      {
+        "start": 5.796,
+        "text": "Click Delete in the bottom toolbar. The confirmation says this cannot be undone. Cancel if you selected the wrong record."
+      },
+      {
+        "start": 15.352,
+        "text": "Confirm Delete. The project disappears from the CMS list."
+      },
+      {
+        "start": 21.19,
+        "text": "If the work was public, rebuild the website as well. Use the publishing procedure or ask the administrator for a rebuild if Publish site is absent."
+      }
+    ]
+  },
+  {
+    "id": "15",
+    "slug": "edit-page",
+    "title": "Edit a fixed page",
+    "goal": "Update text and images on About or the essay page.",
+    "steps": [
+      "Choose Pages and open the page you want to change.",
+      "Edit Body using the rich text toolbar. Use Heading 2 or Heading 3 for subsections, and the list or link controls as needed.",
+      "Update Image or SEO settings if required. Keep the existing slug for fixed pages unless the administrator has arranged a routing change.",
+      "Click Save or Queue to publish, then Publish site when the page is ready."
+    ],
+    "check": "The saved text is correct in the editor. After deployment, the intended fixed page shows the update.",
+    "notes": [
+      "Pages is a fixed collection: you can edit the existing pages but cannot add, duplicate, import, or delete them here.",
+      "The editor does not provide a general page section builder. Add or remove paragraphs and headings within Body. Structural layout changes need development work.",
+      "Use Undo in the text toolbar for recent typing. Discard reloads the entire record from its last save."
+    ],
+    "category": "Pages and settings",
+    "duration": 34.864,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To change a fixed page, choose Pages and open the page you need."
+      },
+      {
+        "start": 5.626,
+        "text": "Edit the Body field. The toolbar supports headings, emphasis, lists, and links, and lets you add or remove text sections within the body."
+      },
+      {
+        "start": 16.358,
+        "text": "Check the page image and keep the existing slug. Fixed pages cannot be added or deleted from this CMS."
+      },
+      {
+        "start": 24.954,
+        "text": "Click Save or Queue to publish, then Publish site when the page is ready. Check the result on the public page after deployment."
+      }
+    ]
+  },
+  {
+    "id": "16",
+    "slug": "site-settings",
+    "title": "Update site settings",
+    "goal": "Change the site identity and public contact details.",
+    "steps": [
+      "Choose Site Settings. Its single record opens directly.",
+      "Edit Name, Tagline, Location, Email, Phone, Description, or the default Social image as needed.",
+      "Click Save and wait for any uploads to complete.",
+      "Arrange a site rebuild so the saved settings appear publicly. If Publish site is absent, queue a complete content item that should stay visible and publish, or ask the administrator to rebuild."
+    ],
+    "check": "The saved settings remain after reopening. After deployment, public identity and contact details show the intended values.",
+    "notes": [
+      "Site Settings uses Save and has no per record publication controls. Saving it alone does not create a queued content item.",
+      "The Email and Phone fields are public website contact details. They do not change your editor login.",
+      "The default Description and Social image are used when a page has no more specific value."
+    ],
+    "category": "Pages and settings",
+    "duration": 37.12,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To change site wide details, choose Site Settings. The single settings record opens directly."
+      },
+      {
+        "start": 8.385,
+        "text": "Update the name, tagline, location, public email or phone, and default sharing information as needed."
+      },
+      {
+        "start": 16.981,
+        "text": "Click Save. These public contact fields do not change your editor login."
+      },
+      {
+        "start": 23.273,
+        "text": "The static website picks up saved settings during its next build. If Publish site is absent, queue a complete item that should remain visible and publish, or ask the administrator to rebuild."
+      }
+    ]
+  },
+  {
+    "id": "17",
+    "slug": "seo",
+    "title": "Change search and sharing details",
+    "goal": "Set the page title, description, and image used for search and link previews.",
+    "steps": [
+      "Open the relevant project or page and scroll to SEO settings.",
+      "Enter Meta title and Meta description if the normal title or default summary is unsuitable.",
+      "Add or replace Social image if this page needs a specific link preview image.",
+      "Click Save or Queue to publish, then Publish site. Check the public page after deployment."
+    ],
+    "check": "The saved SEO fields match the intended title, summary, and sharing image.",
+    "notes": [
+      "Empty Meta title falls back to the item title. Empty image fields use the configured page, project, or site defaults.",
+      "Search engines and social services may cache older previews; their results may update after the website itself.",
+      "SEO fields describe the page for search and sharing. They do not replace the visible Body or Description."
+    ],
+    "category": "Pages and settings",
+    "duration": 32.661,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To change search and sharing details, open the project or page and scroll to SEO settings."
+      },
+      {
+        "start": 7.332,
+        "text": "Enter a clear Meta title and a short Meta description. Leave the title empty if the normal item title is already suitable."
+      },
+      {
+        "start": 16.792,
+        "text": "Use Social image for a page specific sharing image. Save the record when the fields are ready."
+      },
+      {
+        "start": 24.26,
+        "text": "Publish the site. Search engines and social networks may keep an older preview in their cache for a while."
+      }
+    ]
+  },
+  {
+    "id": "18",
+    "slug": "bulk-status",
+    "title": "Update several projects together",
+    "goal": "Queue or change the status of several selected works.",
+    "steps": [
+      "Choose Projects and return to the full table. Use Search first if it helps narrow the list.",
+      "Click Select, then click the rows you intend to change. Check the selection count; Select all selects the currently displayed records.",
+      "Open Update items and choose Queue to publish, Save as draft, or Unpublish as appropriate.",
+      "Click Cancel to leave selection mode. Review statuses and publish the site if the public website should change."
+    ],
+    "check": "Only the selected rows have the intended status and no unrelated work was included.",
+    "notes": [
+      "Bulk actions affect all selected records. Review the count and titles before applying a change.",
+      "Select mode also provides Export and, for Projects, Delete. Bulk deletion has a confirmation dialog.",
+      "Project dragging is disabled in Select mode. Leave that mode before reordering."
+    ],
+    "category": "Bulk actions",
+    "duration": 31.629,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To change several projects together, open the full Projects table and click Select."
+      },
+      {
+        "start": 6.539,
+        "text": "Click each row you want to include, then check the selected count and titles."
+      },
+      {
+        "start": 12.592,
+        "text": "Open Update items and choose the intended status. Here, Queue to publish adds the selected works to the global publish queue."
+      },
+      {
+        "start": 22.412,
+        "text": "Click Cancel to leave selection mode. Review the statuses, then use Publish site when the queued changes are ready."
+      }
+    ]
+  },
+  {
+    "id": "19",
+    "slug": "csv-import",
+    "title": "Import projects from a CSV file",
+    "goal": "Create project drafts from a prepared spreadsheet export.",
+    "steps": [
+      "Prepare a CSV with a header row. Use column names such as title, slug, year, medium, description, and hero. Use accessible image URLs for asset fields.",
+      "Choose Projects, click Import, then Choose CSV file.",
+      "Review each Collection Field mapping. Match the relevant columns and leave unrelated columns at Ignore. Review the row count and any warnings.",
+      "Click Import rows. Open each imported draft, check its values and images, and complete required fields before queuing and publishing."
+    ],
+    "check": "The imported works appear as Not published with the expected field values.",
+    "notes": [
+      "Import creates new records; it does not update records with matching titles. Use unique slugs to avoid collisions.",
+      "The import is limited to 1000 rows per request. The internal project position is omitted from mappings; imported records append.",
+      "CSV import does not upload image binaries. A local file path is not a usable public image URL. Use the normal image controls if files still need uploading.",
+      "Pages and Site Settings do not offer Import."
+    ],
+    "category": "Bulk actions",
+    "duration": 35.662,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To import project drafts, start with a CSV that has a header row and clear column names."
+      },
+      {
+        "start": 7.139,
+        "text": "In Projects, click Import, then choose the CSV file."
+      },
+      {
+        "start": 12.544,
+        "text": "Review the Collection Field mappings and the row count. Match the columns you need and leave other fields at Ignore."
+      },
+      {
+        "start": 20.853,
+        "text": "Click Import rows. Import creates new drafts, so open and review each one before publishing. Image fields need accessible image URLs; local file paths do not upload images."
+      }
+    ]
+  },
+  {
+    "id": "20",
+    "slug": "csv-export",
+    "title": "Export selected records",
+    "goal": "Download record values as a CSV reference.",
+    "steps": [
+      "Open Projects or Pages and use Search if needed.",
+      "Click Select and choose the rows to export. Use Select all for the currently displayed records.",
+      "Click Export to download the CSV.",
+      "Open the file to confirm the rows and columns. Click Cancel to leave selection mode."
+    ],
+    "check": "A CSV file downloads with the selected records and their field values.",
+    "notes": [
+      "The export contains image URLs and gallery data, not the image files themselves. Keep master media files separately.",
+      "An export is useful as a reference. Import creates new records, so reimporting an export is not a restore or update procedure."
+    ],
+    "category": "Bulk actions",
+    "duration": 32.519,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "To export records, open the collection table and click Select."
+      },
+      {
+        "start": 5.676,
+        "text": "Choose the rows you need. Select all applies to the currently displayed records, including any search filter."
+      },
+      {
+        "start": 14.152,
+        "text": "Click Export. The browser downloads a CSV containing the selected values."
+      },
+      {
+        "start": 21.07,
+        "text": "Check the downloaded file, then click Cancel to leave selection mode. Images are represented by URLs; the media files are not included."
+      }
+    ]
+  },
+  {
+    "id": "21",
+    "slug": "discard-and-sign-out",
+    "title": "Discard edits and sign out",
+    "goal": "Leave the CMS with saved work accounted for.",
+    "steps": [
+      "Check Unsaved beside the editor controls. Click Save if you want to keep the edits.",
+      "To abandon local edits, click Discard. This reloads the entire record from the last saved version.",
+      "If you navigate away with edits, choose Cancel to keep editing or Discard to leave without saving.",
+      "Click your editor name at the top right to sign out. Confirm the login screen returns."
+    ],
+    "check": "The login screen is visible and no wanted changes were left unsaved.",
+    "notes": [
+      "Discard only affects unsaved field edits. It does not undo a saved record, a project list reorder, a deletion, or the immediate creation of a record.",
+      "If a conflict says the item changed elsewhere, copy any text you need, reload the record, review the latest version, and reapply your changes.",
+      "If your session expires, sign in again before retrying a save. Avoid closing the tab while uploads are running."
+    ],
+    "category": "Finishing up",
+    "duration": 31.605,
+    "chapters": [
+      {
+        "start": 0.15,
+        "text": "Before leaving the CMS, check whether the editor shows Unsaved."
+      },
+      {
+        "start": 5.795,
+        "text": "Click Discard only if you want to reload the entire record from its last save. Saved changes and automatically saved project ordering are not undone."
+      },
+      {
+        "start": 16.865,
+        "text": "Once your work is saved or discarded, click your editor name at the top right to sign out."
+      },
+      {
+        "start": 23.421,
+        "text": "The login screen returns. If you need to keep working later, sign in again with your editor account."
+      }
+    ]
+  }
+]
