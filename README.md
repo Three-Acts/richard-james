@@ -466,6 +466,10 @@ directory:
 | cms | `apps/cms` | Vite | `API_ORIGIN` (optionally `VITE_API_URL`) |
 | api | `apps/api` | Other/Node (Vercel Functions) | `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_ORIGIN`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, optionally `SITE_VERCEL_PROJECT_ID` (only if the hook URL can't be parsed — do *not* set `VERCEL_PROJECT_ID`, a Vercel system var that gets overwritten with this project's own id), `PUBLISH_TOKEN`, and `API_ALLOWED_ORIGINS` (`DATABASE_URL_UNPOOLED` is only used by the local `db:migrate` script, so it isn't needed on Vercel) |
 
+Set `API_ORIGIN` separately for both Preview and Production environments. The live
+`richardjames` project (custom domain) and `richard-james-web` both build `apps/web`;
+each needs this variable, including on pull request previews.
+
 Vercel installs dependencies per workspace (it runs `npm install` inside the project's
 root directory, which npm treats as `npm install -w <that app>`), so root-level
 `devDependencies` are **not** available in a Vercel build. Every tool an app's `build`
