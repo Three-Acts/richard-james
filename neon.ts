@@ -7,5 +7,6 @@ export default defineConfig({
   auth: true,
   buckets: {
     public: { access: "public_read" },
+    "cms-tutorials": { access: "private" },
   },
 });
